@@ -1,0 +1,23 @@
+# Java build files
+backend/target/
+*.class
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Future frontend build files
+frontend/node_modules/
+frontend/dist/
+
+# Secrets and local configuration
+.env
+.env.*
+application-local.properties
+application-local.yml
+application-local.yaml
+
+# Operating system files
+.DS_Store
+Thumbs.db
