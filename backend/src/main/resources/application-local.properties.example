@@ -9,3 +9,8 @@ spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
 spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.open-in-view=false
 spring.jpa.properties.hibernate.format_sql=true
+
+# Generate a Base64-encoded secret of at least 32 bytes. Keep it local.
+app.security.jwt.secret=REPLACE_WITH_BASE64_SECRET
+# Base64-encoded 32-byte AES key used to encrypt TOTP secrets at rest.
+app.security.totp.encryption-key=REPLACE_WITH_BASE64_32_BYTE_KEY
