@@ -14,7 +14,7 @@ public class Role {
     @Column(name = "role_id") private Long roleId;
     @Column(name = "role_code", nullable = false, unique = true) private String roleCode;
     @Column(name = "role_name", nullable = false, unique = true) private String roleName;
-    @Column(name = "is_active", nullable = false) private String isActive;
+    @Column(name = "is_active", nullable = false, columnDefinition = "CHAR(1)") private String isActive;
 
     protected Role() { }
     public Long getRoleId() { return roleId; }

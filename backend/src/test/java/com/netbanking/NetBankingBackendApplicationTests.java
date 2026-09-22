@@ -4,9 +4,8 @@ import org.junit.jupiter.api.Test;
 
 class NetBankingBackendApplicationTests {
 
-	@Test
-	void applicationEntryPointIsAvailable() {
-		new NetBankingBackendApplication();
-	}
-
+    @Test
+    void applicationEntryPointIsAvailable() {
+        new NetBankingBackendApplication();
+    }
 }
