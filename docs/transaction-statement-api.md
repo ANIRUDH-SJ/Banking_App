@@ -1,7 +1,7 @@
 # Transaction history and statements
 
-This is the first read-only slice of backend services 10 (`TransactionService`) and 11 (`StatementService`).
-It reads the existing `bank_transaction` and `account_transaction_entry` tables from
+This module provides secure transaction history, lifecycle tracking, statement filtering, and CSV export.
+It uses the existing `bank_transaction` and `account_transaction_entry` tables from
 `database/06_transaction_tables.sql`. Ledger entries identify the account-specific debit or credit and
 its balance after posting. All routes require a bearer JWT, and the service checks active account ownership
 before querying any entries.
@@ -44,7 +44,7 @@ returns `404`; an account the user does not hold returns `403`. Oversized CSV ex
 
 ## Internal write contract
 
-`TransactionService` exposes transactional methods for other backend services; there is intentionally no
+`TransactionService` exposes transactional methods for money movement workflows; there is intentionally no
 customer-facing write controller:
 
 - `createTransaction` validates transaction shape and amount, generates a stable unique reference, persists
@@ -54,10 +54,10 @@ customer-facing write controller:
   Every accepted transition creates an immutable history row.
 - `postEntry` records a debit or credit only for the matching transaction account while the transaction is
   processing. The caller must update the balance in the same surrounding database transaction.
-- `getByReference` provides backend services with a stable lookup for receipts and idempotent workflows.
+- `getByReference` provides a stable lookup for receipts and idempotent workflows.
 
 Apply `database/10_transaction_status_history.sql` after the existing transaction schema before running
-the completed service.
+the module.
 
 ## Integration boundary
 

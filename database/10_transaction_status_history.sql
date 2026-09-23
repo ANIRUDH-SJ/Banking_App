@@ -1,5 +1,5 @@
 -- Internet Net Banking Application
--- Immutable transaction lifecycle history for backend service 10.
+-- Immutable transaction lifecycle history.
 --
 -- Run after 06_transaction_tables.sql and 01_security_tables.sql.
 -- Run as NET_BANKING_APP while connected to FREEPDB1.
