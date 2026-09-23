@@ -2,6 +2,8 @@ package com.netbanking.auth.api;
 import com.netbanking.auth.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,7 +18,12 @@ public class AuthController {
     @PostMapping("/login/verify-totp")
     public AuthenticationResponse verifyTotp(@Valid @RequestBody LoginTotpVerifyRequest request) { return authService.verifyLoginTotp(request); }
     @PostMapping("/totp/setup")
-    public com.netbanking.totp.api.TotpSetupResponse setupTotp(@Valid @RequestBody LoginRequest request) { return authService.beginTotpSetup(request); }
+    public ResponseEntity<com.netbanking.totp.api.TotpSetupResponse> setupTotp(
+            @Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(authService.beginTotpSetup(request));
+    }
     @PostMapping("/totp/confirm") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void confirmTotp(@Valid @RequestBody com.netbanking.totp.api.TotpConfirmRequest request) { authService.confirmTotpSetup(request); }
 }

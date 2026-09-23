@@ -10,6 +10,7 @@ import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 @Transactional
@@ -35,6 +36,10 @@ public class UserService {
         if (user.getAccountStatus() == UserStatus.LOCKED) user.unlock();
         if (user.getAccountStatus() != UserStatus.ACTIVE) throw new UnauthorizedException("Account is not active.");
     }
-    public void recordFailedLogin(AppUser user) { user.recordFailedLogin(maxFailedAttempts, Instant.now().plus(lockDuration)); }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordFailedLogin(AppUser user) {
+        user.recordFailedLogin(maxFailedAttempts, Instant.now().plus(lockDuration));
+        userRepository.save(user);
+    }
     public void recordSuccessfulLogin(AppUser user) { user.recordSuccessfulLogin(Instant.now()); }
 }
