@@ -4,5 +4,6 @@ public enum TransactionType {
     TRANSFER,
     DEPOSIT,
     WITHDRAWAL,
+    LOAN_PAYMENT,
     REVERSAL
 }

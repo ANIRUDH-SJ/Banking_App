@@ -2,7 +2,9 @@
 
 Team project repository for the Internet Net Banking Application
 
-Microsoft Authenticator enrollment and login verification are documented in
-[docs/authenticator-setup.md](docs/authenticator-setup.md).
-The first backend transaction-history and statement endpoints are documented in
-[docs/transaction-statement-api.md](docs/transaction-statement-api.md).
+Backend API documentation:
+
+- [Microsoft Authenticator setup](docs/authenticator-setup.md)
+- [Card controls](docs/card-api.md)
+- [Loan information and payments](docs/loan-api.md)
+- [Transaction history and statements](docs/transaction-statement-api.md)
