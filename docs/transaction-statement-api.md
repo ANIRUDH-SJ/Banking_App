@@ -16,7 +16,7 @@ before querying any entries.
 | `GET /api/v1/accounts/{accountId}/statement?from=2026-08-01&to=2026-08-31&type=TRANSFER&status=COMPLETED&page=0&size=20` | Filtered, paged ledger entries. All filters are optional. Dates include the whole `to` day. |
 | `GET /api/v1/accounts/{accountId}/statement.csv?from=2026-08-01&to=2026-08-31` | CSV attachment with the same optional filters. Maximum 10,000 rows; narrow the filters if exceeded. |
 
-`type` accepts `TRANSFER`, `DEPOSIT`, `WITHDRAWAL`, or `REVERSAL`. `status` accepts `PENDING`,
+`type` accepts `TRANSFER`, `DEPOSIT`, `WITHDRAWAL`, `LOAN_PAYMENT`, or `REVERSAL`. `status` accepts `PENDING`,
 `PROCESSING`, `COMPLETED`, `FAILED`, or `REVERSED`. Results are ordered by `postedAt` and then `entryId`,
 newest first. These routes report posted ledger entries only; a pending transaction without an entry
 does not appear in a statement.

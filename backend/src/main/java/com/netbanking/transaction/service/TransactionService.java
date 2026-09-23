@@ -198,6 +198,7 @@ public class TransactionService {
             case TRANSFER -> hasDebit && hasCredit;
             case DEPOSIT -> !hasDebit && hasCredit;
             case WITHDRAWAL -> hasDebit && !hasCredit;
+            case LOAN_PAYMENT -> hasDebit && !hasCredit;
             case REVERSAL -> hasDebit || hasCredit;
         };
         if (!valid) {

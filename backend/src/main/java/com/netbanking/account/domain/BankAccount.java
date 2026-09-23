@@ -59,4 +59,18 @@ public class BankAccount {
         this.accountStatus = accountStatus;
         this.closedAt = "CLOSED".equals(accountStatus) ? LocalDateTime.now() : null;
     }
+
+    public void debit(BigDecimal amount) {
+        if (!"ACTIVE".equals(accountStatus)) {
+            throw new IllegalStateException("The source account must be active.");
+        }
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Debit amount must be positive.");
+        }
+        if (availableBalance.compareTo(amount) < 0) {
+            throw new IllegalStateException("The source account has insufficient available balance.");
+        }
+        currentBalance = currentBalance.subtract(amount);
+        availableBalance = availableBalance.subtract(amount);
+    }
 }

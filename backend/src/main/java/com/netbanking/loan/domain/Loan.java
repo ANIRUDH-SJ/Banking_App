@@ -98,4 +98,24 @@ public class Loan {
     public LocalDate getNextDueDate() { return nextDueDate; }
     public LocalDate getMaturityDate() { return maturityDate; }
     public LoanStatus getLoanStatus() { return loanStatus; }
+
+    public void applyPayment(BigDecimal amount) {
+        if (loanStatus != LoanStatus.ACTIVE) {
+            throw new IllegalStateException("Payments are allowed only for active loans.");
+        }
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive.");
+        }
+        if (amount.compareTo(outstandingPrincipal) > 0) {
+            throw new IllegalArgumentException("Payment amount cannot exceed the outstanding principal.");
+        }
+        outstandingPrincipal = outstandingPrincipal.subtract(amount);
+        if (outstandingPrincipal.signum() == 0) {
+            loanStatus = LoanStatus.PAID_OFF;
+            nextDueDate = null;
+        } else if (nextDueDate != null && amount.compareTo(emiAmount) >= 0) {
+            long installmentsCovered = amount.divideToIntegralValue(emiAmount).longValueExact();
+            nextDueDate = nextDueDate.plusMonths(installmentsCovered);
+        }
+    }
 }
