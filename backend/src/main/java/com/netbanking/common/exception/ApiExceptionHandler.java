@@ -13,4 +13,6 @@ public class ApiExceptionHandler {
     Map<String, String> notFound(ResourceNotFoundException exception) { return Map.of("message", exception.getMessage()); }
     @ExceptionHandler(IllegalArgumentException.class) @ResponseStatus(HttpStatus.BAD_REQUEST)
     Map<String, String> badRequest(IllegalArgumentException exception) { return Map.of("message", exception.getMessage()); }
+    @ExceptionHandler(SecurityException.class) @ResponseStatus(HttpStatus.FORBIDDEN)
+    Map<String, String> forbidden(SecurityException exception) { return Map.of("message", exception.getMessage()); }
 }

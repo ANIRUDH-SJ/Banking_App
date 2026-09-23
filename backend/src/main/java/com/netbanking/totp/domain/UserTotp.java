@@ -11,7 +11,7 @@ import java.time.Instant;
 public class UserTotp {
     @Id @Column(name = "user_id") private Long userId;
     @Column(name = "secret_ciphertext", nullable = false) private String secretCiphertext;
-    @Column(name = "is_enabled", nullable = false) private String isEnabled;
+    @Column(name = "is_enabled", nullable = false, columnDefinition = "CHAR(1)") private String isEnabled;
     @Column(name = "confirmed_at") private Instant confirmedAt;
     protected UserTotp() { }
     public UserTotp(Long userId, String secretCiphertext) { this.userId = userId; this.secretCiphertext = secretCiphertext; this.isEnabled = "N"; }
