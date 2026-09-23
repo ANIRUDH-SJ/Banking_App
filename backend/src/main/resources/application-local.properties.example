@@ -14,3 +14,5 @@ spring.jpa.properties.hibernate.format_sql=true
 app.security.jwt.secret=REPLACE_WITH_BASE64_SECRET
 # Base64-encoded 32-byte AES key used to encrypt TOTP secrets at rest.
 app.security.totp.encryption-key=REPLACE_WITH_BASE64_32_BYTE_KEY
+# Short-lived token issued only after password verification and consumed by TOTP login.
+app.security.totp.login-challenge-minutes=5

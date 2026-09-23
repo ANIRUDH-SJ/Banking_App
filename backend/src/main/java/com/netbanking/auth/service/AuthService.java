@@ -2,6 +2,7 @@ package com.netbanking.auth.service;
 
 import com.netbanking.auth.api.*;
 import com.netbanking.common.exception.ConflictException;
+import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.common.exception.UnauthorizedException;
 import com.netbanking.role.service.RoleService;
 import com.netbanking.security.JwtService;
@@ -11,6 +12,7 @@ import com.netbanking.user.service.UserService;
 import com.netbanking.totp.api.TotpSetupResponse;
 import com.netbanking.totp.service.TotpService;
 import java.util.Set;
+import io.jsonwebtoken.JwtException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,12 +45,25 @@ public class AuthService {
             userService.recordFailedLogin(user);
             throw new UnauthorizedException("Invalid username or password.");
         }
-        return new LoginChallengeResponse(null, totpService.isEnabled(user) ? "TOTP_REQUIRED" : "TOTP_SETUP_REQUIRED");
+        if (!totpService.isEnabled(user)) {
+            return new LoginChallengeResponse(null, "TOTP_SETUP_REQUIRED");
+        }
+        return new LoginChallengeResponse(jwtService.createTotpLoginChallenge(user), "TOTP_REQUIRED");
     }
     public AuthenticationResponse verifyLoginTotp(LoginTotpVerifyRequest request) {
-        AppUser user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
+        AppUser user;
+        try {
+            user = userService.requireById(jwtService.parseTotpLoginChallenge(request.challengeId()));
+        } catch (JwtException | IllegalArgumentException | ResourceNotFoundException exception) {
+            throw new UnauthorizedException("Login challenge is invalid or expired.");
+        }
         userService.requireEligibleForLogin(user);
-        totpService.verifyLogin(user, request.code());
+        try {
+            totpService.verifyLogin(user, request.code());
+        } catch (UnauthorizedException exception) {
+            userService.recordFailedLogin(user);
+            throw exception;
+        }
         userService.recordSuccessfulLogin(user);
         Set<String> roles = user.getRoles().stream().map(role -> role.getRoleCode()).collect(java.util.stream.Collectors.toUnmodifiableSet());
         return new AuthenticationResponse(jwtService.createToken(user), "Bearer", user.getUserId(), user.getUsername(), roles);
