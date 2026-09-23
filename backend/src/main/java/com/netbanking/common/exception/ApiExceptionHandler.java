@@ -11,4 +11,6 @@ public class ApiExceptionHandler {
     Map<String, String> unauthorized(RuntimeException exception) { return Map.of("message", exception.getMessage()); }
     @ExceptionHandler(ResourceNotFoundException.class) @ResponseStatus(HttpStatus.NOT_FOUND)
     Map<String, String> notFound(ResourceNotFoundException exception) { return Map.of("message", exception.getMessage()); }
+    @ExceptionHandler(IllegalArgumentException.class) @ResponseStatus(HttpStatus.BAD_REQUEST)
+    Map<String, String> badRequest(IllegalArgumentException exception) { return Map.of("message", exception.getMessage()); }
 }
