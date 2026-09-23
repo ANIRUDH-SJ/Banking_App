@@ -15,4 +15,6 @@ public class ApiExceptionHandler {
     Map<String, String> badRequest(IllegalArgumentException exception) { return Map.of("message", exception.getMessage()); }
     @ExceptionHandler(SecurityException.class) @ResponseStatus(HttpStatus.FORBIDDEN)
     Map<String, String> forbidden(SecurityException exception) { return Map.of("message", exception.getMessage()); }
+    @ExceptionHandler(IllegalStateException.class) @ResponseStatus(HttpStatus.CONFLICT)
+    Map<String, String> illegalState(IllegalStateException exception) { return Map.of("message", exception.getMessage()); }
 }
