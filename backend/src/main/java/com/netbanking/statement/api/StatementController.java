@@ -1,10 +1,10 @@
 package com.netbanking.statement.api;
 
 import com.netbanking.security.SecurityContextHelper;
-import com.netbanking.statement.api.StatementFilter.TransactionStatus;
-import com.netbanking.statement.api.StatementFilter.TransactionType;
 import com.netbanking.statement.service.StatementService;
 import com.netbanking.transaction.api.TransactionResponse;
+import com.netbanking.transaction.domain.TransactionStatus;
+import com.netbanking.transaction.domain.TransactionType;
 import java.time.LocalDate;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;

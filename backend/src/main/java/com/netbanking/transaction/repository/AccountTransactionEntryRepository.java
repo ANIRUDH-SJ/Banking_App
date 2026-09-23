@@ -1,6 +1,7 @@
 package com.netbanking.transaction.repository;
 
 import com.netbanking.transaction.domain.AccountTransactionEntry;
+import com.netbanking.transaction.domain.EntryType;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,4 +22,7 @@ public interface AccountTransactionEntryRepository extends JpaRepository<Account
 
     @EntityGraph(attributePaths = "transaction")
     Optional<AccountTransactionEntry> findByEntryIdAndAccountId(Long entryId, Long accountId);
+
+    boolean existsByTransactionTransactionIdAndAccountIdAndEntryType(
+            Long transactionId, Long accountId, EntryType entryType);
 }

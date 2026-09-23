@@ -6,6 +6,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -28,8 +30,9 @@ public class AccountTransactionEntry {
     @JoinColumn(name = "transaction_id", nullable = false)
     private BankTransaction transaction;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "entry_type", nullable = false)
-    private String entryType;
+    private EntryType entryType;
 
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
@@ -43,10 +46,20 @@ public class AccountTransactionEntry {
     protected AccountTransactionEntry() {
     }
 
+    public AccountTransactionEntry(Long accountId, BankTransaction transaction, EntryType entryType,
+                                   BigDecimal amount, BigDecimal balanceAfter) {
+        this.accountId = accountId;
+        this.transaction = transaction;
+        this.entryType = entryType;
+        this.amount = amount;
+        this.balanceAfter = balanceAfter;
+        this.postedAt = LocalDateTime.now();
+    }
+
     public Long getEntryId() { return entryId; }
     public Long getAccountId() { return accountId; }
     public BankTransaction getTransaction() { return transaction; }
-    public String getEntryType() { return entryType; }
+    public EntryType getEntryType() { return entryType; }
     public BigDecimal getAmount() { return amount; }
     public BigDecimal getBalanceAfter() { return balanceAfter; }
     public LocalDateTime getPostedAt() { return postedAt; }

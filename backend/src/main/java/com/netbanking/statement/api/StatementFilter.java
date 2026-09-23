@@ -1,5 +1,7 @@
 package com.netbanking.statement.api;
 
+import com.netbanking.transaction.domain.TransactionStatus;
+import com.netbanking.transaction.domain.TransactionType;
 import java.time.LocalDate;
 
 public record StatementFilter(LocalDate from, LocalDate to, TransactionType type, TransactionStatus status) {
@@ -10,7 +12,4 @@ public record StatementFilter(LocalDate from, LocalDate to, TransactionType type
         }
     }
 
-    public enum TransactionType { TRANSFER, DEPOSIT, WITHDRAWAL, REVERSAL }
-
-    public enum TransactionStatus { PENDING, PROCESSING, COMPLETED, FAILED, REVERSED }
 }

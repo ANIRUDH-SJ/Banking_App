@@ -12,6 +12,7 @@ before querying any entries.
 | --- | --- |
 | `GET /api/v1/accounts/{accountId}/transactions?page=0&size=20` | Newest ledger entries for the account, paged; size 1–100. |
 | `GET /api/v1/accounts/{accountId}/transactions/{entryId}` | One entry, scoped to the account. |
+| `GET /api/v1/accounts/{accountId}/transactions/{entryId}/status-history` | Ordered lifecycle history for the entry's transaction. |
 | `GET /api/v1/accounts/{accountId}/statement?from=2026-08-01&to=2026-08-31&type=TRANSFER&status=COMPLETED&page=0&size=20` | Filtered, paged ledger entries. All filters are optional. Dates include the whole `to` day. |
 | `GET /api/v1/accounts/{accountId}/statement.csv?from=2026-08-01&to=2026-08-31` | CSV attachment with the same optional filters. Maximum 10,000 rows; narrow the filters if exceeded. |
 
@@ -41,8 +42,25 @@ Example response item:
 Invalid page sizes and inverted date ranges return `400`; an entry absent from the specified account
 returns `404`; an account the user does not hold returns `403`. Oversized CSV exports return `413`.
 
-## Next integration step
+## Internal write contract
 
-Posting financial transactions, assigning references, and recording lifecycle changes must be integrated
-with transfer and bill-payment services so balance updates, transaction records, ledger entries, idempotency,
-and audit events share one database transaction. No public write endpoint is exposed by this slice.
+`TransactionService` exposes transactional methods for other backend services; there is intentionally no
+customer-facing write controller:
+
+- `createTransaction` validates transaction shape and amount, generates a stable unique reference, persists
+  a pending transaction, and records its initial status history in one database transaction.
+- `changeStatus` enforces `PENDING -> PROCESSING -> COMPLETED`, failure from a pending or processing state,
+  and reversal of a completed transaction. Completion requires all applicable debit and credit entries.
+  Every accepted transition creates an immutable history row.
+- `postEntry` records a debit or credit only for the matching transaction account while the transaction is
+  processing. The caller must update the balance in the same surrounding database transaction.
+- `getByReference` provides backend services with a stable lookup for receipts and idempotent workflows.
+
+Apply `database/10_transaction_status_history.sql` after the existing transaction schema before running
+the completed service.
+
+## Integration boundary
+
+Transfer and bill-payment services must call these write methods inside their own database transaction so
+balance updates, transaction records, ledger entries, idempotency, and audit events commit or roll back
+together. No public transaction-write endpoint is exposed by this module.

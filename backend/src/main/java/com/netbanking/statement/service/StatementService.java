@@ -82,10 +82,10 @@ public class StatementService {
             if (filter.type() != null || filter.status() != null) {
                 Join<Object, Object> transaction = root.join("transaction");
                 if (filter.type() != null) {
-                    predicates.add(builder.equal(transaction.get("transactionType"), filter.type().name()));
+                    predicates.add(builder.equal(transaction.get("transactionType"), filter.type()));
                 }
                 if (filter.status() != null) {
-                    predicates.add(builder.equal(transaction.get("transactionStatus"), filter.status().name()));
+                    predicates.add(builder.equal(transaction.get("transactionStatus"), filter.status()));
                 }
             }
             return builder.and(predicates.toArray(Predicate[]::new));

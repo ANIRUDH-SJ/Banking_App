@@ -3,6 +3,7 @@ package com.netbanking.transaction.api;
 import com.netbanking.security.SecurityContextHelper;
 import com.netbanking.transaction.service.TransactionService;
 import org.springframework.data.domain.Page;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,5 +30,12 @@ public class TransactionController {
     @GetMapping("/{entryId}")
     public TransactionResponse get(@PathVariable Long accountId, @PathVariable Long entryId) {
         return transactionService.getAccountTransaction(SecurityContextHelper.currentUserId(), accountId, entryId);
+    }
+
+    @GetMapping("/{entryId}/status-history")
+    public List<TransactionStatusHistoryResponse> statusHistory(
+            @PathVariable Long accountId, @PathVariable Long entryId) {
+        return transactionService.getStatusHistory(
+                SecurityContextHelper.currentUserId(), accountId, entryId);
     }
 }
