@@ -55,7 +55,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/api/v1/health",
-                                "/api/v1/auth/**")
+                                "/api/v1/auth/**",
+                                "/actuator/health/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(httpBasic -> httpBasic.disable())
