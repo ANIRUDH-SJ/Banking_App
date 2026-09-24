@@ -1,4 +1,4 @@
--- Beneficiaries, transfers, billers, and bill payments.
+-- Features 12-15: beneficiaries, transfers, billers and bill payments.
 -- Run after 10_transaction_status_history.sql, 10_notification_tables.sql, and 13_loan_payment_tables.sql as NET_BANKING_APP.
 SET ECHO ON
 SET FEEDBACK ON

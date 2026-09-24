@@ -21,12 +21,4 @@ class OtpVerificationTest {
         otp.recordFailure(2);
         assertEquals(OtpStatus.FAILED, otp.getStatus());
     }
-
-    @Test
-    void paymentIntentMustMatchTheIssuedChallenge() {
-        OtpVerification otp = new OtpVerification(1L, "challenge", "hash", OtpPurpose.FUND_TRANSFER,
-                Instant.now().plusSeconds(300), "intent-a");
-        assertTrue(otp.matchesIntent("intent-a"));
-        assertFalse(otp.matchesIntent("intent-b"));
-    }
 }

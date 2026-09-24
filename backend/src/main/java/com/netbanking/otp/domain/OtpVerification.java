@@ -15,26 +15,17 @@ public class OtpVerification {
     @Column(name = "expires_at", nullable = false) private Instant expiresAt;
     @Column(name = "verified_at") private Instant verifiedAt;
     @Column(name = "failed_attempts", nullable = false) private int failedAttempts;
-    @Column(name = "intent_digest", length = 64) private String intentDigest;
-    @Version private Long version;
-    @Column(name = "created_at", nullable = false) private Instant createdAt;
     protected OtpVerification() { }
     public OtpVerification(Long userId, String challengeId, String otpHash, OtpPurpose purpose, Instant expiresAt) {
-        this(userId, challengeId, otpHash, purpose, expiresAt, null);
-    }
-    public OtpVerification(Long userId, String challengeId, String otpHash, OtpPurpose purpose, Instant expiresAt, String intentDigest) {
-        this.userId = userId; this.challengeId = challengeId; this.otpHash = otpHash; this.purpose = purpose; this.expiresAt = expiresAt; this.intentDigest = intentDigest; this.status = OtpStatus.PENDING; this.createdAt = Instant.now();
+        this.userId = userId; this.challengeId = challengeId; this.otpHash = otpHash; this.purpose = purpose; this.expiresAt = expiresAt; this.status = OtpStatus.PENDING;
     }
     public Long getUserId() { return userId; }
     public String getChallengeId() { return challengeId; }
     public String getOtpHash() { return otpHash; }
     public OtpPurpose getPurpose() { return purpose; }
     public OtpStatus getStatus() { return status; }
-    public String getIntentDigest() { return intentDigest; }
-    public Instant getCreatedAt() { return createdAt; }
     public boolean isExpired(Instant now) { return expiresAt.isBefore(now) || expiresAt.equals(now); }
     public void markExpired() { status = OtpStatus.EXPIRED; }
     public void markVerified() { status = OtpStatus.VERIFIED; verifiedAt = Instant.now(); }
     public void recordFailure(int maxAttempts) { failedAttempts++; if (failedAttempts >= maxAttempts) status = OtpStatus.FAILED; }
-    public boolean matchesIntent(String digest) { return intentDigest != null && intentDigest.equals(digest); }
 }
