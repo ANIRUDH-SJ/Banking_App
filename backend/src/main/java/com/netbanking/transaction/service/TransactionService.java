@@ -195,7 +195,7 @@ public class TransactionService {
         boolean hasDebit = command.debitAccountId() != null;
         boolean hasCredit = command.creditAccountId() != null;
         boolean valid = switch (command.type()) {
-            case TRANSFER -> hasDebit && hasCredit;
+            case TRANSFER -> hasDebit && (hasCredit || command.beneficiaryId() != null);
             case DEPOSIT -> !hasDebit && hasCredit;
             case WITHDRAWAL -> hasDebit && !hasCredit;
             case LOAN_PAYMENT -> hasDebit && !hasCredit;
