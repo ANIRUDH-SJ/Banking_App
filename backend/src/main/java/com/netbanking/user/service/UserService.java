@@ -37,9 +37,10 @@ public class UserService {
         if (user.getAccountStatus() != UserStatus.ACTIVE) throw new UnauthorizedException("Account is not active.");
     }
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordFailedLogin(AppUser user) {
+    public void recordFailedLogin(Long userId) {
+        AppUser user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User was not found."));
         user.recordFailedLogin(maxFailedAttempts, Instant.now().plus(lockDuration));
-        userRepository.save(user);
     }
     public void recordSuccessfulLogin(AppUser user) { user.recordSuccessfulLogin(Instant.now()); }
 }

@@ -71,7 +71,20 @@ class AuthServiceTest {
         assertThatThrownBy(() -> service().verifyLoginTotp(
                 new LoginTotpVerifyRequest("login-challenge", "000000")))
                 .isInstanceOf(UnauthorizedException.class);
-        verify(userService).recordFailedLogin(user);
+        verify(userService).recordFailedLogin(7L);
+    }
+
+    @Test
+    void invalidPasswordDuringAuthenticatorSetupCountsAsFailedLogin() {
+        AppUser user = user();
+        when(userService.requireByUsernameOrEmail("asha")).thenReturn(user);
+        when(passwordEncoder.matches("wrong-password", "password-hash")).thenReturn(false);
+
+        assertThatThrownBy(() -> service().beginTotpSetup(
+                new LoginRequest("asha", "wrong-password")))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(userService).recordFailedLogin(7L);
     }
 
     private AuthService service() {

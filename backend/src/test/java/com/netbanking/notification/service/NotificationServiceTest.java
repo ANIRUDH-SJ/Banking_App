@@ -11,6 +11,9 @@ import com.netbanking.audit.service.AuditLogService;
 import com.netbanking.notification.domain.Notification;
 import com.netbanking.notification.repository.NotificationRepository;
 import java.util.Optional;
+import java.util.List;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -52,5 +55,26 @@ class NotificationServiceTest {
         NotificationService service = new NotificationService(repository, auditLogService);
 
         assertThatCode(() -> service.markRead(7L, 15L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void paginatesNotificationHistoryWithABoundedPageSize() {
+        Notification notification = new Notification(7L, "ACCOUNT", "Deposit received", "A deposit was received.");
+        when(repository.findByUserId(eq(7L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(notification)));
+
+        var page = new NotificationService(repository, auditLogService)
+                .getForUser(7L, 0, 20);
+
+        org.assertj.core.api.Assertions.assertThat(page.getContent()).containsExactly(notification);
+    }
+
+    @Test
+    void rejectsNotificationContentThatExceedsDatabaseLimits() {
+        NotificationService service = new NotificationService(repository, auditLogService);
+
+        assertThatThrownBy(() -> service.createInApp(7L, "ACCOUNT", "x".repeat(201), "message"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("200");
     }
 }

@@ -20,6 +20,7 @@ services:
       service-registry:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: local
       SPRING_DATASOURCE_URL: ${DOCKER_DB_URL:-jdbc:oracle:thin:@//host.docker.internal:1521/FREEPDB1}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-net_banking_app}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}

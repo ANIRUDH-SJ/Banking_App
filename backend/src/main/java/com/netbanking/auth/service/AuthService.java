@@ -42,7 +42,7 @@ public class AuthService {
         AppUser user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
         userService.requireEligibleForLogin(user);
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            userService.recordFailedLogin(user);
+            userService.recordFailedLogin(user.getUserId());
             throw new UnauthorizedException("Invalid username or password.");
         }
         if (!totpService.isEnabled(user)) {
@@ -61,7 +61,7 @@ public class AuthService {
         try {
             totpService.verifyLogin(user, request.code());
         } catch (UnauthorizedException exception) {
-            userService.recordFailedLogin(user);
+            userService.recordFailedLogin(user.getUserId());
             throw exception;
         }
         userService.recordSuccessfulLogin(user);
@@ -74,12 +74,20 @@ public class AuthService {
     }
     public void confirmTotpSetup(com.netbanking.totp.api.TotpConfirmRequest request) {
         AppUser user = verifyCredentials(request.credentials());
-        totpService.confirmSetup(user, request.code());
+        try {
+            totpService.confirmSetup(user, request.code());
+        } catch (UnauthorizedException exception) {
+            userService.recordFailedLogin(user.getUserId());
+            throw exception;
+        }
     }
     private AppUser verifyCredentials(LoginRequest request) {
         AppUser user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
         userService.requireEligibleForLogin(user);
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) throw new UnauthorizedException("Invalid username or password.");
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            userService.recordFailedLogin(user.getUserId());
+            throw new UnauthorizedException("Invalid username or password.");
+        }
         return user;
     }
 }

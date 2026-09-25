@@ -4,14 +4,12 @@ import com.netbanking.admin.service.AdminService;
 import com.netbanking.audit.domain.AuditEvent;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@Profile("local")
 @PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/v1/admin")
 public class AdminAuditController {
