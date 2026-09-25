@@ -1,7 +1,6 @@
 # Beneficiaries, transfers, and bill payments
 
-All routes require a bearer JWT. Apply the database scripts through
-`database/18_identity_case_insensitive_uniqueness.sql` in filename order.
+All routes require a bearer JWT and are reached through the gateway. Payments owns its schema and Flyway migrations.
 
 | Method and path | Result |
 | --- | --- |
@@ -12,6 +11,8 @@ All routes require a bearer JWT. Apply the database scripts through
 | `DELETE /api/v1/beneficiaries/{beneficiaryId}` | Disables a beneficiary. |
 | `GET /api/v1/billers` | Lists active billers and their amount limits. |
 | `POST /api/v1/transfers/otp-challenges` | Sends a transfer OTP for an owned source account. |
+| `GET /api/v1/transfers` | Latest 100 customer transfer workflows, including pending states. |
+| `GET /api/v1/bill-payments` | Latest 100 customer bill-payment workflows. |
 | `POST /api/v1/transfers` | Performs an OTP-authorized beneficiary transfer. |
 | `POST /api/v1/bill-payments/otp-challenges` | Sends a bill-payment OTP for an owned source account. |
 | `POST /api/v1/bill-payments` | Performs an OTP-authorized bill payment. |
@@ -22,6 +23,13 @@ and bill reference. Changing any of those fields after requesting the OTP causes
 
 Transfer, bill-payment, and loan-payment requests require a client-supplied idempotency key. Repeating an
 exact completed request returns the original receipt. Reusing the key with changed details returns
-`409 Conflict`. Payment debits lock the customer and source account, then create the transaction lifecycle
-record and debit ledger entry in the same database transaction. Successful operations create an audit
-event in that transaction and publish the customer notification only after commit.
+`409 Conflict`. Payments persists intent and authorization state before sending an idempotent ledger command.
+Accounts-ledger owns the account locks, balances, ledger entries and stable transaction receipt.
+A successful workflow queues durable audit and notification events. Delivery is eventual and deduplicated.
+
+Network timeouts return `503` and do not prove that a debit failed. Retry the exact request with the same
+idempotency key; background recovery also resumes authorized operations. History can show
+`AWAITING_OTP`, `AUTHORIZED`, `COMPLETED`, or `FAILED`. Pending rows have null transaction IDs/references.
+
+Transfers accept only accounts held by this bank and validate the destination IFSC; external destinations
+are rejected before debit. Bill payments remain simulated. See [service contracts and recovery](microservices-architecture.md).

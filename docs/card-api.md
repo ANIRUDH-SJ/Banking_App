@@ -16,4 +16,4 @@ card, blocking only for an active card, and unblocking only for a blocked card. 
 The database stores a provider token and the final four digits. API responses expose only a value such as
 `************4242`. The model and schema contain no field for a complete card number or CVV.
 
-Apply `database/11_card_tables.sql` after the account schema.
+The products service applies its own Flyway migrations in `NB_PRODUCTS`. Customer and account IDs are logical references; no cross-schema foreign keys are used.
