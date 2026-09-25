@@ -27,6 +27,7 @@ import com.netbanking.user.domain.AppUser;
 import com.netbanking.user.repository.AppUserRepository;
 import java.math.BigDecimal;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,9 +36,10 @@ public class PaymentService {
     private final AccountService accountService; private final BankAccountRepository accountRepository; private final BeneficiaryService beneficiaryService; private final BillerService billerService;
     private final OtpService otpService; private final AppUserRepository userRepository; private final BankTransactionRepository transactionRepository; private final TransactionService transactionService;
     private final FundTransferRepository transferRepository; private final BillPaymentRepository billPaymentRepository;
+    private final PaymentAuditService paymentAuditService; private final ApplicationEventPublisher eventPublisher;
     private final BigDecimal maxTransferAmount;
-    public PaymentService(AccountService accountService, BankAccountRepository accountRepository, BeneficiaryService beneficiaryService, BillerService billerService, OtpService otpService, AppUserRepository userRepository, BankTransactionRepository transactionRepository, TransactionService transactionService, FundTransferRepository transferRepository, BillPaymentRepository billPaymentRepository, @Value("${app.payments.transfer-max-amount:100000}") BigDecimal maxTransferAmount) {
-        this.accountService = accountService; this.accountRepository = accountRepository; this.beneficiaryService = beneficiaryService; this.billerService = billerService; this.otpService = otpService; this.userRepository = userRepository; this.transactionRepository = transactionRepository; this.transactionService = transactionService; this.transferRepository = transferRepository; this.billPaymentRepository = billPaymentRepository; this.maxTransferAmount = maxTransferAmount;
+    public PaymentService(AccountService accountService, BankAccountRepository accountRepository, BeneficiaryService beneficiaryService, BillerService billerService, OtpService otpService, AppUserRepository userRepository, BankTransactionRepository transactionRepository, TransactionService transactionService, FundTransferRepository transferRepository, BillPaymentRepository billPaymentRepository, PaymentAuditService paymentAuditService, ApplicationEventPublisher eventPublisher, @Value("${app.payments.transfer-max-amount:100000}") BigDecimal maxTransferAmount) {
+        this.accountService = accountService; this.accountRepository = accountRepository; this.beneficiaryService = beneficiaryService; this.billerService = billerService; this.otpService = otpService; this.userRepository = userRepository; this.transactionRepository = transactionRepository; this.transactionService = transactionService; this.transferRepository = transferRepository; this.billPaymentRepository = billPaymentRepository; this.paymentAuditService = paymentAuditService; this.eventPublisher = eventPublisher; this.maxTransferAmount = maxTransferAmount;
     }
     public OtpChallengeResponse issueTransferOtp(Long userId, TransferOtpChallengeRequest request) {
         accountService.requireOwnership(userId, request.sourceAccountId());
@@ -58,6 +60,14 @@ public class PaymentService {
                         request.amount(), request.billReference()));
     }
     public PaymentReceiptResponse transfer(Long userId, FundTransferRequest request) {
+        try {
+            return executeTransfer(userId, request);
+        } catch (RuntimeException failure) {
+            recordRejection(userId, request.sourceAccountId(), "FUND_TRANSFER", failure);
+            throw failure;
+        }
+    }
+    private PaymentReceiptResponse executeTransfer(Long userId, FundTransferRequest request) {
         lockUserForPayment(userId);
         String fingerprint = PaymentIntent.transferFingerprint(userId, request.sourceAccountId(),
                 request.beneficiaryId(), request.amount(), request.narration());
@@ -71,9 +81,20 @@ public class PaymentService {
         if (account.getAccountNumber().equals(beneficiary.getAccountNumber())) throw new IllegalArgumentException("Source and destination accounts must be different.");
         TransactionRecord transaction = createAndCompleteTransaction(account, userId, beneficiary.getBeneficiaryId(), TransactionType.TRANSFER, request.amount(), blankToNull(request.narration()));
         FundTransfer transfer = transferRepository.save(new FundTransfer(transaction.transactionId(), account.getAccountId(), beneficiary.getBeneficiaryId(), userId, request.idempotencyKey(), fingerprint));
+        paymentAuditService.recordSuccess(userId, account.getAccountId(), "FUND_TRANSFER", transaction.reference());
+        eventPublisher.publishEvent(new PaymentCompletedEvent(userId, "Fund transfer",
+                transaction.reference(), transaction.amount(), transaction.currencyCode()));
         return new PaymentReceiptResponse(transfer.getTransferId(), transaction.transactionId(), transaction.reference(), transfer.getTransferStatus(), transaction.amount(), transaction.currencyCode());
     }
     public PaymentReceiptResponse payBill(Long userId, BillPaymentRequest request) {
+        try {
+            return executeBillPayment(userId, request);
+        } catch (RuntimeException failure) {
+            recordRejection(userId, request.sourceAccountId(), "BILL_PAYMENT", failure);
+            throw failure;
+        }
+    }
+    private PaymentReceiptResponse executeBillPayment(Long userId, BillPaymentRequest request) {
         lockUserForPayment(userId);
         String fingerprint = PaymentIntent.billPaymentFingerprint(userId, request.sourceAccountId(),
                 request.billerId(), request.amount(), request.billReference());
@@ -86,6 +107,9 @@ public class PaymentService {
         BankAccount account = lockedActiveAccount(request.sourceAccountId());
         TransactionRecord transaction = createAndCompleteTransaction(account, userId, null, TransactionType.WITHDRAWAL, request.amount(), "Bill payment: " + biller.getBillerCode());
         BillPayment payment = billPaymentRepository.save(new BillPayment(transaction.transactionId(), account.getAccountId(), biller.getBillerId(), userId, request.billReference().trim(), request.idempotencyKey(), fingerprint));
+        paymentAuditService.recordSuccess(userId, account.getAccountId(), "BILL_PAYMENT", transaction.reference());
+        eventPublisher.publishEvent(new PaymentCompletedEvent(userId, "Bill payment",
+                transaction.reference(), transaction.amount(), transaction.currencyCode()));
         return new PaymentReceiptResponse(payment.getBillPaymentId(), transaction.transactionId(), transaction.reference(), payment.getPaymentStatus(), transaction.amount(), transaction.currencyCode());
     }
     private OtpChallengeResponse issueOtp(Long userId, OtpPurpose purpose, String intentDigest) { AppUser user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User was not found.")); return new OtpChallengeResponse(otpService.issue(user, purpose, intentDigest).challengeId(), "OTP_SENT"); }
@@ -127,6 +151,13 @@ public class PaymentService {
             prior.bindLegacyRequest(fingerprint);
         }
         return billReceipt(prior);
+    }
+    private void recordRejection(Long userId, Long sourceAccountId, String operation, RuntimeException failure) {
+        try {
+            paymentAuditService.recordRejected(userId, sourceAccountId, operation, failure);
+        } catch (RuntimeException auditFailure) {
+            failure.addSuppressed(auditFailure);
+        }
     }
     private String blankToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 }

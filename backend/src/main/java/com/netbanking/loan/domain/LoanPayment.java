@@ -36,6 +36,9 @@ public class LoanPayment {
     @Column(name = "idempotency_key", nullable = false, length = 64)
     private String idempotencyKey;
 
+    @Column(name = "request_fingerprint", length = 64)
+    private String requestFingerprint;
+
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
@@ -57,7 +60,7 @@ public class LoanPayment {
 
     public LoanPayment(Long loanId, Long sourceAccountId, Long transactionId,
                        String transactionReference, String idempotencyKey, BigDecimal amount,
-                       String currencyCode, BigDecimal outstandingAfter) {
+                       String currencyCode, BigDecimal outstandingAfter, String requestFingerprint) {
         this.loanId = loanId;
         this.sourceAccountId = sourceAccountId;
         this.transactionId = transactionId;
@@ -66,6 +69,7 @@ public class LoanPayment {
         this.amount = amount;
         this.currencyCode = currencyCode;
         this.outstandingAfter = outstandingAfter;
+        this.requestFingerprint = requestFingerprint;
         this.paymentStatus = LoanPaymentStatus.COMPLETED;
     }
 
@@ -82,9 +86,12 @@ public class LoanPayment {
     public Long getTransactionId() { return transactionId; }
     public String getTransactionReference() { return transactionReference; }
     public String getIdempotencyKey() { return idempotencyKey; }
+    public String getRequestFingerprint() { return requestFingerprint; }
     public BigDecimal getAmount() { return amount; }
     public String getCurrencyCode() { return currencyCode; }
     public BigDecimal getOutstandingAfter() { return outstandingAfter; }
     public LoanPaymentStatus getPaymentStatus() { return paymentStatus; }
     public LocalDateTime getPaidAt() { return paidAt; }
+    public boolean matchesRequest(String fingerprint) { return fingerprint != null && fingerprint.equals(requestFingerprint); }
+    public void bindLegacyRequest(String fingerprint) { if (requestFingerprint == null) requestFingerprint = fingerprint; }
 }

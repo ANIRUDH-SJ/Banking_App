@@ -3,6 +3,7 @@ package com.netbanking.payment.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.netbanking.account.repository.BankAccountRepository;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +43,8 @@ class PaymentServiceTest {
     @Mock private TransactionService transactionService;
     @Mock private FundTransferRepository transferRepository;
     @Mock private BillPaymentRepository billPaymentRepository;
+    @Mock private PaymentAuditService paymentAuditService;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @Test
     void rejectsAnIdempotencyKeyReusedForDifferentTransferDetails() {
@@ -59,6 +63,10 @@ class PaymentServiceTest {
         assertThatThrownBy(() -> service().transfer(7L, changed))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("different transfer");
+        verify(paymentAuditService).recordRejected(
+                org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(10L),
+                org.mockito.ArgumentMatchers.eq("FUND_TRANSFER"),
+                org.mockito.ArgumentMatchers.any(ConflictException.class));
         verifyNoInteractions(otpService, accountService);
     }
 
@@ -86,7 +94,8 @@ class PaymentServiceTest {
     private PaymentService service() {
         return new PaymentService(accountService, accountRepository, beneficiaryService, billerService,
                 otpService, userRepository, transactionRepository, transactionService,
-                transferRepository, billPaymentRepository, new BigDecimal("100000"));
+                transferRepository, billPaymentRepository, paymentAuditService, eventPublisher,
+                new BigDecimal("100000"));
     }
 
     private static AppUser user() {

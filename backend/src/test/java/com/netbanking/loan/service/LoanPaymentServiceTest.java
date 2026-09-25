@@ -1,6 +1,7 @@
 package com.netbanking.loan.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -11,6 +12,7 @@ import com.netbanking.account.domain.BankAccount;
 import com.netbanking.account.repository.BankAccountRepository;
 import com.netbanking.account.service.AccountService;
 import com.netbanking.customer.service.CustomerService;
+import com.netbanking.common.exception.ConflictException;
 import com.netbanking.loan.api.CreateLoanPaymentRequest;
 import com.netbanking.loan.domain.Loan;
 import com.netbanking.loan.domain.LoanPayment;
@@ -100,7 +102,8 @@ class LoanPaymentServiceTest {
         CreateLoanPaymentRequest request = request("payment-key-001");
         LoanPayment existing = new LoanPayment(
                 4L, 8L, 55L, "TXN-LOAN-55", "payment-key-001",
-                new BigDecimal("200.00"), "INR", new BigDecimal("74800.00"));
+                new BigDecimal("200.00"), "INR", new BigDecimal("74800.00"),
+                LoanPaymentIntent.fingerprint(7L, 4L, 8L, new BigDecimal("200.00")));
         when(customerService.requireCustomerIdForUser(7L)).thenReturn(21L);
         when(loanRepository.findByLoanIdAndCustomerIdForUpdate(4L, 21L))
                 .thenReturn(Optional.of(loan));
@@ -112,6 +115,25 @@ class LoanPaymentServiceTest {
         assertThat(response.transactionReference()).isEqualTo("TXN-LOAN-55");
         verifyNoInteractions(accountService, accountRepository, transactionService, auditWriter);
         verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectsAnIdempotencyKeyReusedWithDifferentPaymentDetails() {
+        CreateLoanPaymentRequest request = request("payment-key-001");
+        LoanPayment existing = new LoanPayment(
+                4L, 9L, 55L, "TXN-LOAN-55", "payment-key-001",
+                new BigDecimal("100.00"), "INR", new BigDecimal("74900.00"),
+                LoanPaymentIntent.fingerprint(7L, 4L, 9L, new BigDecimal("100.00")));
+        when(customerService.requireCustomerIdForUser(7L)).thenReturn(21L);
+        when(loanRepository.findByLoanIdAndCustomerIdForUpdate(4L, 21L))
+                .thenReturn(Optional.of(loan));
+        when(paymentRepository.findByLoanIdAndIdempotencyKey(4L, "payment-key-001"))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> paymentService.pay(7L, 4L, request))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("different loan payment");
+        verifyNoInteractions(accountService, accountRepository, transactionService, auditWriter);
     }
 
     private static CreateLoanPaymentRequest request(String key) {
