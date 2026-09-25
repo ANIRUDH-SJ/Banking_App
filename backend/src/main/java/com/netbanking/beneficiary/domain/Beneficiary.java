@@ -15,6 +15,7 @@ public class Beneficiary {
     @Column(name = "bank_name", nullable = false) private String bankName;
     @Column(name = "beneficiary_status", nullable = false) private String beneficiaryStatus;
     @Column(name = "activated_at") private Instant activatedAt;
+    @Column(name = "created_at", nullable = false) private Instant createdAt;
     protected Beneficiary() { }
     public Beneficiary(Long customerId, String nickname, String beneficiaryName, String accountNumber, String ifscCode, String bankName) {
         this.customerId = customerId; this.nickname = nickname; this.beneficiaryName = beneficiaryName;
@@ -29,7 +30,12 @@ public class Beneficiary {
     public String getBankName() { return bankName; }
     public String getBeneficiaryStatus() { return beneficiaryStatus; }
     public Instant getActivatedAt() { return activatedAt; }
+    public Instant getCreatedAt() { return createdAt; }
     public boolean isActive() { return "ACTIVE".equals(beneficiaryStatus); }
-    public void activate() { beneficiaryStatus = "ACTIVE"; activatedAt = Instant.now(); }
+    public void activate() {
+        if (!"PENDING".equals(beneficiaryStatus)) throw new IllegalStateException("Only a pending beneficiary can be activated.");
+        beneficiaryStatus = "ACTIVE"; activatedAt = Instant.now();
+    }
     public void disable() { beneficiaryStatus = "DISABLED"; }
+    @PrePersist void initializeCreatedAt() { if (createdAt == null) createdAt = Instant.now(); }
 }

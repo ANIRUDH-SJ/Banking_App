@@ -15,15 +15,27 @@ public class OtpVerification {
     @Column(name = "expires_at", nullable = false) private Instant expiresAt;
     @Column(name = "verified_at") private Instant verifiedAt;
     @Column(name = "failed_attempts", nullable = false) private int failedAttempts;
+    @Column(name = "intent_digest", length = 64) private String intentDigest;
+    @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @Version @Column(name = "version", nullable = false) private long version;
     protected OtpVerification() { }
     public OtpVerification(Long userId, String challengeId, String otpHash, OtpPurpose purpose, Instant expiresAt) {
-        this.userId = userId; this.challengeId = challengeId; this.otpHash = otpHash; this.purpose = purpose; this.expiresAt = expiresAt; this.status = OtpStatus.PENDING;
+        this(userId, challengeId, otpHash, purpose, expiresAt, null);
     }
+    public OtpVerification(Long userId, String challengeId, String otpHash, OtpPurpose purpose,
+                           Instant expiresAt, String intentDigest) {
+        this.userId = userId; this.challengeId = challengeId; this.otpHash = otpHash; this.purpose = purpose;
+        this.expiresAt = expiresAt; this.intentDigest = intentDigest; this.status = OtpStatus.PENDING;
+    }
+    @PrePersist void initializeCreatedAt() { if (createdAt == null) createdAt = Instant.now(); }
     public Long getUserId() { return userId; }
     public String getChallengeId() { return challengeId; }
     public String getOtpHash() { return otpHash; }
     public OtpPurpose getPurpose() { return purpose; }
     public OtpStatus getStatus() { return status; }
+    public int getFailedAttempts() { return failedAttempts; }
+    public String getIntentDigest() { return intentDigest; }
+    public boolean matchesIntent(String expectedDigest) { return expectedDigest != null && expectedDigest.equals(intentDigest); }
     public boolean isExpired(Instant now) { return expiresAt.isBefore(now) || expiresAt.equals(now); }
     public void markExpired() { status = OtpStatus.EXPIRED; }
     public void markVerified() { status = OtpStatus.VERIFIED; verifiedAt = Instant.now(); }

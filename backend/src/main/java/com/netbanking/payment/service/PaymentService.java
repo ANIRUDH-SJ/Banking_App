@@ -8,6 +8,7 @@ import com.netbanking.beneficiary.service.BeneficiaryService;
 import com.netbanking.biller.domain.Biller;
 import com.netbanking.biller.service.BillerService;
 import com.netbanking.common.exception.ResourceNotFoundException;
+import com.netbanking.common.exception.ConflictException;
 import com.netbanking.otp.domain.OtpPurpose;
 import com.netbanking.otp.service.OtpService;
 import com.netbanking.payment.api.*;
@@ -38,29 +39,57 @@ public class PaymentService {
     public PaymentService(AccountService accountService, BankAccountRepository accountRepository, BeneficiaryService beneficiaryService, BillerService billerService, OtpService otpService, AppUserRepository userRepository, BankTransactionRepository transactionRepository, TransactionService transactionService, FundTransferRepository transferRepository, BillPaymentRepository billPaymentRepository, @Value("${app.payments.transfer-max-amount:100000}") BigDecimal maxTransferAmount) {
         this.accountService = accountService; this.accountRepository = accountRepository; this.beneficiaryService = beneficiaryService; this.billerService = billerService; this.otpService = otpService; this.userRepository = userRepository; this.transactionRepository = transactionRepository; this.transactionService = transactionService; this.transferRepository = transferRepository; this.billPaymentRepository = billPaymentRepository; this.maxTransferAmount = maxTransferAmount;
     }
-    public OtpChallengeResponse issueTransferOtp(Long userId, OtpChallengeRequest request) { return issueOtp(userId, request.sourceAccountId(), OtpPurpose.FUND_TRANSFER); }
-    public OtpChallengeResponse issueBillPaymentOtp(Long userId, OtpChallengeRequest request) { return issueOtp(userId, request.sourceAccountId(), OtpPurpose.BILL_PAYMENT); }
+    public OtpChallengeResponse issueTransferOtp(Long userId, TransferOtpChallengeRequest request) {
+        accountService.requireOwnership(userId, request.sourceAccountId());
+        Beneficiary beneficiary = beneficiaryService.requireActiveOwned(userId, request.beneficiaryId());
+        if (request.amount().compareTo(maxTransferAmount) > 0) throw new IllegalArgumentException("Transfer amount exceeds the configured limit.");
+        BankAccount source = accountRepository.findById(request.sourceAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account was not found."));
+        if (source.getAccountNumber().equals(beneficiary.getAccountNumber())) throw new IllegalArgumentException("Source and destination accounts must be different.");
+        return issueOtp(userId, OtpPurpose.FUND_TRANSFER,
+                PaymentIntent.transferDigest(userId, request.sourceAccountId(), request.beneficiaryId(), request.amount()));
+    }
+    public OtpChallengeResponse issueBillPaymentOtp(Long userId, BillPaymentOtpChallengeRequest request) {
+        accountService.requireOwnership(userId, request.sourceAccountId());
+        Biller biller = billerService.requireActiveAndAmount(request.billerId(), request.amount());
+        biller.validateReference(request.billReference());
+        return issueOtp(userId, OtpPurpose.BILL_PAYMENT,
+                PaymentIntent.billPaymentDigest(userId, request.sourceAccountId(), request.billerId(),
+                        request.amount(), request.billReference()));
+    }
     public PaymentReceiptResponse transfer(Long userId, FundTransferRequest request) {
-        var prior = transferRepository.findByInitiatedByUserIdAndIdempotencyKey(userId, request.idempotencyKey()); if (prior.isPresent()) return transferReceipt(prior.get());
+        lockUserForPayment(userId);
+        String fingerprint = PaymentIntent.transferFingerprint(userId, request.sourceAccountId(),
+                request.beneficiaryId(), request.amount(), request.narration());
+        var prior = transferRepository.findByInitiatedByUserIdAndIdempotencyKey(userId, request.idempotencyKey());
+        if (prior.isPresent()) return replayTransfer(prior.get(), request, fingerprint);
         accountService.requireOwnership(userId, request.sourceAccountId()); Beneficiary beneficiary = beneficiaryService.requireActiveOwned(userId, request.beneficiaryId());
         if (request.amount().compareTo(maxTransferAmount) > 0) throw new IllegalArgumentException("Transfer amount exceeds the configured limit.");
-        otpService.verifyForUser(userId, request.otpChallengeId(), request.otpCode(), OtpPurpose.FUND_TRANSFER);
+        otpService.verifyForUser(userId, request.otpChallengeId(), request.otpCode(), OtpPurpose.FUND_TRANSFER,
+                PaymentIntent.transferDigest(userId, request.sourceAccountId(), request.beneficiaryId(), request.amount()));
         BankAccount account = lockedActiveAccount(request.sourceAccountId());
         if (account.getAccountNumber().equals(beneficiary.getAccountNumber())) throw new IllegalArgumentException("Source and destination accounts must be different.");
         TransactionRecord transaction = createAndCompleteTransaction(account, userId, beneficiary.getBeneficiaryId(), TransactionType.TRANSFER, request.amount(), blankToNull(request.narration()));
-        FundTransfer transfer = transferRepository.save(new FundTransfer(transaction.transactionId(), account.getAccountId(), beneficiary.getBeneficiaryId(), userId, request.idempotencyKey()));
+        FundTransfer transfer = transferRepository.save(new FundTransfer(transaction.transactionId(), account.getAccountId(), beneficiary.getBeneficiaryId(), userId, request.idempotencyKey(), fingerprint));
         return new PaymentReceiptResponse(transfer.getTransferId(), transaction.transactionId(), transaction.reference(), transfer.getTransferStatus(), transaction.amount(), transaction.currencyCode());
     }
     public PaymentReceiptResponse payBill(Long userId, BillPaymentRequest request) {
-        var prior = billPaymentRepository.findByInitiatedByUserIdAndIdempotencyKey(userId, request.idempotencyKey()); if (prior.isPresent()) return billReceipt(prior.get());
-        accountService.requireOwnership(userId, request.sourceAccountId()); Biller biller = billerService.requireActiveAndAmount(request.billerId(), request.amount());
-        otpService.verifyForUser(userId, request.otpChallengeId(), request.otpCode(), OtpPurpose.BILL_PAYMENT);
+        lockUserForPayment(userId);
+        String fingerprint = PaymentIntent.billPaymentFingerprint(userId, request.sourceAccountId(),
+                request.billerId(), request.amount(), request.billReference());
+        var prior = billPaymentRepository.findByInitiatedByUserIdAndIdempotencyKey(userId, request.idempotencyKey());
+        if (prior.isPresent()) return replayBillPayment(prior.get(), request, fingerprint);
+        accountService.requireOwnership(userId, request.sourceAccountId()); Biller biller = billerService.requireActiveAndAmount(request.billerId(), request.amount()); biller.validateReference(request.billReference());
+        otpService.verifyForUser(userId, request.otpChallengeId(), request.otpCode(), OtpPurpose.BILL_PAYMENT,
+                PaymentIntent.billPaymentDigest(userId, request.sourceAccountId(), request.billerId(),
+                        request.amount(), request.billReference()));
         BankAccount account = lockedActiveAccount(request.sourceAccountId());
         TransactionRecord transaction = createAndCompleteTransaction(account, userId, null, TransactionType.WITHDRAWAL, request.amount(), "Bill payment: " + biller.getBillerCode());
-        BillPayment payment = billPaymentRepository.save(new BillPayment(transaction.transactionId(), account.getAccountId(), biller.getBillerId(), userId, request.billReference().trim(), request.idempotencyKey()));
+        BillPayment payment = billPaymentRepository.save(new BillPayment(transaction.transactionId(), account.getAccountId(), biller.getBillerId(), userId, request.billReference().trim(), request.idempotencyKey(), fingerprint));
         return new PaymentReceiptResponse(payment.getBillPaymentId(), transaction.transactionId(), transaction.reference(), payment.getPaymentStatus(), transaction.amount(), transaction.currencyCode());
     }
-    private OtpChallengeResponse issueOtp(Long userId, Long accountId, OtpPurpose purpose) { accountService.requireOwnership(userId, accountId); AppUser user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User was not found.")); return new OtpChallengeResponse(otpService.issue(user, purpose).challengeId(), "OTP_SENT"); }
+    private OtpChallengeResponse issueOtp(Long userId, OtpPurpose purpose, String intentDigest) { AppUser user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User was not found.")); return new OtpChallengeResponse(otpService.issue(user, purpose, intentDigest).challengeId(), "OTP_SENT"); }
+    private void lockUserForPayment(Long userId) { userRepository.findByIdForUpdate(userId).orElseThrow(() -> new ResourceNotFoundException("User was not found.")); }
     private BankAccount lockedActiveAccount(Long id) { return accountRepository.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Account was not found.")); }
     private TransactionRecord createAndCompleteTransaction(BankAccount account, Long userId, Long beneficiaryId, TransactionType type, BigDecimal amount, String narration) {
         TransactionRecord transaction = transactionService.createTransaction(new CreateTransactionCommand(account.getAccountId(), null, beneficiaryId, userId, type, amount, account.getCurrencyCode(), narration));
@@ -71,5 +100,33 @@ public class PaymentService {
     }
     private PaymentReceiptResponse transferReceipt(FundTransfer p) { var t = transactionRepository.findById(p.getTransactionId()).orElseThrow(() -> new ResourceNotFoundException("Transaction was not found.")); return new PaymentReceiptResponse(p.getTransferId(), t.getTransactionId(), t.getTransactionReference(), p.getTransferStatus(), t.getAmount(), t.getCurrencyCode().trim()); }
     private PaymentReceiptResponse billReceipt(BillPayment p) { var t = transactionRepository.findById(p.getTransactionId()).orElseThrow(() -> new ResourceNotFoundException("Transaction was not found.")); return new PaymentReceiptResponse(p.getBillPaymentId(), t.getTransactionId(), t.getTransactionReference(), p.getPaymentStatus(), t.getAmount(), t.getCurrencyCode().trim()); }
+    private PaymentReceiptResponse replayTransfer(FundTransfer prior, FundTransferRequest request, String fingerprint) {
+        if (!prior.matchesRequest(fingerprint)) {
+            var transaction = transactionRepository.findById(prior.getTransactionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Transaction was not found."));
+            boolean legacyMatch = prior.getRequestFingerprint() == null
+                    && prior.getSourceAccountId().equals(request.sourceAccountId())
+                    && prior.getBeneficiaryId().equals(request.beneficiaryId())
+                    && transaction.getAmount().compareTo(request.amount()) == 0
+                    && PaymentIntent.normalize(transaction.getNarration()).equals(PaymentIntent.normalize(request.narration()));
+            if (!legacyMatch) throw new ConflictException("Idempotency key has already been used for a different transfer.");
+            prior.bindLegacyRequest(fingerprint);
+        }
+        return transferReceipt(prior);
+    }
+    private PaymentReceiptResponse replayBillPayment(BillPayment prior, BillPaymentRequest request, String fingerprint) {
+        if (!prior.matchesRequest(fingerprint)) {
+            var transaction = transactionRepository.findById(prior.getTransactionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Transaction was not found."));
+            boolean legacyMatch = prior.getRequestFingerprint() == null
+                    && prior.getSourceAccountId().equals(request.sourceAccountId())
+                    && prior.getBillerId().equals(request.billerId())
+                    && transaction.getAmount().compareTo(request.amount()) == 0
+                    && prior.getBillReference().strip().equals(request.billReference().strip());
+            if (!legacyMatch) throw new ConflictException("Idempotency key has already been used for a different bill payment.");
+            prior.bindLegacyRequest(fingerprint);
+        }
+        return billReceipt(prior);
+    }
     private String blankToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 }
