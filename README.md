@@ -63,6 +63,7 @@ The normal Java suite uses H2 for transactional tests. **It does not establish O
 
 ## Documentation
 
+- [Backend testing from scratch with Postman and Microsoft Authenticator](docs/backend-testing-guide.md)
 - [Architecture, consistency and internal contracts](docs/microservices-architecture.md)
 - [Local startup and configuration](docs/TEAMMATE_QUICK_START.md)
 - [Eureka discovery and troubleshooting](docs/service-discovery.md)
