@@ -38,14 +38,18 @@ public class BeneficiaryService {
     }
     @Transactional(readOnly = true) public List<BeneficiaryResponse> list(Long userId) { return repository.findAllByCustomerIdOrderByNicknameAsc(customerService.requireCustomerIdForUser(userId)).stream().map(this::toResponse).toList(); }
     public BeneficiaryOtpChallengeResponse issueActivationOtp(Long userId, Long beneficiaryId) {
-        Beneficiary beneficiary = owned(userId, beneficiaryId); requireCoolingPeriod(beneficiary);
+        Beneficiary beneficiary = owned(userId, beneficiaryId);
+        beneficiary.requirePendingForActivation();
+        requireCoolingPeriod(beneficiary);
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User was not found."));
         return new BeneficiaryOtpChallengeResponse(otpService.issue(user,
                 OtpPurpose.BENEFICIARY_ACTIVATION, activationDigest(userId, beneficiaryId)).challengeId(), "OTP_SENT");
     }
     public BeneficiaryResponse activate(Long userId, Long beneficiaryId, BeneficiaryActivationRequest request) {
-        Beneficiary beneficiary = owned(userId, beneficiaryId); requireCoolingPeriod(beneficiary);
+        Beneficiary beneficiary = owned(userId, beneficiaryId);
+        beneficiary.requirePendingForActivation();
+        requireCoolingPeriod(beneficiary);
         otpService.verifyForUser(userId, request.otpChallengeId(), request.otpCode(),
                 OtpPurpose.BENEFICIARY_ACTIVATION, activationDigest(userId, beneficiaryId));
         beneficiary.activate(); return toResponse(beneficiary);

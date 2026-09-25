@@ -7,7 +7,7 @@ All routes require a bearer JWT. Apply the database scripts through
 | --- | --- |
 | `POST /api/v1/beneficiaries` | Creates a pending beneficiary. |
 | `GET /api/v1/beneficiaries` | Lists the current user's beneficiaries. |
-| `POST /api/v1/beneficiaries/{beneficiaryId}/activation-challenges` | Sends an activation OTP after the cooling period. |
+| `POST /api/v1/beneficiaries/{beneficiaryId}/activation-challenges` | Sends an activation OTP for a pending beneficiary after the cooling period. |
 | `POST /api/v1/beneficiaries/{beneficiaryId}/activate` | Activates a beneficiary with its OTP challenge. |
 | `DELETE /api/v1/beneficiaries/{beneficiaryId}` | Disables a beneficiary. |
 | `GET /api/v1/billers` | Lists active billers and their amount limits. |

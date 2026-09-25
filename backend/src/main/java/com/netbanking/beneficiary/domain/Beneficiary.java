@@ -32,8 +32,11 @@ public class Beneficiary {
     public Instant getActivatedAt() { return activatedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public boolean isActive() { return "ACTIVE".equals(beneficiaryStatus); }
-    public void activate() {
+    public void requirePendingForActivation() {
         if (!"PENDING".equals(beneficiaryStatus)) throw new IllegalStateException("Only a pending beneficiary can be activated.");
+    }
+    public void activate() {
+        requirePendingForActivation();
         beneficiaryStatus = "ACTIVE"; activatedAt = Instant.now();
     }
     public void disable() { beneficiaryStatus = "DISABLED"; }
