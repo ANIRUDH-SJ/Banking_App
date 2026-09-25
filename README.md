@@ -2,6 +2,10 @@
 
 Team project repository for the Internet Net Banking Application
 
+Frontend collaboration:
+
+- [Frontend work division](docs/frontend-work-division.md)
+
 Backend API documentation:
 
 - [Service discovery and local startup](docs/service-discovery.md)
