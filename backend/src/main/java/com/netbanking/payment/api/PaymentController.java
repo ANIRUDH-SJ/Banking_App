@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentController {
     private final FundTransferService fundTransferService; private final BillPaymentService billPaymentService;
     public PaymentController(FundTransferService fundTransferService, BillPaymentService billPaymentService) { this.fundTransferService = fundTransferService; this.billPaymentService = billPaymentService; }
-    @PostMapping("/transfers/otp-challenges") @ResponseStatus(HttpStatus.CREATED) public OtpChallengeResponse transferOtp(@Valid @RequestBody OtpChallengeRequest request) { return fundTransferService.issueOtp(SecurityContextHelper.currentUserId(), request); }
+    @PostMapping("/transfers/otp-challenges") @ResponseStatus(HttpStatus.CREATED) public OtpChallengeResponse transferOtp(@Valid @RequestBody TransferOtpChallengeRequest request) { return fundTransferService.issueOtp(SecurityContextHelper.currentUserId(), request); }
     @PostMapping("/transfers") @ResponseStatus(HttpStatus.CREATED) public PaymentReceiptResponse transfer(@Valid @RequestBody FundTransferRequest request) { return fundTransferService.transfer(SecurityContextHelper.currentUserId(), request); }
-    @PostMapping("/bill-payments/otp-challenges") @ResponseStatus(HttpStatus.CREATED) public OtpChallengeResponse billOtp(@Valid @RequestBody OtpChallengeRequest request) { return billPaymentService.issueOtp(SecurityContextHelper.currentUserId(), request); }
+    @PostMapping("/bill-payments/otp-challenges") @ResponseStatus(HttpStatus.CREATED) public OtpChallengeResponse billOtp(@Valid @RequestBody BillPaymentOtpChallengeRequest request) { return billPaymentService.issueOtp(SecurityContextHelper.currentUserId(), request); }
     @PostMapping("/bill-payments") @ResponseStatus(HttpStatus.CREATED) public PaymentReceiptResponse payBill(@Valid @RequestBody BillPaymentRequest request) { return billPaymentService.pay(SecurityContextHelper.currentUserId(), request); }
 }

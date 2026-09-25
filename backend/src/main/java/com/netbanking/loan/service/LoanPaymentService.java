@@ -4,6 +4,7 @@ import com.netbanking.account.domain.BankAccount;
 import com.netbanking.account.repository.BankAccountRepository;
 import com.netbanking.account.service.AccountService;
 import com.netbanking.common.exception.ResourceNotFoundException;
+import com.netbanking.common.exception.ConflictException;
 import com.netbanking.customer.service.CustomerService;
 import com.netbanking.loan.api.CreateLoanPaymentRequest;
 import com.netbanking.loan.api.LoanPaymentResponse;
@@ -62,9 +63,19 @@ public class LoanPaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Loan was not found."));
 
         String idempotencyKey = request.idempotencyKey().strip();
+        String requestFingerprint = LoanPaymentIntent.fingerprint(
+                userId, loanId, request.sourceAccountId(), request.amount());
         var existing = paymentRepository.findByLoanIdAndIdempotencyKey(loanId, idempotencyKey);
         if (existing.isPresent()) {
-            return toResponse(existing.get());
+            LoanPayment prior = existing.get();
+            boolean legacyMatch = prior.getRequestFingerprint() == null
+                    && prior.getSourceAccountId().equals(request.sourceAccountId())
+                    && prior.getAmount().compareTo(request.amount()) == 0;
+            if (!prior.matchesRequest(requestFingerprint) && !legacyMatch) {
+                throw new ConflictException("Idempotency key has already been used for a different loan payment.");
+            }
+            if (legacyMatch) prior.bindLegacyRequest(requestFingerprint);
+            return toResponse(prior);
         }
 
         accountService.requireOwnership(userId, request.sourceAccountId());
@@ -90,7 +101,7 @@ public class LoanPaymentService {
         LoanPayment payment = paymentRepository.save(new LoanPayment(
                 loanId, account.getAccountId(), transaction.transactionId(),
                 transaction.reference(), idempotencyKey, request.amount(),
-                currencyCode, loan.getOutstandingPrincipal()));
+                currencyCode, loan.getOutstandingPrincipal(), requestFingerprint));
         transactionService.changeStatus(
                 transaction.transactionId(), TransactionStatus.COMPLETED, userId, null);
         auditWriter.recordCompleted(userId, loanId, transaction.reference());
