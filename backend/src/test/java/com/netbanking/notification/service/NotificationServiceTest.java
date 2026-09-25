@@ -2,6 +2,7 @@ package com.netbanking.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
@@ -34,6 +37,18 @@ class NotificationServiceTest {
         service.createInApp(7L, "ACCOUNT", "Deposit received", "A deposit was received.");
 
         verify(auditLogService).record(eq(7L), eq("NOTIFICATION_CREATED"), eq("NOTIFICATION"), any(), eq("SUCCESS"));
+    }
+
+    @Test
+    void commitsPaymentNotificationsInAnIndependentTransaction() throws Exception {
+        var method = NotificationService.class.getMethod("createInApp",
+                Long.class, String.class, String.class, String.class);
+        var transaction = new AnnotationTransactionAttributeSource()
+                .getTransactionAttribute(method, NotificationService.class);
+
+        assertThat(transaction).isNotNull();
+        assertThat(transaction.getPropagationBehavior())
+                .isEqualTo(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Test

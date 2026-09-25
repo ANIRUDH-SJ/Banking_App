@@ -7,11 +7,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 @Service public class NotificationService {
  private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("notificationId"));
  private final NotificationRepository repository; private final AuditLogService auditLogService;
  public NotificationService(NotificationRepository repository,AuditLogService auditLogService){this.repository=repository;this.auditLogService=auditLogService;}
- @Transactional public Notification createInApp(Long userId,String type,String title,String message){
+ @Transactional(propagation = Propagation.REQUIRES_NEW) public Notification createInApp(Long userId,String type,String title,String message){
   requireText(type,"Notification type",50); requireText(title,"Notification title",200); requireText(message,"Notification message",1000);
   Notification saved=repository.save(new Notification(userId,type.strip(),title.strip(),message.strip()));auditLogService.record(userId,"NOTIFICATION_CREATED","NOTIFICATION",String.valueOf(saved.getNotificationId()),"SUCCESS");return saved;
  }
