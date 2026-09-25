@@ -1,5 +1,6 @@
 package com.netbanking.totp.service;
 
+import dev.samstevens.totp.code.CodeGenerator;
 import dev.samstevens.totp.code.CodeVerifier;
 import dev.samstevens.totp.code.DefaultCodeGenerator;
 import dev.samstevens.totp.code.DefaultCodeVerifier;
@@ -27,9 +28,13 @@ public class TotpConfiguration {
     }
 
     @Bean
-    CodeVerifier totpCodeVerifier(TimeProvider timeProvider) {
-        DefaultCodeVerifier verifier = new DefaultCodeVerifier(
-                new DefaultCodeGenerator(HashingAlgorithm.SHA1, 6), timeProvider);
+    CodeGenerator totpCodeGenerator() {
+        return new DefaultCodeGenerator(HashingAlgorithm.SHA1, 6);
+    }
+
+    @Bean
+    CodeVerifier totpCodeVerifier(CodeGenerator codeGenerator, TimeProvider timeProvider) {
+        DefaultCodeVerifier verifier = new DefaultCodeVerifier(codeGenerator, timeProvider);
         verifier.setTimePeriod(30);
         verifier.setAllowedTimePeriodDiscrepancy(1);
         return verifier;

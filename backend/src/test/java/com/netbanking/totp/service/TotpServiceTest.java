@@ -7,10 +7,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.netbanking.common.exception.ConflictException;
+import com.netbanking.common.exception.UnauthorizedException;
 import com.netbanking.totp.domain.UserTotp;
 import com.netbanking.totp.repository.UserTotpRepository;
 import com.netbanking.user.domain.AppUser;
+import dev.samstevens.totp.code.CodeGenerator;
 import dev.samstevens.totp.code.CodeVerifier;
+import dev.samstevens.totp.code.DefaultCodeGenerator;
+import dev.samstevens.totp.code.HashingAlgorithm;
 import dev.samstevens.totp.qr.QrData;
 import dev.samstevens.totp.qr.QrGenerator;
 import dev.samstevens.totp.secret.SecretGenerator;
@@ -28,6 +32,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 class TotpServiceTest {
 
     private static final String SECRET = "JBSWY3DPEHPK3PXP";
+    private static final long TIME = 1_700_000_000L;
+    private static final CodeGenerator CODE_GENERATOR = new DefaultCodeGenerator(HashingAlgorithm.SHA1, 6);
 
     @Mock private UserTotpRepository repository;
     @Mock private TotpSecretCipher cipher;
@@ -86,25 +92,63 @@ class TotpServiceTest {
     }
 
     @Test
-    void rejectsAValidCodeReusedInTheSameTimeStep() {
+    void rejectsAValidCodeReusedInTheSameTimeStep() throws Exception {
         AppUser user = user();
         UserTotp credential = new UserTotp(7L, "encrypted-secret");
         credential.confirm();
         when(repository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(credential));
         when(cipher.decrypt("encrypted-secret")).thenReturn(SECRET);
-        when(verifier.isValidCode(SECRET, "123456")).thenReturn(true);
-        when(timeProvider.getTime()).thenReturn(1_700_000_000L);
+        when(timeProvider.getTime()).thenReturn(TIME);
+        String code = CODE_GENERATOR.generate(SECRET, TIME / 30);
 
-        service().verifyLogin(user, "123456");
+        service().verifyLogin(user, code);
 
-        assertThatThrownBy(() -> service().verifyLogin(user, "123456"))
-                .isInstanceOf(com.netbanking.common.exception.UnauthorizedException.class)
+        assertThatThrownBy(() -> service().verifyLogin(user, code))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("already used");
+    }
+
+    @Test
+    void rejectsNextWindowCodeReusedWhenThatWindowBegins() throws Exception {
+        UserTotp credential = enabledCredential();
+        when(repository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(credential));
+        when(cipher.decrypt("encrypted-secret")).thenReturn(SECRET);
+        when(timeProvider.getTime()).thenReturn(TIME, TIME + 30);
+        String nextCode = CODE_GENERATOR.generate(SECRET, TIME / 30 + 1);
+
+        service().verifyLogin(user(), nextCode);
+
+        assertThatThrownBy(() -> service().verifyLogin(user(), nextCode))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("already used");
+    }
+
+    @Test
+    void priorWindowCodeDoesNotBlockCurrentWindowCode() throws Exception {
+        UserTotp credential = enabledCredential();
+        when(repository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(credential));
+        when(cipher.decrypt("encrypted-secret")).thenReturn(SECRET);
+        when(timeProvider.getTime()).thenReturn(TIME);
+        String priorCode = CODE_GENERATOR.generate(SECRET, TIME / 30 - 1);
+        String currentCode = CODE_GENERATOR.generate(SECRET, TIME / 30);
+
+        service().verifyLogin(user(), priorCode);
+        service().verifyLogin(user(), currentCode);
+
+        assertThatThrownBy(() -> service().verifyLogin(user(), priorCode))
+                .isInstanceOf(UnauthorizedException.class)
                 .hasMessageContaining("already used");
     }
 
     private TotpService service() {
         return new TotpService(repository, cipher, "Internet Banking",
-                secretGenerator, verifier, qrGenerator, timeProvider);
+                secretGenerator, verifier, CODE_GENERATOR, qrGenerator, timeProvider);
+    }
+
+    private static UserTotp enabledCredential() {
+        UserTotp credential = new UserTotp(7L, "encrypted-secret");
+        credential.confirm();
+        return credential;
     }
 
     private static AppUser user() {
