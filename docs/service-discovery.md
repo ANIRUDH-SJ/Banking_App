@@ -38,11 +38,12 @@ In another terminal, start the backend:
 
 ```bash
 cd backend
-./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE=local \
+  EUREKA_DEFAULT_ZONE="http://${EUREKA_USERNAME}:${EUREKA_PASSWORD}@localhost:8761/eureka/" \
+  ./mvnw spring-boot:run
 ```
 
-Configure `EUREKA_DEFAULT_ZONE` for the backend with the same credentials, for example
-`http://registry-user:registry-password@localhost:8761/eureka/`. Open `http://localhost:8761` and sign in
+Use URL-safe credentials or percent-encode reserved characters in `EUREKA_DEFAULT_ZONE`. The `local` profile enables the development OTP, email, and SMS adapters. Open `http://localhost:8761` and sign in
 with the registry credentials. After the backend starts and sends its first heartbeat,
 `NET-BANKING-BACKEND` appears under **Instances currently registered with Eureka**.
 

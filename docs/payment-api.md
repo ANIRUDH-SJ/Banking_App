@@ -1,7 +1,7 @@
 # Beneficiaries, transfers, and bill payments
 
 All routes require a bearer JWT. Apply the database scripts through
-`database/16_loan_payment_idempotency.sql` in filename order.
+`database/18_identity_case_insensitive_uniqueness.sql` in filename order.
 
 | Method and path | Result |
 | --- | --- |

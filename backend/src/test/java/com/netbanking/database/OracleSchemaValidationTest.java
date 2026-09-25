@@ -8,8 +8,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariables;
 
-@EnabledIfEnvironmentVariable(named = "ORACLE_SCHEMA_VALIDATION_URL", matches = ".+")
+@EnabledIfEnvironmentVariables({
+        @EnabledIfEnvironmentVariable(named = "ORACLE_SCHEMA_VALIDATION_URL", matches = ".+"),
+        @EnabledIfEnvironmentVariable(named = "ORACLE_SCHEMA_VALIDATION_USERNAME", matches = ".+"),
+        @EnabledIfEnvironmentVariable(named = "ORACLE_SCHEMA_VALIDATION_PASSWORD", matches = ".+")
+})
 class OracleSchemaValidationTest {
     @Test
     void paymentMappingsMatchTheMigratedOracleSchema() throws Exception {
