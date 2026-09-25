@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.netbanking.auth.api.LoginRequest;
 import com.netbanking.auth.api.LoginTotpVerifyRequest;
+import com.netbanking.auth.api.RegisterRequest;
+import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.UnauthorizedException;
 import com.netbanking.role.service.RoleService;
 import com.netbanking.security.JwtService;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,6 +88,18 @@ class AuthServiceTest {
                 .isInstanceOf(UnauthorizedException.class);
 
         verify(userService).recordFailedLogin(7L);
+    }
+
+    @Test
+    void registrationMapsConcurrentUniqueConstraintFailureToConflict() {
+        RegisterRequest request = new RegisterRequest("asha", "asha@example.com", "strong-password");
+        when(passwordEncoder.encode("strong-password")).thenReturn("password-hash");
+        org.mockito.Mockito.doThrow(new DataIntegrityViolationException("duplicate"))
+                .when(userRepository).saveAndFlush(org.mockito.ArgumentMatchers.any(AppUser.class));
+
+        assertThatThrownBy(() -> service().register(request))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("already in use");
     }
 
     private AuthService service() {

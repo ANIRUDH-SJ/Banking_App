@@ -14,6 +14,7 @@ import dev.samstevens.totp.code.CodeVerifier;
 import dev.samstevens.totp.qr.QrData;
 import dev.samstevens.totp.qr.QrGenerator;
 import dev.samstevens.totp.secret.SecretGenerator;
+import dev.samstevens.totp.time.TimeProvider;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,7 @@ class TotpServiceTest {
     @Mock private SecretGenerator secretGenerator;
     @Mock private CodeVerifier verifier;
     @Mock private QrGenerator qrGenerator;
+    @Mock private TimeProvider timeProvider;
 
     @Test
     void returnsAuthenticatorCompatibleUriQrImageAndManualKey() throws Exception {
@@ -83,9 +85,26 @@ class TotpServiceTest {
                 .hasMessageContaining("already configured");
     }
 
+    @Test
+    void rejectsAValidCodeReusedInTheSameTimeStep() {
+        AppUser user = user();
+        UserTotp credential = new UserTotp(7L, "encrypted-secret");
+        credential.confirm();
+        when(repository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(credential));
+        when(cipher.decrypt("encrypted-secret")).thenReturn(SECRET);
+        when(verifier.isValidCode(SECRET, "123456")).thenReturn(true);
+        when(timeProvider.getTime()).thenReturn(1_700_000_000L);
+
+        service().verifyLogin(user, "123456");
+
+        assertThatThrownBy(() -> service().verifyLogin(user, "123456"))
+                .isInstanceOf(com.netbanking.common.exception.UnauthorizedException.class)
+                .hasMessageContaining("already used");
+    }
+
     private TotpService service() {
         return new TotpService(repository, cipher, "Internet Banking",
-                secretGenerator, verifier, qrGenerator);
+                secretGenerator, verifier, qrGenerator, timeProvider);
     }
 
     private static AppUser user() {

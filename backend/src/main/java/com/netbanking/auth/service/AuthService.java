@@ -11,9 +11,11 @@ import com.netbanking.user.repository.AppUserRepository;
 import com.netbanking.user.service.UserService;
 import com.netbanking.totp.api.TotpSetupResponse;
 import com.netbanking.totp.service.TotpService;
+import java.util.Locale;
 import java.util.Set;
 import io.jsonwebtoken.JwtException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,11 +34,17 @@ public class AuthService {
         this.totpService = totpService; this.passwordEncoder = passwordEncoder; this.jwtService = jwtService;
     }
     public void register(RegisterRequest request) {
-        if (userRepository.existsByUsernameIgnoreCase(request.username())) throw new ConflictException("Username is already in use.");
-        if (userRepository.existsByEmailIgnoreCase(request.email())) throw new ConflictException("Email is already in use.");
-        AppUser user = new AppUser(request.username().trim(), request.email().trim().toLowerCase(), passwordEncoder.encode(request.password()));
+        String username = request.username().trim();
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByUsernameIgnoreCase(username)) throw new ConflictException("Username is already in use.");
+        if (userRepository.existsByEmailIgnoreCase(email)) throw new ConflictException("Email is already in use.");
+        AppUser user = new AppUser(username, email, passwordEncoder.encode(request.password()));
         roleService.assignDefaultCustomerRole(user);
-        userRepository.save(user);
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Username or email is already in use.");
+        }
     }
     public LoginChallengeResponse beginLogin(LoginRequest request) {
         AppUser user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
