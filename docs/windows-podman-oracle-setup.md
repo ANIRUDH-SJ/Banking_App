@@ -1,5 +1,3 @@
-> Historical monolith documentation. For the current service schemas and commands, use [teammate setup](../TEAMMATE_QUICK_START.md). Do not run the old schema instructions on the new service schemas.
-
 # Windows + Podman + Oracle Database: teammate setup
 
 Use this guide once on **each developer's own computer**. Each developer runs a personal Oracle database container; nobody shares a database password or connects to another developer's laptop.

@@ -1,5 +1,3 @@
-> Historical monolith documentation. For the current service schemas and commands, use [teammate setup](../TEAMMATE_QUICK_START.md). Do not run the old schema instructions on the new service schemas.
-
 # PRD alignment summary
 
 The current repository now has the required Java 17 / Spring Boot 3.2 backend foundation, Oracle JDBC support,

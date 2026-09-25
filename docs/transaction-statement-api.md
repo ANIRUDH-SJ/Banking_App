@@ -2,7 +2,7 @@
 
 This module provides secure transaction history, lifecycle tracking, statement filtering, and CSV export.
 It uses the existing `bank_transaction` and `account_transaction_entry` tables from
-the accounts-ledger service Flyway baseline. Ledger entries identify the account-specific debit or credit and
+`database/06_transaction_tables.sql`. Ledger entries identify the account-specific debit or credit and
 its balance after posting. All routes require a bearer JWT, and the service checks active account ownership
 before querying any entries.
 
@@ -56,10 +56,11 @@ customer-facing write controller:
   processing. The caller must update the balance in the same surrounding database transaction.
 - `getByReference` provides a stable lookup for receipts and idempotent workflows.
 
-Accounts-ledger applies its Flyway migrations in `NB_ACCOUNTS`. Other applications invoke
-`POST /internal/ledger/operations` using authenticated HTTP and a stable operation ID. Only the ledger
-service calls the local transaction-write methods above. Balance updates, entries, lifecycle history,
-idempotency receipt and ledger audit outbox commit in one transaction inside that service.
+Apply `database/10_transaction_status_history.sql` after the existing transaction schema before running
+the module.
 
-Payments and products maintain their own recoverable workflows. They do not call these Java methods or
-join the ledger's database transaction. See [architecture](microservices-architecture.md).
+## Integration boundary
+
+Transfer and bill-payment services must call these write methods inside their own database transaction so
+balance updates, transaction records, ledger entries, idempotency, and audit events commit or roll back
+together. No public transaction-write endpoint is exposed by this module.

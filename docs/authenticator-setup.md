@@ -5,7 +5,7 @@ six digits, and a 30-second period.
 
 ## Responsibility split
 
-The identity service owns all security-sensitive work. The gateway forwards `/api/v1/auth` requests to it. The identity service:
+The backend owns all security-sensitive work:
 
 - generates the Base32 secret;
 - encrypts the secret with AES-GCM before persistence;

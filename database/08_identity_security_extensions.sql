@@ -1,4 +1,4 @@
--- Identity and OTP extension.
+-- Identity and OTP extension for services 1-5.
 -- Run after 01_security_tables.sql and 07_audit_security_tables.sql.
 
 ALTER TABLE app_user ADD (

@@ -1,96 +1,122 @@
-# Teammate setup
+# Internet Net Banking — teammate quick start
 
-Each teammate runs one Oracle Database 26ai instance locally. Inside `FREEPDB1`, six schemas separate service ownership. Share migration files through Git; keep passwords, RSA private keys, TOTP encryption keys and database volumes private.
+Each developer runs their **own local Oracle database**. Do not share passwords, Podman volumes, or SSH keys.
 
-## Prerequisites
+## One-time setup
 
-- Java 17 and `JAVA_HOME`; the repository includes the Maven wrapper.
-- Node.js compatible with the installed Oracle JET CLI (Node 22 LTS is a practical team baseline), npm and Git.
-- A local Oracle Database 26ai installation with `FREEPDB1` reachable on port 1521.
-- SQLcl, SQL*Plus or SQL Developer to run bootstrap scripts.
-- Enough memory for Oracle plus eight Java processes. The startup helper limits each Java heap to 256 MB; adjust locally if needed.
+1. Extract the project folder into your Documents folder.
 
-Oracle may run natively or in your existing local container. The Java services do not require Docker Compose. There is no hosted or team-shared database.
+   ```text
+   C:\Users\<your-name>\Documents\internet-net-banking
+   ```
 
-## Create schemas once
+2. Install:
+   - Podman Desktop
+   - Oracle SQL Developer
+   - Git
 
-Connect to **FREEPDB1**, not `CDB$ROOT`, as a PDB administrator. Run each script with SQLcl/SQL*Plus, or SQL Developer's **Run Script / F5**:
+3. Open Podman Desktop and wait until it shows **Running**.
 
-```text
-database/bootstrap/nb_identity.sql
-database/bootstrap/nb_accounts.sql
-database/bootstrap/nb_payments.sql
-database/bootstrap/nb_products.sql
-database/bootstrap/nb_notifications.sql
-database/bootstrap/nb_audit.sql
-```
+4. Open PowerShell and run:
 
-Each script prompts for that schema's password. Choose different private passwords, without double quotes or ampersands for SQL*Plus substitution. No cross-schema grants or synonyms are created. These scripts intentionally fail if the user already exists; do not drop an existing schema to retry them.
+   ```powershell
+   podman machine start
+   ```
 
-## Configure and build
+5. Follow the full setup guide in this project:
 
-From the repository root:
+   ```text
+   docs\windows-podman-oracle-setup.md
+   ```
 
-```sh
-node scripts/init-local.mjs
-```
+   It tells you how to download Oracle, create your personal database password, and start the `netbanking-oracle` container.
 
-Edit the generated `.local/<service>.json` files and replace the six `DB_PASSWORD` placeholders with the matching schema passwords. If Oracle uses a different address, update `DB_URL` in each business service file.
+6. Wait until this command shows `healthy`:
 
-The generator creates RSA signing keys, one outgoing credential per service, hashes of incoming caller credentials, Eureka credentials, and an AES key for TOTP encryption. Only identity receives the signing private key and AES key. It refuses to overwrite `.local` because replacing keys would invalidate enrolled authenticators. Unix file modes are restricted; on Windows keep the directory accessible only to your user.
+   ```powershell
+   podman ps --filter name=netbanking-oracle
+   ```
 
-```sh
-./mvnw verify
-node scripts/verify-architecture.mjs
-node scripts/verify-oracle.mjs
-```
+7. Test the Oracle port:
 
-In PowerShell, use `./mvnw.cmd verify` for the first command. Oracle verification applies migrations to the configured service schemas and starts each service's application context with scheduling and discovery disabled. Run this before considering a local database setup validated. Flyway records checksums; never edit a migration after teammates have applied it. Add a new version instead.
+   ```powershell
+   Test-NetConnection 127.0.0.1 -Port 1521
+   ```
 
-The normal unit/integration suite uses H2 and skips the six Oracle-only checks unless explicitly enabled. It does not need `.local` files or an Oracle instance.
+   If the result is `False`, follow the SSH tunnel section in `docs\windows-podman-oracle-setup.md`. Continue only when it is `True`.
 
-## Start applications
+8. In SQL Developer, create this administrator connection:
 
-Run each command in a separate terminal from the repository root, in this order:
+   ```text
+   Name: netbanking-local-admin
+   Username: sys
+   Role: SYSDBA
+   Hostname: 127.0.0.1
+   Port: 1521
+   Service name: FREEPDB1
+   Password: your own Oracle administrator password
+   ```
 
-```sh
-node scripts/run-service.mjs service-registry
-node scripts/run-service.mjs identity-service
-node scripts/run-service.mjs accounts-ledger-service
-node scripts/run-service.mjs audit-reporting-service
-node scripts/run-service.mjs notification-service
-node scripts/run-service.mjs payments-service
-node scripts/run-service.mjs products-service
-node scripts/run-service.mjs api-gateway
-```
+9. Using `netbanking-local-admin`, open and run **with F5**:
 
-Open `http://localhost:8761` and sign in using `.local/service-registry.json`. Allow time for registration and discovery caches to update. There should be one instance of every business service plus the gateway.
+   ```text
+   database\00_schema_setup.sql
+   ```
 
-Each service runs its own Flyway migrations before Hibernate validates its tables. No application connects as `SYS`, `SYSTEM`, or the old `NET_BANKING_APP` user. Services bind to loopback by default.
+   Choose a private password for `NET_BANKING_APP` when asked.
 
-For an individual service build, use `./mvnw -pl :payments-service -am verify`. Only the shared library and that application are required at build time. Its required peers must still be running for operations that call them.
+10. In SQL Developer, create this application connection:
 
-## Frontend
+    ```text
+    Name: netbanking-app-local
+    Username: net_banking_app
+    Role: Default
+    Hostname: 127.0.0.1
+    Port: 1521
+    Service name: FREEPDB1
+    Password: your own NET_BANKING_APP password
+    ```
 
-```sh
-cd frontend
-npm ci
-npx ojet restore
-npx ojet serve
-```
+11. Using `netbanking-app-local`, open and run **with F5**:
 
-Use `http://localhost:8080/api/v1` as the API base URL for future frontend services. Keep browser requests on the gateway; do not put Eureka credentials or internal service tokens in JavaScript. The current JET application remains a scaffold; API integration and banking screens are separate frontend work.
+    ```text
+    database\01_security_tables.sql
+    ```
 
-## Local authentication and data
+12. Verify the initial role data:
 
-Registration creates an application user. Customer profiles, account holdings, card and loan fixtures still require explicit provisioning. See [database setup and migration](database-migration.md) for ownership and fixture rules; an empty customer account list is not evidence of a discovery failure.
+    ```sql
+    SELECT role_code, role_name
+    FROM role
+    ORDER BY role_id;
+    ```
 
-Microsoft Authenticator enrollment and login remain under `/api/v1/auth`. The generated identity configuration selects the `local` profile for its existing development OTP delivery adapter. That adapter prints payment OTPs to the local console: do not collect these logs or use this adapter with real users. A real delivery adapter is required outside local development.
+    Expected result:
 
-The sample biller catalogue is installed by Flyway. There are no seeded customer passwords, cards with real PANs, or pre-funded real accounts.
+    ```text
+    ADMIN
+    CUSTOMER
+    ```
 
-## Configuration notes
+## Daily startup
 
-`.env.example` lists the environment contract; Spring Boot does not load `.env` automatically. The Node startup helper explicitly loads the private JSON file and passes its values to the Java child process. The generated files take precedence over inherited environment values.
+1. Open Podman Desktop.
+2. Run:
 
-For deployment, supply configuration through your secret manager/environment and launch each packaged jar directly. Use HTTPS, isolate database and internal ports, give each runtime account only its required data permissions, and apply migrations with a separate schema owner. Configure `spring.flyway.schemas` and Hibernate's default schema if the runtime account is not the owner. Do not enable Flyway baselining against the old combined schema.
+   ```powershell
+   podman machine start
+   podman start netbanking-oracle
+   ```
+
+3. Wait until `podman ps --filter name=netbanking-oracle` shows `healthy`.
+4. Run `Test-NetConnection 127.0.0.1 -Port 1521`.
+5. If the port test is false, start the SSH tunnel using the full guide.
+6. Open SQL Developer and connect using `netbanking-app-local`.
+
+## Never share
+
+- Oracle passwords
+- `NET_BANKING_APP` passwords
+- Podman volumes
+- SSH keys
+- SQL Developer saved-password files
