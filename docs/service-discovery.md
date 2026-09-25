@@ -63,6 +63,7 @@ cp .env.example .env
 ```
 
 `DOCKER_DB_URL` must point to an Oracle listener that containers can reach. The default uses `host.docker.internal`, which targets an Oracle instance running on the development machine.
+Set a URL-safe `EUREKA_USERNAME` and `EUREKA_PASSWORD` in `.env`; Compose passes them to the registry and includes them in the backend's Eureka URL. The backend uses the `local` profile for development OTP, email, and SMS adapters.
 
 Build and start both applications:
 
