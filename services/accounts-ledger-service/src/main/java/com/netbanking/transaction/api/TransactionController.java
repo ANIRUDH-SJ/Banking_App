@@ -1,9 +1,9 @@
 package com.netbanking.transaction.api;
 
+import com.netbanking.common.api.PagedResponse;
 import com.netbanking.security.SecurityContextHelper;
 import com.netbanking.transaction.service.TransactionService;
 
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,12 +23,13 @@ public class TransactionController {
     }
 
     @GetMapping
-    public Page<TransactionResponse> list(
+    public PagedResponse<TransactionResponse> list(
             @PathVariable Long accountId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return transactionService.getAccountTransactions(
-                SecurityContextHelper.currentUserId(), accountId, page, size);
+        return PagedResponse.from(
+                transactionService.getAccountTransactions(
+                        SecurityContextHelper.currentUserId(), accountId, page, size));
     }
 
     @GetMapping("/{entryId}")
