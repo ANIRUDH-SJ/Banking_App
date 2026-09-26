@@ -1,6 +1,6 @@
 # Internet Banking
 
-Oracle JET frontend and independently packaged Spring Boot services with Eureka service discovery.
+Oracle JET frontend and independently runnable Spring Boot services, with Eureka service discovery and one local Oracle Database 26ai instance per developer.
 
 ## Repository
 
@@ -18,25 +18,29 @@ Banking_App/
 │   ├── notification-service/
 │   └── audit-reporting-service/
 ├── libraries/service-runtime/    # HTTP contracts, security, discovery and events
-├── database/                     # Existing Oracle schema scripts
+├── database/
+│   ├── bootstrap/               # Create six private Oracle schemas
+│   └── legacy/                  # Archived monolith SQL; never run on new schemas
 ├── scripts/                      # Local configuration, startup and verification
 └── pom.xml                       # Maven reactor; Java 17, Spring Boot 3.5
 ```
 
-Each business service owns its entities, repositories and API. The shared library contains no business entities or repositories. Services exchange authenticated HTTP requests and durable events; none imports another service's implementation.
+Each business service owns its entities, repositories, Flyway migrations and private schema. The shared library contains no business entities or repositories. Services exchange authenticated HTTP requests and durable events; none imports another service's implementation or queries another schema.
 
 ## Applications
 
-| Application | Local port | Responsibility |
-|---|---:|---|
-| service-registry | 8761 | Eureka registration and discovery |
-| api-gateway | 8080 | Explicit public API routes |
-| identity-service | 8081 | Users, roles, customer profiles, OTP and Microsoft Authenticator |
-| accounts-ledger-service | 8082 | Accounts, balances, transactions and statements |
-| payments-service | 8083 | Beneficiaries, billers, transfers and bill payments |
-| products-service | 8084 | Cards, loans and repayments |
-| notification-service | 8085 | In-app notifications and delivery records |
-| audit-reporting-service | 8086 | Audit events and administrator audit search |
+| Application | Local port | Oracle schema | Responsibility |
+|---|---:|---|---|
+| service-registry | 8761 | — | Eureka registration and discovery |
+| api-gateway | 8080 | — | Explicit public API routes |
+| identity-service | 8081 | `NB_IDENTITY` | Users, roles, customer profiles, OTP and Microsoft Authenticator |
+| accounts-ledger-service | 8082 | `NB_ACCOUNTS` | Accounts, balances, transactions and statements |
+| payments-service | 8083 | `NB_PAYMENTS` | Beneficiaries, billers, transfers and bill payments |
+| products-service | 8084 | `NB_PRODUCTS` | Cards, loans and repayments |
+| notification-service | 8085 | `NB_NOTIFICATIONS` | In-app notifications and delivery records |
+| audit-reporting-service | 8086 | `NB_AUDIT` | Audit events and administrator audit search |
+
+All six schemas live in the same local `FREEPDB1`. Each teammate applies the same committed migrations while passwords and data remain local. Cross-service identifiers are logical references; there are no cross-schema foreign keys, grants or synonyms.
 
 Eureka supplies service addresses. Callers require exactly one registered instance and send direct HTTP requests. There is no load-balancing client or `lb://` routing. This supports one local instance per service and does not provide high availability.
 
@@ -46,9 +50,13 @@ Eureka supplies service addresses. Callers require exactly one registered instan
 ./mvnw verify
 node scripts/verify-architecture.mjs
 node scripts/init-local.mjs
+# Replace each DB_PASSWORD placeholder in .local/<service>.json.
+node scripts/verify-oracle.mjs
 ```
 
-On Windows, use `mvnw.cmd verify`. The Node helpers work on Windows, Linux and macOS. Database schema provisioning and Oracle runtime configuration are delivered separately from the service architecture.
+Create the schema users first by running every script under `database/bootstrap/` while connected to `FREEPDB1` as a PDB administrator. On Windows, use `mvnw.cmd verify`. The Node helpers work on Windows, Linux and macOS.
+
+The normal Java suite uses H2 for transactional tests. It does not establish Oracle compatibility. `verify-oracle.mjs` applies Flyway migrations and validates every service's Hibernate mappings against a live local Oracle instance.
 
 ## Existing documentation
 
