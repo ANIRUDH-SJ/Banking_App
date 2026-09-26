@@ -22,3 +22,7 @@ application-local.yaml
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Independent Maven modules and local runtime credentials
+**/target/
+.local/
