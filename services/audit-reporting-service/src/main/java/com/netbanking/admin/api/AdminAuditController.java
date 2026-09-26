@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -34,11 +33,4 @@ public class AdminAuditController {
                 event.getOutcome(),
                 event.getOccurredAt());
     }
-
-    public record AuditEventResponse(
-            Long auditEventId,
-            Long userId,
-            String eventType,
-            String outcome,
-            LocalDateTime occurredAt) {}
 }
