@@ -1,10 +1,10 @@
 package com.netbanking.notification.api;
 
+import com.netbanking.common.api.PagedResponse;
 import com.netbanking.notification.domain.Notification;
 import com.netbanking.notification.service.NotificationService;
 import com.netbanking.security.SecurityContextHelper;
 
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -24,10 +24,13 @@ public class NotificationController {
     }
 
     @GetMapping
-    public Page<NotificationResponse> getForUser(
+    public PagedResponse<NotificationResponse> getForUser(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return notificationService.getForUser(currentUserId(), page, size).map(this::toResponse);
+        return PagedResponse.from(
+                notificationService
+                        .getForUser(currentUserId(), page, size)
+                        .map(this::toResponse));
     }
 
     @PatchMapping("/{notificationId}/read")

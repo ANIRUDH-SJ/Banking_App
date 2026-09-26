@@ -1,11 +1,11 @@
 package com.netbanking.loan.api;
 
+import com.netbanking.common.api.PagedResponse;
 import com.netbanking.loan.service.LoanPaymentService;
 import com.netbanking.security.SecurityContextHelper;
 
 import jakarta.validation.Valid;
 
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,11 +34,12 @@ public class LoanPaymentController {
     }
 
     @GetMapping
-    public Page<LoanPaymentResponse> getPayments(
+    public PagedResponse<LoanPaymentResponse> getPayments(
             @PathVariable Long loanId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return paymentService.getPayments(
-                SecurityContextHelper.currentUserId(), loanId, page, size);
+        return PagedResponse.from(
+                paymentService.getPayments(
+                        SecurityContextHelper.currentUserId(), loanId, page, size));
     }
 }

@@ -2,8 +2,12 @@ package com.netbanking.statement.service;
 
 import com.netbanking.account.service.AccountService;
 import com.netbanking.statement.api.StatementFilter;
+import com.netbanking.statement.api.StatementTransactionStatus;
+import com.netbanking.statement.api.StatementTransactionType;
 import com.netbanking.transaction.api.TransactionResponse;
 import com.netbanking.transaction.domain.AccountTransactionEntry;
+import com.netbanking.transaction.domain.TransactionStatus;
+import com.netbanking.transaction.domain.TransactionType;
 import com.netbanking.transaction.repository.AccountTransactionEntryRepository;
 import com.netbanking.transaction.service.TransactionService;
 
@@ -97,14 +101,38 @@ public class StatementService {
                 Join<Object, Object> transaction = root.join("transaction");
                 if (filter.type() != null) {
                     predicates.add(
-                            builder.equal(transaction.get("transactionType"), filter.type()));
+                            builder.equal(
+                                    transaction.get("transactionType"),
+                                    toDomainType(filter.type())));
                 }
                 if (filter.status() != null) {
                     predicates.add(
-                            builder.equal(transaction.get("transactionStatus"), filter.status()));
+                            builder.equal(
+                                    transaction.get("transactionStatus"),
+                                    toDomainStatus(filter.status())));
                 }
             }
             return builder.and(predicates.toArray(Predicate[]::new));
+        };
+    }
+
+    private static TransactionType toDomainType(StatementTransactionType type) {
+        return switch (type) {
+            case TRANSFER -> TransactionType.TRANSFER;
+            case DEPOSIT -> TransactionType.DEPOSIT;
+            case WITHDRAWAL -> TransactionType.WITHDRAWAL;
+            case LOAN_PAYMENT -> TransactionType.LOAN_PAYMENT;
+            case REVERSAL -> TransactionType.REVERSAL;
+        };
+    }
+
+    private static TransactionStatus toDomainStatus(StatementTransactionStatus status) {
+        return switch (status) {
+            case PENDING -> TransactionStatus.PENDING;
+            case PROCESSING -> TransactionStatus.PROCESSING;
+            case COMPLETED -> TransactionStatus.COMPLETED;
+            case FAILED -> TransactionStatus.FAILED;
+            case REVERSED -> TransactionStatus.REVERSED;
         };
     }
 

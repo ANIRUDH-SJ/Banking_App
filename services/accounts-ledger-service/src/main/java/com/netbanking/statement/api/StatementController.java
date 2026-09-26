@@ -1,12 +1,10 @@
 package com.netbanking.statement.api;
 
+import com.netbanking.common.api.PagedResponse;
 import com.netbanking.security.SecurityContextHelper;
 import com.netbanking.statement.service.StatementService;
 import com.netbanking.transaction.api.TransactionResponse;
-import com.netbanking.transaction.domain.TransactionStatus;
-import com.netbanking.transaction.domain.TransactionType;
 
-import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -31,22 +29,23 @@ public class StatementController {
     }
 
     @GetMapping("/statement")
-    public Page<TransactionResponse> list(
+    public PagedResponse<TransactionResponse> list(
             @PathVariable Long accountId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                     LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                     LocalDate to,
-            @RequestParam(required = false) TransactionType type,
-            @RequestParam(required = false) TransactionStatus status,
+            @RequestParam(required = false) StatementTransactionType type,
+            @RequestParam(required = false) StatementTransactionStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return statementService.getStatement(
-                SecurityContextHelper.currentUserId(),
-                accountId,
-                new StatementFilter(from, to, type, status),
-                page,
-                size);
+        return PagedResponse.from(
+                statementService.getStatement(
+                        SecurityContextHelper.currentUserId(),
+                        accountId,
+                        new StatementFilter(from, to, type, status),
+                        page,
+                        size));
     }
 
     @GetMapping(value = "/statement.csv", produces = "text/csv")
@@ -56,8 +55,8 @@ public class StatementController {
                     LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                     LocalDate to,
-            @RequestParam(required = false) TransactionType type,
-            @RequestParam(required = false) TransactionStatus status) {
+            @RequestParam(required = false) StatementTransactionType type,
+            @RequestParam(required = false) StatementTransactionStatus status) {
         byte[] csv =
                 statementService.exportCsv(
                         SecurityContextHelper.currentUserId(),
