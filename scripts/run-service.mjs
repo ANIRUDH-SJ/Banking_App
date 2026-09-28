@@ -22,7 +22,12 @@ for (const [key, value] of Object.entries(config)) {
 }
 const jar = join(root, modules[name], name, 'target', `${name}-0.0.1-SNAPSHOT.jar`);
 if (!existsSync(jar)) throw new Error('Build the repository with ./mvnw verify first.');
-const java = process.env.JAVA_HOME ? join(process.env.JAVA_HOME, 'bin', process.platform === 'win32' ? 'java.exe' : 'java') : 'java';
+// Windows environment variables are sometimes saved with surrounding quotes.
+// Remove only those outer quotes before constructing the Java executable path.
+const javaHome = process.env.JAVA_HOME?.replace(/^["']|["']$/g, '');
+const java = javaHome
+  ? join(javaHome, 'bin', process.platform === 'win32' ? 'java.exe' : 'java')
+  : 'java';
 const child = spawn(java, ['-Xms64m', '-Xmx256m', '-jar', jar], {
   cwd: root, env: { ...process.env, ...config }, stdio: 'inherit',
 });
