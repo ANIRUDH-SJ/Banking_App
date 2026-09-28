@@ -127,4 +127,18 @@ public class AppUser {
     public void setAccountStatus(UserStatus accountStatus) {
         this.accountStatus = accountStatus;
     }
+
+    public void changeAdministrativeStatus(UserStatus newStatus) {
+        if (newStatus == UserStatus.ACTIVE) {
+            unlock();
+            return;
+        }
+        if (newStatus == UserStatus.DISABLED) {
+            accountStatus = UserStatus.DISABLED;
+            lockedUntil = null;
+            return;
+        }
+        throw new IllegalArgumentException(
+                "Administrators may set a user status only to ACTIVE or DISABLED.");
+    }
 }

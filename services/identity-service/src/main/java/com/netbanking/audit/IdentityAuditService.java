@@ -19,6 +19,16 @@ public class IdentityAuditService {
         audit.record(userId, type, entityType, entityId, "SUCCESS");
     }
 
+    @Transactional
+    public void success(
+            Long userId,
+            String type,
+            String entityType,
+            String entityId,
+            String details) {
+        audit.record(userId, type, entityType, entityId, "SUCCESS", details);
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void denied(Long userId, String type, String entityType, String entityId, String reason) {
         audit.record(userId, type, entityType, entityId, "DENIED", "reason=" + reason);
