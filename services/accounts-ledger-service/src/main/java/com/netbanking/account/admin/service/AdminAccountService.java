@@ -1,11 +1,11 @@
-package com.netbanking.admin.service;
+package com.netbanking.account.admin.service;
 
+import com.netbanking.account.admin.api.AdminAccountResponse;
 import com.netbanking.account.api.AccountStatus;
 import com.netbanking.account.domain.AccountHolder;
 import com.netbanking.account.domain.BankAccount;
 import com.netbanking.account.repository.AccountHolderRepository;
 import com.netbanking.account.repository.BankAccountRepository;
-import com.netbanking.admin.api.AdminAccountResponse;
 import com.netbanking.audit.service.AuditLogService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.ResourceNotFoundException;

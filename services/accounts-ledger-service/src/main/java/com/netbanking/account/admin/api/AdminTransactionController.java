@@ -1,6 +1,6 @@
-package com.netbanking.admin.api;
+package com.netbanking.account.admin.api;
 
-import com.netbanking.admin.service.AdminTransactionService;
+import com.netbanking.account.admin.service.AdminTransactionService;
 import com.netbanking.common.api.PagedResponse;
 import com.netbanking.transaction.domain.TransactionStatus;
 import com.netbanking.transaction.domain.TransactionType;

@@ -1,7 +1,7 @@
-package com.netbanking.admin.api;
+package com.netbanking.account.admin.api;
 
+import com.netbanking.account.admin.service.AdminAccountService;
 import com.netbanking.account.api.AccountStatus;
-import com.netbanking.admin.service.AdminAccountService;
 import com.netbanking.common.api.PagedResponse;
 import com.netbanking.security.SecurityContextHelper;
 

@@ -1,4 +1,4 @@
-package com.netbanking.admin.api;
+package com.netbanking.account.admin.api;
 
 import com.netbanking.account.api.AccountStatus;
 

@@ -1,13 +1,13 @@
-package com.netbanking.admin.service;
+package com.netbanking.user.admin.service;
 
-import com.netbanking.admin.api.AdminCustomerResponse;
-import com.netbanking.admin.api.AdminUserResponse;
 import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.customer.domain.Customer;
 import com.netbanking.customer.repository.CustomerRepository;
 import com.netbanking.role.domain.Role;
+import com.netbanking.user.admin.api.AdminCustomerResponse;
+import com.netbanking.user.admin.api.AdminUserResponse;
 import com.netbanking.user.domain.AppUser;
 import com.netbanking.user.domain.UserStatus;
 import com.netbanking.user.repository.AppUserRepository;
