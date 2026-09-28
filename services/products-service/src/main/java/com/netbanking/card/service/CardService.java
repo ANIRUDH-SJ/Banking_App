@@ -1,5 +1,6 @@
 package com.netbanking.card.service;
 
+import com.netbanking.audit.service.AuditLogService;
 import com.netbanking.card.api.CardResponse;
 import com.netbanking.card.domain.BankCard;
 import com.netbanking.card.domain.CardStatusAction;
@@ -18,10 +19,15 @@ public class CardService {
 
     private final BankCardRepository cardRepository;
     private final CustomerDirectory customerService;
+    private final AuditLogService audit;
 
-    public CardService(BankCardRepository cardRepository, CustomerDirectory customerService) {
+    public CardService(
+            BankCardRepository cardRepository,
+            CustomerDirectory customerService,
+            AuditLogService audit) {
         this.cardRepository = cardRepository;
         this.customerService = customerService;
+        this.audit = audit;
     }
 
     public List<CardResponse> getCards(Long userId) {
@@ -39,6 +45,12 @@ public class CardService {
     public CardResponse changeStatus(Long userId, Long cardId, CardStatusAction action) {
         BankCard card = findOwnedCard(userId, cardId);
         card.apply(action);
+        audit.record(
+                userId,
+                "CARD_" + action.name(),
+                "CARD",
+                String.valueOf(cardId),
+                "SUCCESS");
         return toResponse(card);
     }
 
