@@ -85,6 +85,10 @@ public class SecurityConfiguration {
                                         .permitAll()
                                         .requestMatchers("/internal/**")
                                         .hasRole("SERVICE")
+                                        .requestMatchers("/api/v1/admin/**")
+                                        .hasRole("ADMIN")
+                                        .requestMatchers("/api/v1/**")
+                                        .hasRole("CUSTOMER")
                                         .anyRequest()
                                         .authenticated())
                 .exceptionHandling(

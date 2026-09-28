@@ -87,6 +87,10 @@ class GatewayIntegrationTest {
     }
 
     String token() {
+        return token("CUSTOMER");
+    }
+
+    String token(String role) {
         return Jwts.builder()
                 .issuer("banking-identity")
                 .audience()
@@ -94,7 +98,7 @@ class GatewayIntegrationTest {
                 .and()
                 .subject("7")
                 .claim("token_use", "access")
-                .claim("roles", List.of("CUSTOMER"))
+                .claim("roles", List.of(role))
                 .claim("username", "test")
                 .expiration(Date.from(Instant.now().plusSeconds(60)))
                 .signWith(KEYS.getPrivate(), Jwts.SIG.RS256)
@@ -130,6 +134,18 @@ class GatewayIntegrationTest {
                 .contains("\"code\":\"UNAUTHORIZED\"")
                 .contains("\"correlationId\"");
         assertThat(get("/internal/ledger/operations", token()).statusCode()).isIn(401, 403, 404);
+        verifyNoInteractions(resolver);
+    }
+
+    @Test
+    void tokensCannotCrossRoleRoutes() throws Exception {
+        var adminOnCustomerRoute = get("/api/v1/accounts", token("ADMIN"));
+        var customerOnAdminRoute = get("/api/v1/admin/audit-events", token());
+
+        assertThat(adminOnCustomerRoute.statusCode()).isEqualTo(403);
+        assertThat(adminOnCustomerRoute.body()).contains("\"code\":\"FORBIDDEN\"");
+        assertThat(customerOnAdminRoute.statusCode()).isEqualTo(403);
+        assertThat(customerOnAdminRoute.body()).contains("\"code\":\"FORBIDDEN\"");
         verifyNoInteractions(resolver);
     }
 
