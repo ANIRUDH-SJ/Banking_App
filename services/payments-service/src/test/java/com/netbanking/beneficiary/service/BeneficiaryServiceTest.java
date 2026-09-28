@@ -2,13 +2,16 @@ package com.netbanking.beneficiary.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.netbanking.audit.service.AuditLogService;
 import com.netbanking.beneficiary.api.BeneficiaryActivationRequest;
+import com.netbanking.beneficiary.api.BeneficiaryRequest;
 import com.netbanking.beneficiary.domain.Beneficiary;
 import com.netbanking.beneficiary.repository.BeneficiaryRepository;
 import com.netbanking.discovery.CustomerDirectory;
@@ -31,6 +34,38 @@ class BeneficiaryServiceTest {
     @Mock private BeneficiaryRepository repository;
     @Mock private CustomerDirectory customerService;
     @Mock private OtpClient otpService;
+    @Mock private AuditLogService audit;
+
+    @Test
+    void creationAndDisableAreAudited() {
+        when(customerService.requireCustomerIdForUser(7L)).thenReturn(11L);
+        when(repository.save(any(Beneficiary.class)))
+                .thenAnswer(
+                        invocation -> {
+                            Beneficiary saved = invocation.getArgument(0);
+                            ReflectionTestUtils.setField(saved, "beneficiaryId", 3L);
+                            return saved;
+                        });
+
+        service()
+                .create(
+                        7L,
+                        new BeneficiaryRequest(
+                                "Rent",
+                                "Landlord",
+                                "123456789012",
+                                "ABCD0001234",
+                                "Example Bank"));
+
+        verify(audit).record(7L, "BENEFICIARY_CREATED", "BENEFICIARY", "3", "SUCCESS");
+
+        Beneficiary beneficiary = beneficiaryWithStatus("ACTIVE");
+        stubOwned(beneficiary);
+        service().disable(7L, 3L);
+
+        assertThat(beneficiary.getBeneficiaryStatus()).isEqualTo("DISABLED");
+        verify(audit).record(7L, "BENEFICIARY_DISABLED", "BENEFICIARY", "3", "SUCCESS");
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"ACTIVE", "DISABLED"})
@@ -81,6 +116,7 @@ class BeneficiaryServiceTest {
 
         assertThat(challenge.status()).isEqualTo("OTP_SENT");
         assertThat(activated.status()).isEqualTo("ACTIVE");
+        verify(audit).record(7L, "BENEFICIARY_ACTIVATED", "BENEFICIARY", "3", "SUCCESS");
         verify(otpService)
                 .authorize(
                         eq("beneficiary-3"),
@@ -110,6 +146,6 @@ class BeneficiaryServiceTest {
     }
 
     private BeneficiaryService service() {
-        return new BeneficiaryService(repository, customerService, otpService, 30);
+        return new BeneficiaryService(repository, customerService, otpService, audit, 30);
     }
 }
