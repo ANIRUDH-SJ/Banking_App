@@ -65,6 +65,7 @@ class LedgerIntegrationTest extends ServiceTestBase {
                 key,
                 7L,
                 source,
+                21L,
                 destination,
                 "ABCD0001234",
                 "TRANSFER",
@@ -91,6 +92,10 @@ class LedgerIntegrationTest extends ServiceTestBase {
                         jdbc.queryForObject(
                                 "SELECT COUNT(*) FROM account_transaction_entry", Integer.class))
                 .isEqualTo(2);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT beneficiary_id FROM bank_transaction", Long.class))
+                .isEqualTo(21L);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event_outbox", Integer.class))
                 .isEqualTo(1);
         assertThatThrownBy(

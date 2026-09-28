@@ -54,6 +54,7 @@ public class LedgerService {
                 RequestFingerprint.of(
                         command.userId(),
                         command.sourceAccountId(),
+                        command.beneficiaryId(),
                         command.destinationAccountNumber(),
                         command.destinationIfsc(),
                         command.type(),
@@ -111,7 +112,7 @@ public class LedgerService {
                         new CreateTransactionCommand(
                                 source.getAccountId(),
                                 destinationId,
-                                null,
+                                command.beneficiaryId(),
                                 command.userId(),
                                 TransactionType.valueOf(command.type()),
                                 command.amount(),
