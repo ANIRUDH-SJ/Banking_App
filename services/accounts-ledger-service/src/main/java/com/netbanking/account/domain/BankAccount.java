@@ -82,6 +82,21 @@ public class BankAccount {
     }
 
     public void changeStatus(String accountStatus) {
+        if (accountStatus == null) {
+            throw new IllegalArgumentException("Account status is required.");
+        }
+        boolean allowed =
+                switch (this.accountStatus) {
+                    case "PENDING" -> "ACTIVE".equals(accountStatus) || "CLOSED".equals(accountStatus);
+                    case "ACTIVE" -> "FROZEN".equals(accountStatus) || "CLOSED".equals(accountStatus);
+                    case "FROZEN" -> "ACTIVE".equals(accountStatus) || "CLOSED".equals(accountStatus);
+                    case "CLOSED" -> false;
+                    default -> false;
+                };
+        if (!allowed) {
+            throw new IllegalStateException(
+                    "Account cannot move from " + this.accountStatus + " to " + accountStatus + ".");
+        }
         this.accountStatus = accountStatus;
         this.closedAt = "CLOSED".equals(accountStatus) ? LocalDateTime.now() : null;
     }
