@@ -1,5 +1,7 @@
 package com.netbanking.security;
 
+import com.netbanking.common.api.ApiErrorWriter;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,9 +19,11 @@ import java.util.List;
 @Component
 public class InternalAuthenticationFilter extends OncePerRequestFilter {
     private final InternalTokens tokens;
+    private final ApiErrorWriter errors;
 
-    public InternalAuthenticationFilter(InternalTokens tokens) {
+    public InternalAuthenticationFilter(InternalTokens tokens, ApiErrorWriter errors) {
         this.tokens = tokens;
+        this.errors = errors;
     }
 
     @Override
@@ -29,7 +33,12 @@ public class InternalAuthenticationFilter extends OncePerRequestFilter {
         if (request.getServletPath().startsWith("/internal/")) {
             String caller = request.getHeader("X-Service-Name");
             if (caller == null || !tokens.accepts(caller, request.getHeader("X-Service-Token"))) {
-                response.sendError(401);
+                errors.write(
+                        request,
+                        response,
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "UNAUTHORIZED",
+                        "Service authentication is required.");
                 return;
             }
             SecurityContextHolder.getContext()

@@ -123,7 +123,12 @@ class GatewayIntegrationTest {
 
     @Test
     void anonymousAndInternalRoutesCannotReachUpstream() throws Exception {
-        assertThat(get("/api/v1/accounts", null).statusCode()).isEqualTo(401);
+        var anonymous = get("/api/v1/accounts", null);
+        assertThat(anonymous.statusCode()).isEqualTo(401);
+        assertThat(anonymous.headers().firstValue("X-Correlation-ID")).isPresent();
+        assertThat(anonymous.body())
+                .contains("\"code\":\"UNAUTHORIZED\"")
+                .contains("\"correlationId\"");
         assertThat(get("/internal/ledger/operations", token()).statusCode()).isIn(401, 403, 404);
         verifyNoInteractions(resolver);
     }
