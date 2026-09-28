@@ -1,10 +1,10 @@
-package com.netbanking.admin.service;
+package com.netbanking.account.admin.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.netbanking.ServiceTestBase;
-import com.netbanking.admin.api.AdminTransactionSearchFilter;
+import com.netbanking.account.admin.api.AdminTransactionSearchFilter;
 import com.netbanking.transaction.domain.BankTransaction;
 import com.netbanking.transaction.domain.TransactionStatus;
 import com.netbanking.transaction.domain.TransactionType;

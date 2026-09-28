@@ -1,4 +1,4 @@
-package com.netbanking.admin.api;
+package com.netbanking.user.admin.api;
 
 public record AdminCustomerResponse(
         Long customerId,

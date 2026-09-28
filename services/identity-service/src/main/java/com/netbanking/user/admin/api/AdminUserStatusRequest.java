@@ -1,4 +1,4 @@
-package com.netbanking.admin.api;
+package com.netbanking.user.admin.api;
 
 import com.netbanking.user.domain.UserStatus;
 

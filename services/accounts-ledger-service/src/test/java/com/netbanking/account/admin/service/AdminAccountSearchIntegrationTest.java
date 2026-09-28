@@ -1,4 +1,4 @@
-package com.netbanking.admin.service;
+package com.netbanking.account.admin.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

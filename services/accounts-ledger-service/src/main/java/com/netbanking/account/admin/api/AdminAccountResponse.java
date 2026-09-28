@@ -1,4 +1,4 @@
-package com.netbanking.admin.api;
+package com.netbanking.account.admin.api;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

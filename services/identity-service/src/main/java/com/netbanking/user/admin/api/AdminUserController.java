@@ -1,8 +1,8 @@
-package com.netbanking.admin.api;
+package com.netbanking.user.admin.api;
 
-import com.netbanking.admin.service.AdminUserService;
 import com.netbanking.common.api.PagedResponse;
 import com.netbanking.security.SecurityContextHelper;
+import com.netbanking.user.admin.service.AdminUserService;
 import com.netbanking.user.domain.UserStatus;
 
 import jakarta.validation.Valid;

@@ -1,7 +1,7 @@
-package com.netbanking.admin.service;
+package com.netbanking.account.admin.service;
 
-import com.netbanking.admin.api.AdminTransactionResponse;
-import com.netbanking.admin.api.AdminTransactionSearchFilter;
+import com.netbanking.account.admin.api.AdminTransactionResponse;
+import com.netbanking.account.admin.api.AdminTransactionSearchFilter;
 import com.netbanking.transaction.domain.BankTransaction;
 import com.netbanking.transaction.repository.BankTransactionRepository;
 
