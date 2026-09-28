@@ -1,6 +1,7 @@
 package com.netbanking.auth.service;
 
 import com.netbanking.auth.api.*;
+import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.common.exception.UnauthorizedException;
@@ -32,6 +33,7 @@ public class AuthService {
     private final AppUserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final EventOutbox eventOutbox;
+    private final IdentityAuditService audit;
     private final UserService userService;
     private final RoleService roleService;
     private final TotpService totpService;
@@ -42,6 +44,7 @@ public class AuthService {
             AppUserRepository userRepository,
             CustomerRepository customerRepository,
             EventOutbox eventOutbox,
+            IdentityAuditService audit,
             UserService userService,
             RoleService roleService,
             TotpService totpService,
@@ -50,6 +53,7 @@ public class AuthService {
         this.userRepository = userRepository;
         this.customerRepository = customerRepository;
         this.eventOutbox = eventOutbox;
+        this.audit = audit;
         this.userService = userService;
         this.roleService = roleService;
         this.totpService = totpService;
@@ -82,6 +86,11 @@ public class AuthService {
                     "CUSTOMER_REGISTERED",
                     new CustomerRegistered(
                             customer.getCustomerId(), customer.getCustomerNumber()));
+            audit.success(
+                    user.getUserId(),
+                    "CUSTOMER_REGISTERED",
+                    "CUSTOMER",
+                    String.valueOf(customer.getCustomerId()));
             return new RegistrationResponse(
                     user.getUserId(),
                     customer.getCustomerId(),
@@ -101,7 +110,13 @@ public class AuthService {
     }
 
     public LoginChallengeResponse beginLogin(LoginRequest request) {
-        AppUser user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
+        AppUser user;
+        try {
+            user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
+        } catch (UnauthorizedException exception) {
+            audit.denied(null, "LOGIN_REJECTED", "USER", null, "unknownPrincipal");
+            throw exception;
+        }
         userService.requireEligibleForLogin(user);
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             userService.recordFailedLogin(user.getUserId());
@@ -156,6 +171,7 @@ public class AuthService {
             userService.recordFailedLogin(user.getUserId());
             throw exception;
         }
+        audit.success(user.getUserId(), "TOTP_ENABLED", "USER", String.valueOf(user.getUserId()));
     }
 
     private AppUser verifyCredentials(LoginRequest request) {

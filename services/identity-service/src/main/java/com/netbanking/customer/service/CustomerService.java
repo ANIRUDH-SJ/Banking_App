@@ -1,5 +1,6 @@
 package com.netbanking.customer.service;
 
+import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.customer.api.CustomerProfileResponse;
 import com.netbanking.customer.api.CustomerProfileUpdateRequest;
@@ -14,9 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final IdentityAuditService audit;
 
-    public CustomerService(CustomerRepository customerRepository) {
+    public CustomerService(CustomerRepository customerRepository, IdentityAuditService audit) {
         this.customerRepository = customerRepository;
+        this.audit = audit;
     }
 
     public CustomerProfileResponse getProfileForUser(Long userId) {
@@ -35,7 +38,13 @@ public class CustomerService {
                 request.firstName().trim(),
                 request.lastName().trim(),
                 request.mobileNumber().replace(" ", "").replace("-", ""));
-        return toResponse(customerRepository.saveAndFlush(customer));
+        Customer saved = customerRepository.saveAndFlush(customer);
+        audit.success(
+                userId,
+                "CUSTOMER_PROFILE_UPDATED",
+                "CUSTOMER",
+                String.valueOf(saved.getCustomerId()));
+        return toResponse(saved);
     }
 
     private Customer findCustomerByUserId(Long userId) {
