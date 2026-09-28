@@ -34,7 +34,7 @@ public class NotificationEventReceiver {
                 event,
                 payload -> {
                     var p = json.convertValue(payload, Notice.class);
-                    service.createInApp(p.userId(), "PAYMENT", p.title(), p.message());
+                    service.createInApp(p.userId(), p.type(), p.title(), p.message());
                 });
     }
 }
