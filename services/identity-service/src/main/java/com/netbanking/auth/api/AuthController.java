@@ -1,7 +1,9 @@
 package com.netbanking.auth.api;
 
 import com.netbanking.auth.service.AuthService;
+import com.netbanking.loginaudit.service.LoginAttemptContext;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.http.CacheControl;
@@ -25,13 +27,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginChallengeResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.beginLogin(request);
+    public LoginChallengeResponse login(
+            @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        return authService.beginLogin(request, LoginAttemptContext.from(httpRequest));
     }
 
     @PostMapping("/login/verify-totp")
-    public AuthenticationResponse verifyTotp(@Valid @RequestBody LoginTotpVerifyRequest request) {
-        return authService.verifyLoginTotp(request);
+    public AuthenticationResponse verifyTotp(
+            @Valid @RequestBody LoginTotpVerifyRequest request, HttpServletRequest httpRequest) {
+        return authService.verifyLoginTotp(request, LoginAttemptContext.from(httpRequest));
     }
 
     @PostMapping("/totp/setup")

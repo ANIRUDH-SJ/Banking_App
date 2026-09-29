@@ -4,6 +4,8 @@ import com.netbanking.auth.api.*;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.common.exception.UnauthorizedException;
+import com.netbanking.loginaudit.service.LoginAttemptContext;
+import com.netbanking.loginaudit.service.LoginAuditService;
 import com.netbanking.role.service.RoleService;
 import com.netbanking.security.JwtService;
 import com.netbanking.totp.api.TotpSetupResponse;
@@ -26,6 +28,7 @@ import java.util.Set;
 @Transactional
 public class AuthService {
     private final AppUserRepository userRepository;
+    private final LoginAuditService loginAudit;
     private final UserService userService;
     private final RoleService roleService;
     private final TotpService totpService;
@@ -34,12 +37,14 @@ public class AuthService {
 
     public AuthService(
             AppUserRepository userRepository,
+            LoginAuditService loginAudit,
             UserService userService,
             RoleService roleService,
             TotpService totpService,
             PasswordEncoder passwordEncoder,
             JwtService jwtService) {
         this.userRepository = userRepository;
+        this.loginAudit = loginAudit;
         this.userService = userService;
         this.roleService = roleService;
         this.totpService = totpService;
@@ -63,11 +68,25 @@ public class AuthService {
         }
     }
 
-    public LoginChallengeResponse beginLogin(LoginRequest request) {
-        AppUser user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
-        userService.requireEligibleForLogin(user);
+    public LoginChallengeResponse beginLogin(
+            LoginRequest request, LoginAttemptContext attemptContext) {
+        String attemptedUsername = request.usernameOrEmail().trim();
+        AppUser user;
+        try {
+            user = userService.requireByUsernameOrEmail(attemptedUsername);
+        } catch (UnauthorizedException exception) {
+            loginAudit.failure(null, attemptedUsername, "UNKNOWN_PRINCIPAL", attemptContext);
+            throw exception;
+        }
+        try {
+            userService.requireEligibleForLogin(user);
+        } catch (UnauthorizedException exception) {
+            loginAudit.failure(user, attemptedUsername, "ACCOUNT_NOT_ELIGIBLE", attemptContext);
+            throw exception;
+        }
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             userService.recordFailedLogin(user.getUserId());
+            loginAudit.failure(user, attemptedUsername, "INVALID_CREDENTIALS", attemptContext);
             throw new UnauthorizedException("Invalid username or password.");
         }
         if (!totpService.isEnabled(user)) {
@@ -77,20 +96,29 @@ public class AuthService {
                 jwtService.createTotpLoginChallenge(user), "TOTP_REQUIRED");
     }
 
-    public AuthenticationResponse verifyLoginTotp(LoginTotpVerifyRequest request) {
+    public AuthenticationResponse verifyLoginTotp(
+            LoginTotpVerifyRequest request, LoginAttemptContext attemptContext) {
         AppUser user;
         try {
             user =
                     userService.requireById(
                             jwtService.parseTotpLoginChallenge(request.challengeId()));
         } catch (JwtException | IllegalArgumentException | ResourceNotFoundException exception) {
+            loginAudit.failure(null, "challenge", "INVALID_CHALLENGE", attemptContext);
             throw new UnauthorizedException("Login challenge is invalid or expired.");
         }
-        userService.requireEligibleForLogin(user);
+        try {
+            userService.requireEligibleForLogin(user);
+        } catch (UnauthorizedException exception) {
+            loginAudit.failure(
+                    user, user.getUsername(), "ACCOUNT_NOT_ELIGIBLE", attemptContext);
+            throw exception;
+        }
         try {
             totpService.verifyLogin(user, request.code());
         } catch (UnauthorizedException exception) {
             userService.recordFailedLogin(user.getUserId());
+            loginAudit.failure(user, user.getUsername(), "INVALID_TOTP", attemptContext);
             throw exception;
         }
         userService.recordSuccessfulLogin(user);
@@ -98,12 +126,15 @@ public class AuthService {
                 user.getRoles().stream()
                         .map(role -> role.getRoleCode())
                         .collect(java.util.stream.Collectors.toUnmodifiableSet());
-        return new AuthenticationResponse(
-                jwtService.createToken(user),
-                "Bearer",
-                user.getUserId(),
-                user.getUsername(),
-                roles);
+        AuthenticationResponse response =
+                new AuthenticationResponse(
+                        jwtService.createToken(user),
+                        "Bearer",
+                        user.getUserId(),
+                        user.getUsername(),
+                        roles);
+        loginAudit.success(user, attemptContext);
+        return response;
     }
 
     public TotpSetupResponse beginTotpSetup(LoginRequest request) {
