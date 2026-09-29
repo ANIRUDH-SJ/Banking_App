@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.netbanking.beneficiary.service.BeneficiaryService;
+import com.netbanking.biller.provider.*;
 import com.netbanking.biller.service.BillerService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.contracts.*;
@@ -20,6 +21,7 @@ class PaymentServiceTest {
     final LedgerClient ledger = mock(LedgerClient.class);
     final OtpClient otp = mock(OtpClient.class);
     final PaymentWorkflowStore store = mock(PaymentWorkflowStore.class);
+    final BillerPaymentAdapter billerPayments = mock(BillerPaymentAdapter.class);
     final PaymentAuditService audit = mock(PaymentAuditService.class);
     final PaymentService service =
             new PaymentService(
@@ -28,6 +30,7 @@ class PaymentServiceTest {
                     ledger,
                     otp,
                     store,
+                    billerPayments,
                     audit,
                     new BigDecimal("100000"));
     final FundTransferRequest request =
@@ -116,5 +119,54 @@ class PaymentServiceTest {
                 .authorize("operation-key", 7L, "challenge", "123456", "FUND_TRANSFER", "digest");
         ordered.verify(store).authorized("operation-key");
         ordered.verify(ledger).post(command);
+    }
+
+    @Test
+    void rejectedBillerCollectionReversesTheCompletedDebit() {
+        var billCommand =
+                new LedgerCommand(
+                        "bill-operation",
+                        7L,
+                        10L,
+                        null,
+                        null,
+                        "WITHDRAWAL",
+                        new BigDecimal("100"),
+                        "INR",
+                        "Bill payment: WATER");
+        var billOperation =
+                new PaymentWorkflowStore.Operation(
+                        2L,
+                        "BILL_PAYMENT",
+                        "bill-operation",
+                        "fingerprint",
+                        "digest",
+                        "AUTHORIZED",
+                        billCommand,
+                        null,
+                        null);
+        var debit = new LedgerReceipt(101L, "TXN-101", "COMPLETED", billCommand.amount(), "INR");
+        var reversal =
+                new LedgerReceipt(102L, "TXN-102", "COMPLETED", billCommand.amount(), "INR");
+        var rejected = new BillerPaymentReceipt("PROVIDER-1", "REJECTED", "Reference closed");
+        var response =
+                new PaymentReceiptResponse(
+                        2L, 101L, "TXN-101", "REVERSED", billCommand.amount(), "INR");
+        when(ledger.post(billCommand)).thenReturn(debit);
+        when(store.details("bill-operation"))
+                .thenReturn(
+                        new PaymentWorkflowStore.Details(
+                                null, 3L, "WATER", "ABC-123", null));
+        when(billerPayments.collect(any())).thenReturn(rejected);
+        when(ledger.reverse(any())).thenReturn(reversal);
+        when(store.reversed("bill-operation", debit, reversal, rejected)).thenReturn(response);
+
+        assertThat(service.settle(billOperation).status()).isEqualTo("REVERSED");
+
+        verify(store).debited("bill-operation", debit);
+        verify(ledger)
+                .reverse(
+                        new LedgerReversalCommand(
+                                "bill-operation:reversal", 7L, 101L, "Reference closed"));
     }
 }
