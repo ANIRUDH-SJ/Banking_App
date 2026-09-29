@@ -10,6 +10,8 @@ import com.netbanking.auth.api.LoginTotpVerifyRequest;
 import com.netbanking.auth.api.RegisterRequest;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.UnauthorizedException;
+import com.netbanking.loginaudit.service.LoginAttemptContext;
+import com.netbanking.loginaudit.service.LoginAuditService;
 import com.netbanking.role.service.RoleService;
 import com.netbanking.security.JwtService;
 import com.netbanking.totp.service.TotpService;
@@ -29,6 +31,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class AuthServiceTest {
 
     @Mock private AppUserRepository userRepository;
+    @Mock private LoginAuditService loginAudit;
     @Mock private UserService userService;
     @Mock private RoleService roleService;
     @Mock private TotpService totpService;
@@ -43,7 +46,7 @@ class AuthServiceTest {
         when(totpService.isEnabled(user)).thenReturn(true);
         when(jwtService.createTotpLoginChallenge(user)).thenReturn("login-challenge");
 
-        var response = service().beginLogin(new LoginRequest("asha", "password"));
+        var response = service().beginLogin(new LoginRequest("asha", "password"), attempt());
 
         assertThat(response.status()).isEqualTo("TOTP_REQUIRED");
         assertThat(response.challengeId()).isEqualTo("login-challenge");
@@ -57,10 +60,14 @@ class AuthServiceTest {
         when(jwtService.createToken(user)).thenReturn("access-token");
 
         var response =
-                service().verifyLoginTotp(new LoginTotpVerifyRequest("login-challenge", "123456"));
+                service()
+                        .verifyLoginTotp(
+                                new LoginTotpVerifyRequest("login-challenge", "123456"),
+                                attempt());
 
         verify(totpService).verifyLogin(user, "123456");
         verify(userService).recordSuccessfulLogin(user);
+        verify(loginAudit).success(user, attempt());
         assertThat(response.accessToken()).isEqualTo("access-token");
     }
 
@@ -78,9 +85,64 @@ class AuthServiceTest {
                                 service()
                                         .verifyLoginTotp(
                                                 new LoginTotpVerifyRequest(
-                                                        "login-challenge", "000000")))
+                                                        "login-challenge", "000000"),
+                                                attempt()))
                 .isInstanceOf(UnauthorizedException.class);
         verify(userService).recordFailedLogin(7L);
+        verify(loginAudit).failure(user, "asha", "INVALID_TOTP", attempt());
+    }
+
+    @Test
+    void unknownPrincipalCreatesFailedLoginAudit() {
+        when(userService.requireByUsernameOrEmail("missing@example.com"))
+                .thenThrow(new UnauthorizedException("Invalid username or password."));
+
+        assertThatThrownBy(
+                        () ->
+                                service()
+                                        .beginLogin(
+                                                new LoginRequest(
+                                                        "missing@example.com", "password"),
+                                                attempt()))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(loginAudit)
+                .failure(null, "missing@example.com", "UNKNOWN_PRINCIPAL", attempt());
+    }
+
+    @Test
+    void invalidPasswordCreatesFailedLoginAuditForTheKnownUser() {
+        AppUser user = user();
+        when(userService.requireByUsernameOrEmail("asha")).thenReturn(user);
+        when(passwordEncoder.matches("wrong-password", "password-hash")).thenReturn(false);
+
+        assertThatThrownBy(
+                        () ->
+                                service()
+                                        .beginLogin(
+                                                new LoginRequest("asha", "wrong-password"),
+                                                attempt()))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(userService).recordFailedLogin(7L);
+        verify(loginAudit).failure(user, "asha", "INVALID_CREDENTIALS", attempt());
+    }
+
+    @Test
+    void invalidChallengeCreatesFailedLoginAuditWithoutPersistingTheToken() {
+        when(jwtService.parseTotpLoginChallenge("invalid-challenge"))
+                .thenThrow(new IllegalArgumentException("invalid"));
+
+        assertThatThrownBy(
+                        () ->
+                                service()
+                                        .verifyLoginTotp(
+                                                new LoginTotpVerifyRequest(
+                                                        "invalid-challenge", "123456"),
+                                                attempt()))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(loginAudit).failure(null, "challenge", "INVALID_CHALLENGE", attempt());
     }
 
     @Test
@@ -112,7 +174,17 @@ class AuthServiceTest {
 
     private AuthService service() {
         return new AuthService(
-                userRepository, userService, roleService, totpService, passwordEncoder, jwtService);
+                userRepository,
+                loginAudit,
+                userService,
+                roleService,
+                totpService,
+                passwordEncoder,
+                jwtService);
+    }
+
+    private static LoginAttemptContext attempt() {
+        return new LoginAttemptContext("203.0.113.8", "test-agent");
     }
 
     private static AppUser user() {
