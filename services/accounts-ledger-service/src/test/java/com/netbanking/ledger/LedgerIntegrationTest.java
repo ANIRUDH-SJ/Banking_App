@@ -80,6 +80,19 @@ class LedgerIntegrationTest extends ServiceTestBase {
                 id);
     }
 
+    LedgerCommand withdrawal(String key, String amount) {
+        return new LedgerCommand(
+                key,
+                7L,
+                1L,
+                null,
+                null,
+                "WITHDRAWAL",
+                new BigDecimal(amount),
+                "INR",
+                "Bill payment: TEST");
+    }
+
     @Test
     void commitsBothBalancesEntriesAndOutboxOnce() {
         var request = command("transfer-1", 1L, "1234567892", "100.1234");
@@ -163,5 +176,31 @@ class LedgerIntegrationTest extends ServiceTestBase {
                                         command("external", 1L, "9999999999", "100")))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(balance(1)).isEqualByComparingTo("1000");
+    }
+
+    @Test
+    void billDebitReversalCreditsTheSourceExactlyOnce() {
+        var debit = ledger.post("payments-service", withdrawal("bill-payment", "100"));
+        var command =
+                new LedgerReversalCommand(
+                        "bill-payment:reversal", 7L, debit.transactionId(), "Biller rejected bill");
+
+        var first = ledger.reverse("payments-service", command);
+
+        assertThat(ledger.reverse("payments-service", command)).isEqualTo(first);
+        assertThat(balance(1)).isEqualByComparingTo("1000");
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT transaction_status FROM bank_transaction WHERE"
+                                        + " transaction_id = ?",
+                                String.class,
+                                debit.transactionId()))
+                .isEqualTo("REVERSED");
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT COUNT(*) FROM bank_transaction WHERE transaction_type ="
+                                        + " 'REVERSAL'",
+                                Integer.class))
+                .isEqualTo(1);
     }
 }
