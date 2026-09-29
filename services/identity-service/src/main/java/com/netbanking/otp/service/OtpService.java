@@ -73,15 +73,16 @@ public class OtpService {
         }
         String code = String.format("%06d", secureRandom.nextInt(1_000_000));
         String challengeId = UUID.randomUUID().toString();
+        Instant expiresAt = now.plus(expiry);
         repository.saveAndFlush(
                 new OtpVerification(
                         user.getUserId(),
                         challengeId,
                         passwordEncoder.encode(code),
                         purpose,
-                        now.plus(expiry),
+                        expiresAt,
                         intentDigest));
-        deliveryService.deliver(user.getUserId(), purpose, code);
+        deliveryService.deliver(user.getUserId(), challengeId, purpose, code, expiresAt);
         return new Challenge(challengeId);
     }
 
