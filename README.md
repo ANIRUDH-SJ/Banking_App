@@ -66,5 +66,6 @@ The normal Java suite uses H2 for transactional tests. It does not establish Ora
 - [Loan information and payments](docs/loan-api.md)
 - [Beneficiaries, transfers and bill payments](docs/payment-api.md)
 - [Transaction history and statements](docs/transaction-statement-api.md)
+- [Gateway authentication rate limits](docs/gateway-rate-limits.md)
 
 The Oracle JET application remains a scaffold. Customer screens, production SMTP/SMS providers, real settlement integrations and production deployment infrastructure require separate work.
