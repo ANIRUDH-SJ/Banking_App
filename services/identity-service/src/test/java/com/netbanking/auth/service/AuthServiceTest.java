@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.netbanking.auth.api.LoginRequest;
 import com.netbanking.auth.api.LoginTotpVerifyRequest;
 import com.netbanking.auth.api.RegisterRequest;
+import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.UnauthorizedException;
 import com.netbanking.contracts.CustomerRegistered;
@@ -39,6 +40,8 @@ class AuthServiceTest {
     @Mock private AppUserRepository userRepository;
     @Mock private CustomerRepository customerRepository;
     @Mock private EventOutbox eventOutbox;
+    @Mock private IdentityAuditService audit;
+
     @Mock private UserService userService;
     @Mock private RoleService roleService;
     @Mock private TotpService totpService;
@@ -137,6 +140,19 @@ class AuthServiceTest {
                         eq(new CustomerRegistered(84L, "CUST0000000000000042")));
     }
 
+
+    @Test
+    void unknownLoginPrincipalIsAuditedAsDenied() {
+        when(userService.requireByUsernameOrEmail("missing"))
+                .thenThrow(new UnauthorizedException("Invalid credentials."));
+
+        assertThatThrownBy(() -> service().beginLogin(new LoginRequest("missing", "password")))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(audit).denied(null, "LOGIN_REJECTED", "USER", null, "unknownPrincipal");
+
+    }
+
     @Test
     void registrationMapsConcurrentUniqueConstraintFailureToConflict() {
         RegisterRequest request = registrationRequest();
@@ -155,6 +171,8 @@ class AuthServiceTest {
                 userRepository,
                 customerRepository,
                 eventOutbox,
+                audit,
+
                 userService,
                 roleService,
                 totpService,
@@ -171,6 +189,7 @@ class AuthServiceTest {
                 "Patil",
                 LocalDate.of(1998, 1, 1),
                 "9999999999");
+
     }
 
     private static AppUser user() {

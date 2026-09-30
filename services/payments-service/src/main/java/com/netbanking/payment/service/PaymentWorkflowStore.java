@@ -210,6 +210,7 @@ public class PaymentWorkflowStore {
                 "transactionReference=" + receipt.reference());
         notifications.publish(
                 current.command().userId(),
+                current.kind(),
                 "Payment completed",
                 "Payment of "
                         + receipt.amount()

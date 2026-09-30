@@ -73,8 +73,20 @@ public class AuditEvent {
         return eventType;
     }
 
+    public String getEntityType() {
+        return entityType;
+    }
+
+    public String getEntityId() {
+        return entityId;
+    }
+
     public String getOutcome() {
         return outcome;
+    }
+
+    public String getEventDetails() {
+        return eventDetails;
     }
 
     public LocalDateTime getOccurredAt() {

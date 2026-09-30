@@ -29,3 +29,22 @@ remain recoverable and are retried with the original operation key.
 The default `mock` adapter accepts payments idempotently. Local failure and rejection paths can be
 exercised with `BILLER_PAYMENT_MOCK_FAILURES` and `BILLER_PAYMENT_MOCK_REJECT_PREFIX`; production
 deployments should select a real adapter with `BILLER_PAYMENT_PROVIDER`.
+
+## External transfer adapter
+
+When the beneficiary account is not held by a local branch, the ledger routes the transfer through
+`ExternalTransferAdapter`. The first-release implementation uses the `mock` provider and records its
+provider reference in `external_transfer_dispatch` before the local transaction commits. The adapter
+contract requires `operationId` to be used as the provider idempotency key. A repeated dispatch with
+the same operation and instructions must return the original provider receipt; reuse with different
+instructions must be rejected.
+
+| Environment variable | Default | Purpose |
+| --- | --- | --- |
+| `EXTERNAL_TRANSFER_PROVIDER` | `mock` | Selects the configured adapter implementation. |
+| `EXTERNAL_TRANSFER_MOCK_FAILURES` | `0` | Makes the mock return HTTP 503 this many times per operation before succeeding. |
+
+HTTP 5xx adapter failures leave the payment authorized and eligible for the existing recovery worker.
+The ledger transaction rolls back the source debit, transaction row, and dispatch row until an adapter
+attempt succeeds. A destination using a known local IFSC but an unknown local account is rejected and
+is never sent to an external adapter.
