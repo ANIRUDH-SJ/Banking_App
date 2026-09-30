@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 public class DevelopmentEmailService implements EmailService {
     private static final Logger log = LoggerFactory.getLogger(DevelopmentEmailService.class);
 
+    @Override
     public void send(String recipient, String subject, String body) {
         log.info("Mock email delivered to {} with subject {}", mask(recipient), subject);
     }
