@@ -2,6 +2,7 @@ package com.netbanking.customer.service;
 
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.customer.api.CustomerProfileResponse;
+import com.netbanking.customer.api.CustomerProfileUpdateRequest;
 import com.netbanking.customer.domain.Customer;
 import com.netbanking.customer.repository.CustomerRepository;
 
@@ -26,6 +27,17 @@ public class CustomerService {
         return findCustomerByUserId(userId).getCustomerId();
     }
 
+    @Transactional
+    public CustomerProfileResponse updateProfileForUser(
+            Long userId, CustomerProfileUpdateRequest request) {
+        Customer customer = findCustomerByUserId(userId);
+        customer.updateProfile(
+                request.firstName().trim(),
+                request.lastName().trim(),
+                request.mobileNumber().replace(" ", "").replace("-", ""));
+        return toResponse(customerRepository.saveAndFlush(customer));
+    }
+
     private Customer findCustomerByUserId(Long userId) {
         return customerRepository
                 .findByUserId(userId)
@@ -39,6 +51,7 @@ public class CustomerService {
                 customer.getCustomerNumber(),
                 customer.getFirstName(),
                 customer.getLastName(),
+                customer.getDateOfBirth(),
                 customer.getMobileNumber(),
                 customer.getKycStatus(),
                 "Y".equals(customer.getIsActive()));

@@ -2,8 +2,10 @@ package com.netbanking.card.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.netbanking.audit.service.AuditLogService;
 import com.netbanking.card.domain.BankCard;
 import com.netbanking.card.domain.CardNetwork;
 import com.netbanking.card.domain.CardStatus;
@@ -27,12 +29,13 @@ class CardServiceTest {
 
     @Mock private BankCardRepository cardRepository;
     @Mock private CustomerDirectory customerService;
+    @Mock private AuditLogService audit;
 
     private CardService cardService;
 
     @BeforeEach
     void setUp() {
-        cardService = new CardService(cardRepository, customerService);
+        cardService = new CardService(cardRepository, customerService, audit);
         when(customerService.requireCustomerIdForUser(7L)).thenReturn(21L);
     }
 
@@ -60,6 +63,7 @@ class CardServiceTest {
         var response = cardService.changeStatus(7L, 3L, CardStatusAction.BLOCK);
 
         assertThat(response.status()).isEqualTo("BLOCKED");
+        verify(audit).record(7L, "CARD_BLOCK", "CARD", "3", "SUCCESS");
     }
 
     @Test

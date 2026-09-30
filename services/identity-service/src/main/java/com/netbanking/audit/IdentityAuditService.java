@@ -1,7 +1,6 @@
 package com.netbanking.audit;
 
 import com.netbanking.audit.service.AuditLogService;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;

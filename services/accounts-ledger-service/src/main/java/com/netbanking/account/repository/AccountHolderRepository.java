@@ -13,6 +13,8 @@ public interface AccountHolderRepository extends JpaRepository<AccountHolder, Ac
     boolean existsByAccountIdAndCustomerIdAndIsActive(
             Long accountId, Long customerId, String isActive);
 
+    boolean existsByCustomerIdAndIsActive(Long customerId, String isActive);
+
     @Query(
             "select holder.accountId from AccountHolder holder "
                     + "where holder.customerId = :customerId and holder.isActive = 'Y'")
