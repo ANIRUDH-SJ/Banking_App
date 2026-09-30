@@ -2,9 +2,11 @@ package com.netbanking.customer.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.netbanking.common.exception.ResourceNotFoundException;
+import com.netbanking.customer.api.CustomerProfileUpdateRequest;
 import com.netbanking.customer.domain.Customer;
 import com.netbanking.customer.repository.CustomerRepository;
 
@@ -50,5 +52,33 @@ class CustomerServiceTest {
 
         assertThatThrownBy(() -> service.getProfileForUser(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void updatesOnlyTheEditableProfileFields() {
+        Customer customer =
+                new Customer(
+                        10L,
+                        99L,
+                        "CUST000010",
+                        "Asha",
+                        "Patil",
+                        LocalDate.of(1998, 1, 1),
+                        "9999999999",
+                        "VERIFIED",
+                        "Y");
+        when(customerRepository.findByUserId(99L)).thenReturn(Optional.of(customer));
+        when(customerRepository.saveAndFlush(customer)).thenReturn(customer);
+
+        CustomerService service = new CustomerService(customerRepository);
+        var response =
+                service.updateProfileForUser(
+                        99L, new CustomerProfileUpdateRequest("Asha ", " Rao ", "+91 98765-43210"));
+
+        assertThat(response.firstName()).isEqualTo("Asha");
+        assertThat(response.lastName()).isEqualTo("Rao");
+        assertThat(response.mobileNumber()).isEqualTo("+919876543210");
+        assertThat(response.dateOfBirth()).isEqualTo(LocalDate.of(1998, 1, 1));
+        verify(customerRepository).saveAndFlush(customer);
     }
 }
