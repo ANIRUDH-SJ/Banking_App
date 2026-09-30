@@ -3,6 +3,8 @@ package com.netbanking.customer.api;
 import com.netbanking.customer.service.CustomerService;
 import com.netbanking.security.SecurityContextHelper;
 
+import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,5 +19,11 @@ public class CustomerController {
     @GetMapping
     public CustomerProfileResponse profile() {
         return customers.getProfileForUser(SecurityContextHelper.currentUserId());
+    }
+
+    @PutMapping
+    public CustomerProfileResponse updateProfile(
+            @Valid @RequestBody CustomerProfileUpdateRequest request) {
+        return customers.updateProfileForUser(SecurityContextHelper.currentUserId(), request);
     }
 }

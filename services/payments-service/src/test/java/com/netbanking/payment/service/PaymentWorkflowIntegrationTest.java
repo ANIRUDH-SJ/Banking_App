@@ -3,7 +3,11 @@ package com.netbanking.payment.service;
 import static org.assertj.core.api.Assertions.*;
 
 import com.netbanking.ServiceTestBase;
+import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.contracts.*;
+import com.netbanking.payment.api.PaymentKind;
+import com.netbanking.payment.api.PaymentSearchFilter;
+import com.netbanking.payment.api.PaymentStatus;
 
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +17,7 @@ import java.math.BigDecimal;
 
 class PaymentWorkflowIntegrationTest extends ServiceTestBase {
     @Autowired PaymentWorkflowStore store;
+    @Autowired PaymentSearchService search;
     @Autowired JdbcTemplate jdbc;
     final LedgerCommand command =
             new LedgerCommand(
@@ -97,5 +102,36 @@ class PaymentWorkflowIntegrationTest extends ServiceTestBase {
         jdbc.update(
                 "UPDATE payment_operation SET next_attempt_at = TIMESTAMP '2000-01-01 00:00:00'");
         assertThat(store.recoverable()).hasSize(1);
+    }
+
+    @Test
+    void paymentSearchFiltersResultsAndEnforcesOwnership() {
+        create();
+        store.authorized(command.operationId());
+        store.complete(
+                command.operationId(),
+                new LedgerReceipt(55L, "TXN-55", "COMPLETED", command.amount(), "INR"));
+
+        var result =
+                search.search(
+                        7L,
+                        new PaymentSearchFilter(
+                                PaymentKind.TRANSFER,
+                                PaymentStatus.COMPLETED,
+                                null,
+                                null,
+                                "TXN-55"),
+                        0,
+                        20);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        var payment = result.getContent().get(0);
+        assertThat(payment.transactionReference()).isEqualTo("TXN-55");
+        assertThat(payment.sourceAccountId()).isEqualTo(10L);
+        assertThat(payment.beneficiaryId()).isEqualTo(20L);
+        assertThat(payment.narration()).isEqualTo("Rent");
+        assertThat(search.get(7L, payment.paymentId())).isEqualTo(payment);
+        assertThatThrownBy(() -> search.get(8L, payment.paymentId()))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }
