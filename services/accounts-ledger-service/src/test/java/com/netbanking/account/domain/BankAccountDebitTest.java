@@ -44,4 +44,14 @@ class BankAccountDebitTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("active");
     }
+
+    @Test
+    void closedAccountCannotBeReopened() {
+        account.changeStatus("CLOSED");
+
+        assertThat(account.getClosedAt()).isNotNull();
+        assertThatThrownBy(() -> account.changeStatus("ACTIVE"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("CLOSED to ACTIVE");
+    }
 }
