@@ -1,6 +1,7 @@
 package com.netbanking.notification.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.netbanking.discovery.NotificationRecipientDirectory;
 import com.netbanking.events.*;
 import com.netbanking.events.NotificationPublisher.Notice;
 import com.netbanking.notification.service.NotificationService;
@@ -18,12 +19,17 @@ public class NotificationEventReceiver {
     private final EventInbox inbox;
     private final ObjectMapper json;
     private final NotificationService service;
+    private final NotificationRecipientDirectory recipients;
 
     public NotificationEventReceiver(
-            EventInbox inbox, ObjectMapper json, NotificationService service) {
+            EventInbox inbox,
+            ObjectMapper json,
+            NotificationService service,
+            NotificationRecipientDirectory recipients) {
         this.inbox = inbox;
         this.json = json;
         this.service = service;
+        this.recipients = recipients;
     }
 
     @PostMapping("/internal/events")
@@ -34,7 +40,12 @@ public class NotificationEventReceiver {
                 event,
                 payload -> {
                     var p = json.convertValue(payload, Notice.class);
-                    service.createInApp(p.userId(), "PAYMENT", p.title(), p.message());
+                    service.create(
+                            p.userId(),
+                            p.type(),
+                            p.title(),
+                            p.message(),
+                            recipients.requireForUser(p.userId()));
                 });
     }
 }
