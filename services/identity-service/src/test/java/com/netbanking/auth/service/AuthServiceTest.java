@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.netbanking.auth.api.*;
+import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.UnauthorizedException;
 import com.netbanking.contracts.CustomerRegistered;
@@ -46,6 +47,7 @@ class AuthServiceTest {
     @Mock private AppUserRepository userRepository;
     @Mock private CustomerRepository customerRepository;
     @Mock private EventOutbox eventOutbox;
+    @Mock private IdentityAuditService audit;
     @Mock private UserService userService;
     @Mock private RoleService roleService;
     @Mock private OtpService otpService;
@@ -159,6 +161,17 @@ class AuthServiceTest {
     }
 
     @Test
+    void unknownLoginPrincipalIsAuditedAsDenied() {
+        when(userService.requireByUsernameOrEmail("missing"))
+                .thenThrow(new UnauthorizedException("Invalid credentials."));
+
+        assertThatThrownBy(() -> service().beginLogin(new LoginRequest("missing", "password")))
+                .isInstanceOf(UnauthorizedException.class);
+
+        verify(audit).denied(null, "LOGIN_REJECTED", "USER", null, "unknownPrincipal");
+    }
+
+    @Test
     void passwordResetChallengeUsesAGenericResponseForAnExistingAccount() {
         AppUser user = user();
         when(userRepository.findByUsernameIgnoreCase("asha")).thenReturn(Optional.of(user));
@@ -247,6 +260,7 @@ class AuthServiceTest {
                 userRepository,
                 customerRepository,
                 eventOutbox,
+                audit,
                 userService,
                 roleService,
                 otpService,

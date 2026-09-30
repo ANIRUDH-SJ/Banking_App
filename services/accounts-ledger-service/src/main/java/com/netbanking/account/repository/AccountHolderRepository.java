@@ -19,4 +19,6 @@ public interface AccountHolderRepository extends JpaRepository<AccountHolder, Ac
             "select holder.accountId from AccountHolder holder "
                     + "where holder.customerId = :customerId and holder.isActive = 'Y'")
     List<Long> findActiveAccountIdsByCustomerId(@Param("customerId") Long customerId);
+
+    List<AccountHolder> findByAccountIdInAndIsActive(List<Long> accountIds, String isActive);
 }

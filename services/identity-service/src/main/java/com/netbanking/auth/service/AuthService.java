@@ -1,6 +1,7 @@
 package com.netbanking.auth.service;
 
 import com.netbanking.auth.api.*;
+import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.common.exception.UnauthorizedException;
@@ -39,6 +40,8 @@ public class AuthService {
     private final AppUserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final EventOutbox eventOutbox;
+    private final IdentityAuditService audit;
+
     private final UserService userService;
     private final RoleService roleService;
     private final OtpService otpService;
@@ -50,6 +53,8 @@ public class AuthService {
             AppUserRepository userRepository,
             CustomerRepository customerRepository,
             EventOutbox eventOutbox,
+            IdentityAuditService audit,
+
             UserService userService,
             RoleService roleService,
             OtpService otpService,
@@ -59,6 +64,8 @@ public class AuthService {
         this.userRepository = userRepository;
         this.customerRepository = customerRepository;
         this.eventOutbox = eventOutbox;
+        this.audit = audit;
+
         this.userService = userService;
         this.roleService = roleService;
         this.otpService = otpService;
@@ -111,7 +118,13 @@ public class AuthService {
     }
 
     public LoginChallengeResponse beginLogin(LoginRequest request) {
-        AppUser user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
+        AppUser user;
+        try {
+            user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
+        } catch (UnauthorizedException exception) {
+            audit.denied(null, "LOGIN_REJECTED", "USER", null, "unknownPrincipal");
+            throw exception;
+        }
         userService.requireEligibleForLogin(user);
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             userService.recordFailedLogin(user.getUserId());
@@ -140,6 +153,7 @@ public class AuthService {
             userService.recordFailedLogin(user.getUserId());
             throw exception;
         }
+        audit.success(user.getUserId(), "TOTP_ENABLED", "USER", String.valueOf(user.getUserId()));
         userService.recordSuccessfulLogin(user);
         Set<String> roles =
                 user.getRoles().stream()

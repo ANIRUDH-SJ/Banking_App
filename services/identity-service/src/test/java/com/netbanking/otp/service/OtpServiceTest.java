@@ -53,7 +53,9 @@ class OtpServiceTest {
         verify(deliveryService)
                 .deliver(
                         org.mockito.ArgumentMatchers.eq(7L),
+                        org.mockito.ArgumentMatchers.eq(challenge.challengeId()),
                         org.mockito.ArgumentMatchers.eq(OtpPurpose.FUND_TRANSFER),
+                        any(),
                         any());
     }
 
@@ -67,7 +69,7 @@ class OtpServiceTest {
         assertThatThrownBy(() -> service().issue(user, OtpPurpose.BILL_PAYMENT, "intent"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Too many");
-        verify(deliveryService, never()).deliver(any(), any(), any());
+        verify(deliveryService, never()).deliver(any(), any(), any(), any(), any());
     }
 
     @Test

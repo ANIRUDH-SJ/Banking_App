@@ -19,8 +19,14 @@ public class GatewayRoutes {
                     Map.entry("bill-payments", "payments-service"),
                     Map.entry("cards", "products-service"),
                     Map.entry("loans", "products-service"),
-                    Map.entry("notifications", "notification-service"),
-                    Map.entry("admin", "audit-reporting-service"));
+                    Map.entry("notifications", "notification-service"));
+
+    private static final Map<String, String> ADMIN_ROUTES =
+            Map.of(
+                    "users", "identity-service",
+                    "accounts", "accounts-ledger-service",
+                    "transactions", "accounts-ledger-service",
+                    "audit-events", "audit-reporting-service");
 
     public String serviceFor(String path) {
         // Reject encoded separators, matrix parameters and dot segments before resolving a route.
@@ -33,7 +39,11 @@ public class GatewayRoutes {
                         .anyMatch(s -> s.equals(".") || s.equals(".."))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        String service = ROUTES.get(path.substring(8).split("/", 2)[0]);
+        String[] segments = path.substring(8).split("/", 3);
+        String service =
+                "admin".equals(segments[0])
+                        ? segments.length < 2 ? null : ADMIN_ROUTES.get(segments[1])
+                        : ROUTES.get(segments[0]);
         if (service == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return service;
     }
