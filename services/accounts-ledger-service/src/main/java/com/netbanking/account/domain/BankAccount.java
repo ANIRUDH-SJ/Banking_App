@@ -45,6 +45,18 @@ public class BankAccount {
 
     protected BankAccount() {}
 
+    public static BankAccount openSavings(Long branchId, String accountNumber) {
+        BankAccount account = new BankAccount();
+        account.branchId = branchId;
+        account.accountNumber = accountNumber;
+        account.accountType = "SAVINGS";
+        account.currencyCode = "INR";
+        account.accountStatus = "ACTIVE";
+        account.currentBalance = BigDecimal.ZERO.setScale(4);
+        account.availableBalance = BigDecimal.ZERO.setScale(4);
+        return account;
+    }
+
     public Long getAccountId() {
         return accountId;
     }

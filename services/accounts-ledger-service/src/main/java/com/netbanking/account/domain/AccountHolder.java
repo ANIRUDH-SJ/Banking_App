@@ -27,6 +27,13 @@ public class AccountHolder {
 
     protected AccountHolder() {}
 
+    public AccountHolder(Long accountId, Long customerId) {
+        this.accountId = accountId;
+        this.customerId = customerId;
+        this.holderType = "PRIMARY";
+        this.isActive = "Y";
+    }
+
     public Long getAccountId() {
         return accountId;
     }

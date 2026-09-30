@@ -4,10 +4,15 @@ import com.netbanking.auth.api.*;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.common.exception.UnauthorizedException;
+import com.netbanking.contracts.CustomerRegistered;
+import com.netbanking.customer.domain.Customer;
+import com.netbanking.customer.repository.CustomerRepository;
+import com.netbanking.events.EventOutbox;
 import com.netbanking.contracts.RequestFingerprint;
 import com.netbanking.otp.domain.OtpPurpose;
 import com.netbanking.otp.service.OtpIssueLimitException;
 import com.netbanking.otp.service.OtpService;
+
 import com.netbanking.role.service.RoleService;
 import com.netbanking.security.JwtService;
 import com.netbanking.totp.api.TotpSetupResponse;
@@ -32,6 +37,8 @@ import java.util.UUID;
 @Transactional
 public class AuthService {
     private final AppUserRepository userRepository;
+    private final CustomerRepository customerRepository;
+    private final EventOutbox eventOutbox;
     private final UserService userService;
     private final RoleService roleService;
     private final OtpService otpService;
@@ -41,6 +48,8 @@ public class AuthService {
 
     public AuthService(
             AppUserRepository userRepository,
+            CustomerRepository customerRepository,
+            EventOutbox eventOutbox,
             UserService userService,
             RoleService roleService,
             OtpService otpService,
@@ -48,6 +57,8 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService) {
         this.userRepository = userRepository;
+        this.customerRepository = customerRepository;
+        this.eventOutbox = eventOutbox;
         this.userService = userService;
         this.roleService = roleService;
         this.otpService = otpService;
@@ -56,7 +67,7 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    public void register(RegisterRequest request) {
+    public RegistrationResponse register(RegisterRequest request) {
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByUsernameIgnoreCase(username))
@@ -67,9 +78,36 @@ public class AuthService {
         roleService.assignDefaultCustomerRole(user);
         try {
             userRepository.saveAndFlush(user);
+            Customer customer =
+                    customerRepository.saveAndFlush(
+                            Customer.create(
+                                    user.getUserId(),
+                                    customerNumber(user.getUserId()),
+                                    request.firstName().trim(),
+                                    request.lastName().trim(),
+                                    request.dateOfBirth(),
+                                    normalizeMobileNumber(request.mobileNumber())));
+            eventOutbox.publish(
+                    "accounts-ledger-service",
+                    "CUSTOMER_REGISTERED",
+                    new CustomerRegistered(
+                            customer.getCustomerId(), customer.getCustomerNumber()));
+            return new RegistrationResponse(
+                    user.getUserId(),
+                    customer.getCustomerId(),
+                    customer.getCustomerNumber(),
+                    "ACTIVE");
         } catch (DataIntegrityViolationException exception) {
-            throw new ConflictException("Username or email is already in use.");
+            throw new ConflictException("Registration details are already in use.");
         }
+    }
+
+    private static String customerNumber(Long userId) {
+        return "CUST" + String.format(Locale.ROOT, "%016d", userId);
+    }
+
+    private static String normalizeMobileNumber(String mobileNumber) {
+        return mobileNumber.replace(" ", "").replace("-", "");
     }
 
     public LoginChallengeResponse beginLogin(LoginRequest request) {
