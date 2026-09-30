@@ -122,6 +122,7 @@ public class LoanRepaymentStore {
                         request.sourceAccountId(),
                         null,
                         null,
+                        null,
                         "LOAN_PAYMENT",
                         request.amount(),
                         loan.getCurrencyCode().trim(),

@@ -8,6 +8,8 @@ import com.netbanking.audit.service.AuditLogService;
 import com.netbanking.branch.repository.BranchRepository;
 import com.netbanking.common.exception.*;
 import com.netbanking.contracts.*;
+import com.netbanking.ledger.external.ExternalTransferAdapter;
+import com.netbanking.ledger.external.ExternalTransferCommand;
 import com.netbanking.transaction.domain.*;
 import com.netbanking.transaction.service.*;
 
@@ -26,6 +28,7 @@ public class LedgerService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
     private final AuditLogService audit;
+    private final ExternalTransferAdapter externalTransfers;
 
     public LedgerService(
             BankAccountRepository accounts,
@@ -34,7 +37,8 @@ public class LedgerService {
             TransactionService transactions,
             JdbcTemplate jdbc,
             ObjectMapper json,
-            AuditLogService audit) {
+            AuditLogService audit,
+            ExternalTransferAdapter externalTransfers) {
         this.accounts = accounts;
         this.branches = branches;
         this.ownership = ownership;
@@ -42,6 +46,7 @@ public class LedgerService {
         this.jdbc = jdbc;
         this.json = json;
         this.audit = audit;
+        this.externalTransfers = externalTransfers;
     }
 
     @Transactional
@@ -54,6 +59,7 @@ public class LedgerService {
                 RequestFingerprint.of(
                         command.userId(),
                         command.sourceAccountId(),
+                        command.beneficiaryId(),
                         command.destinationAccountNumber(),
                         command.destinationIfsc(),
                         command.type(),
@@ -65,14 +71,20 @@ public class LedgerService {
         ownership.requireOwnership(command.userId(), command.sourceAccountId());
         Long destinationId = null;
         if ("TRANSFER".equals(command.type())) {
+            requireTransferDestination(command);
             destinationId =
                     accounts.findAccountIdByAccountNumber(command.destinationAccountNumber())
-                            .orElseThrow(
-                                    () ->
-                                            new IllegalArgumentException(
-                                                    "Only transfers to accounts in this bank are"
-                                                            + " supported."));
-            if (destinationId.equals(command.sourceAccountId()))
+                            .orElse(null);
+            if (destinationId == null
+                    && branches
+                            .findByIfscCodeAndIsActive(
+                                    command.destinationIfsc().toUpperCase(java.util.Locale.ROOT),
+                                    "Y")
+                            .isPresent()) {
+                throw new IllegalArgumentException(
+                        "Destination account was not found for this bank branch.");
+            }
+            if (command.sourceAccountId().equals(destinationId))
                 throw new IllegalArgumentException("Source and destination must differ.");
         }
         // Stable lock order prevents opposite-direction transfers from deadlocking.
@@ -111,7 +123,7 @@ public class LedgerService {
                         new CreateTransactionCommand(
                                 source.getAccountId(),
                                 destinationId,
-                                null,
+                                command.beneficiaryId(),
                                 command.userId(),
                                 TransactionType.valueOf(command.type()),
                                 command.amount(),
@@ -132,6 +144,25 @@ public class LedgerService {
                     destination.getAccountId(),
                     EntryType.CREDIT,
                     destination.getCurrentBalance());
+        } else if ("TRANSFER".equals(command.type())) {
+            var externalReceipt =
+                    externalTransfers.transfer(
+                            new ExternalTransferCommand(
+                                    command.operationId(),
+                                    command.destinationAccountNumber(),
+                                    command.destinationIfsc(),
+                                    command.amount(),
+                                    command.currencyCode(),
+                                    command.narration()));
+            if (!"ACCEPTED".equals(externalReceipt.status())) {
+                throw new IllegalStateException("External transfer was not accepted.");
+            }
+            jdbc.update(
+                    "INSERT INTO external_transfer_dispatch (operation_id, transaction_id,"
+                            + " provider_reference, dispatch_status) VALUES (?, ?, ?, 'ACCEPTED')",
+                    command.operationId(),
+                    transaction.transactionId(),
+                    externalReceipt.providerReference());
         }
         var completed =
                 transactions.changeStatus(
@@ -158,6 +189,20 @@ public class LedgerService {
         audit.record(
                 command.userId(), "LEDGER_POSTED", "TRANSACTION", receipt.reference(), "SUCCESS");
         return receipt;
+    }
+
+    private static void requireTransferDestination(LedgerCommand command) {
+        if (command.beneficiaryId() == null) {
+            throw new IllegalArgumentException("A beneficiary is required for this transfer.");
+        }
+        if (command.destinationAccountNumber() == null
+                || !command.destinationAccountNumber().matches("[0-9]{10,20}")) {
+            throw new IllegalArgumentException("Destination account number is invalid.");
+        }
+        if (command.destinationIfsc() == null
+                || !command.destinationIfsc().matches("[A-Za-z]{4}0[A-Za-z0-9]{6}")) {
+            throw new IllegalArgumentException("Destination IFSC is invalid.");
+        }
     }
 
     private BankAccount lock(Long id) {
