@@ -138,6 +138,7 @@ class AuthServiceTest {
                         eq("accounts-ledger-service"),
                         eq("CUSTOMER_REGISTERED"),
                         eq(new CustomerRegistered(84L, "CUST0000000000000042")));
+    }
 
 
     @Test
