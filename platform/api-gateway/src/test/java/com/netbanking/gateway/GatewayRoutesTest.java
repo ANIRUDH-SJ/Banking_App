@@ -12,6 +12,14 @@ class GatewayRoutesTest {
         assertThat(routes.serviceFor("/api/v1/accounts/1/statement.csv"))
                 .isEqualTo("accounts-ledger-service");
         assertThat(routes.serviceFor("/api/v1/transfers")).isEqualTo("payments-service");
+        assertThat(routes.serviceFor("/api/v1/admin/users"))
+                .isEqualTo("identity-service");
+        assertThat(routes.serviceFor("/api/v1/admin/accounts/7/status"))
+                .isEqualTo("accounts-ledger-service");
+        assertThat(routes.serviceFor("/api/v1/admin/transactions"))
+                .isEqualTo("accounts-ledger-service");
+        assertThat(routes.serviceFor("/api/v1/admin/audit-events"))
+                .isEqualTo("audit-reporting-service");
         for (String path :
                 new String[] {
                     "/internal/ledger/operations",
@@ -20,6 +28,8 @@ class GatewayRoutesTest {
                     "/api/v1/accounts%2f..%2f",
                     "/api/v1/accounts;internal",
                     "//evil.example/api/v1/accounts",
+                    "/api/v1/admin",
+                    "/api/v1/admin/unknown",
                     "/api/v1/unknown"
                 })
             assertThatThrownBy(() -> routes.serviceFor(path))

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.events.NotificationPublisher;
 import com.netbanking.user.domain.AppUser;
 import com.netbanking.user.repository.AppUserRepository;
@@ -21,6 +22,7 @@ import java.util.Optional;
 class UserServiceTest {
 
     @Mock private AppUserRepository userRepository;
+    @Mock private IdentityAuditService audit;
     @Mock private NotificationPublisher notifications;
 
     @Test
@@ -28,13 +30,14 @@ class UserServiceTest {
         AppUser user = new AppUser("asha", "asha@example.com", "password-hash");
         ReflectionTestUtils.setField(user, "userId", 7L);
         when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(user));
-        UserService service = new UserService(userRepository, notifications, 1, 15);
+        UserService service = new UserService(userRepository, audit, notifications, 1, 15);
 
         service.recordFailedLogin(7L);
 
         assertThat(user.getFailedLoginAttempts()).isEqualTo(1);
         assertThat(user.isLockedAt(Instant.now())).isTrue();
         verify(userRepository).findByIdForUpdate(7L);
+        verify(audit).denied(7L, "ACCOUNT_LOCKED", "USER", "7", "invalidCredentials");
         verify(notifications)
                 .publish(
                         7L,

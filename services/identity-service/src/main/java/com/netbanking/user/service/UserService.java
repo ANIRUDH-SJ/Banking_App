@@ -1,5 +1,6 @@
 package com.netbanking.user.service;
 
+import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.common.exception.UnauthorizedException;
 import com.netbanking.events.NotificationPublisher;
@@ -19,16 +20,19 @@ import java.time.Instant;
 @Transactional
 public class UserService {
     private final AppUserRepository userRepository;
+    private final IdentityAuditService audit;
     private final NotificationPublisher notifications;
     private final int maxFailedAttempts;
     private final Duration lockDuration;
 
     public UserService(
             AppUserRepository userRepository,
+            IdentityAuditService audit,
             NotificationPublisher notifications,
             @Value("${app.security.max-failed-login-attempts}") int maxFailedAttempts,
             @Value("${app.security.account-lock-minutes}") long accountLockMinutes) {
         this.userRepository = userRepository;
+        this.audit = audit;
         this.notifications = notifications;
         this.maxFailedAttempts = maxFailedAttempts;
         this.lockDuration = Duration.ofMinutes(accountLockMinutes);
@@ -64,7 +68,14 @@ public class UserService {
                         .findByIdForUpdate(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("User was not found."));
         user.recordFailedLogin(maxFailedAttempts, Instant.now().plus(lockDuration));
-        if (user.getAccountStatus() == UserStatus.LOCKED) {
+        boolean locked = user.getAccountStatus() == UserStatus.LOCKED;
+        audit.denied(
+                userId,
+                locked ? "ACCOUNT_LOCKED" : "LOGIN_REJECTED",
+                "USER",
+                String.valueOf(userId),
+                "invalidCredentials");
+        if (locked) {
             notifications.publish(
                     userId,
                     "SECURITY",
@@ -75,6 +86,7 @@ public class UserService {
 
     public void recordSuccessfulLogin(AppUser user) {
         user.recordSuccessfulLogin(Instant.now());
+        audit.success(user.getUserId(), "LOGIN_SUCCEEDED", "USER", String.valueOf(user.getUserId()));
         notifications.publish(
                 user.getUserId(),
                 "SECURITY",

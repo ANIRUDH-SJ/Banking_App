@@ -1,5 +1,6 @@
 package com.netbanking.beneficiary.service;
 
+import com.netbanking.audit.service.AuditLogService;
 import com.netbanking.beneficiary.api.*;
 import com.netbanking.beneficiary.domain.Beneficiary;
 import com.netbanking.beneficiary.repository.BeneficiaryRepository;
@@ -25,18 +26,21 @@ public class BeneficiaryService {
     private final BeneficiaryRepository repository;
     private final CustomerDirectory customerService;
     private final OtpClient otpService;
+    private final AuditLogService audit;
     private final Duration activationCooldown;
 
     public BeneficiaryService(
             BeneficiaryRepository repository,
             CustomerDirectory customerService,
             OtpClient otpService,
+            AuditLogService audit,
             @org.springframework.beans.factory.annotation.Value(
                             "${app.beneficiary.activation-cooldown-minutes:30}")
                     long activationCooldownMinutes) {
         this.repository = repository;
         this.customerService = customerService;
         this.otpService = otpService;
+        this.audit = audit;
         this.activationCooldown = Duration.ofMinutes(activationCooldownMinutes);
     }
 
@@ -49,7 +53,7 @@ public class BeneficiaryService {
                 || repository.existsByCustomerIdAndAccountNumberAndIfscCode(
                         customerId, accountNumber, ifsc))
             throw new ConflictException("This beneficiary already exists.");
-        return toResponse(
+        Beneficiary beneficiary =
                 repository.save(
                         new Beneficiary(
                                 customerId,
@@ -57,7 +61,14 @@ public class BeneficiaryService {
                                 request.beneficiaryName().trim(),
                                 accountNumber,
                                 ifsc,
-                                request.bankName().trim())));
+                                request.bankName().trim()));
+        audit.record(
+                userId,
+                "BENEFICIARY_CREATED",
+                "BENEFICIARY",
+                String.valueOf(beneficiary.getBeneficiaryId()),
+                "SUCCESS");
+        return toResponse(beneficiary);
     }
 
     @Transactional(readOnly = true)
@@ -97,11 +108,23 @@ public class BeneficiaryService {
                 "BENEFICIARY_ACTIVATION",
                 activationDigest(userId, beneficiaryId));
         beneficiary.activate();
+        audit.record(
+                userId,
+                "BENEFICIARY_ACTIVATED",
+                "BENEFICIARY",
+                String.valueOf(beneficiaryId),
+                "SUCCESS");
         return toResponse(beneficiary);
     }
 
     public void disable(Long userId, Long beneficiaryId) {
         owned(userId, beneficiaryId).disable();
+        audit.record(
+                userId,
+                "BENEFICIARY_DISABLED",
+                "BENEFICIARY",
+                String.valueOf(beneficiaryId),
+                "SUCCESS");
     }
 
     @Transactional(readOnly = true)

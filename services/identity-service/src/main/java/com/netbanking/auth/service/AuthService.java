@@ -1,9 +1,14 @@
 package com.netbanking.auth.service;
 
 import com.netbanking.auth.api.*;
+import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.common.exception.UnauthorizedException;
+import com.netbanking.contracts.CustomerRegistered;
+import com.netbanking.customer.domain.Customer;
+import com.netbanking.customer.repository.CustomerRepository;
+import com.netbanking.events.EventOutbox;
 import com.netbanking.role.service.RoleService;
 import com.netbanking.security.JwtService;
 import com.netbanking.totp.api.TotpSetupResponse;
@@ -26,6 +31,10 @@ import java.util.Set;
 @Transactional
 public class AuthService {
     private final AppUserRepository userRepository;
+    private final CustomerRepository customerRepository;
+    private final EventOutbox eventOutbox;
+    private final IdentityAuditService audit;
+
     private final UserService userService;
     private final RoleService roleService;
     private final TotpService totpService;
@@ -34,12 +43,20 @@ public class AuthService {
 
     public AuthService(
             AppUserRepository userRepository,
+            CustomerRepository customerRepository,
+            EventOutbox eventOutbox,
+            IdentityAuditService audit,
+
             UserService userService,
             RoleService roleService,
             TotpService totpService,
             PasswordEncoder passwordEncoder,
             JwtService jwtService) {
         this.userRepository = userRepository;
+        this.customerRepository = customerRepository;
+        this.eventOutbox = eventOutbox;
+        this.audit = audit;
+
         this.userService = userService;
         this.roleService = roleService;
         this.totpService = totpService;
@@ -47,7 +64,7 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    public void register(RegisterRequest request) {
+    public RegistrationResponse register(RegisterRequest request) {
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByUsernameIgnoreCase(username))
@@ -58,13 +75,46 @@ public class AuthService {
         roleService.assignDefaultCustomerRole(user);
         try {
             userRepository.saveAndFlush(user);
+            Customer customer =
+                    customerRepository.saveAndFlush(
+                            Customer.create(
+                                    user.getUserId(),
+                                    customerNumber(user.getUserId()),
+                                    request.firstName().trim(),
+                                    request.lastName().trim(),
+                                    request.dateOfBirth(),
+                                    normalizeMobileNumber(request.mobileNumber())));
+            eventOutbox.publish(
+                    "accounts-ledger-service",
+                    "CUSTOMER_REGISTERED",
+                    new CustomerRegistered(
+                            customer.getCustomerId(), customer.getCustomerNumber()));
+            return new RegistrationResponse(
+                    user.getUserId(),
+                    customer.getCustomerId(),
+                    customer.getCustomerNumber(),
+                    "ACTIVE");
         } catch (DataIntegrityViolationException exception) {
-            throw new ConflictException("Username or email is already in use.");
+            throw new ConflictException("Registration details are already in use.");
         }
     }
 
+    private static String customerNumber(Long userId) {
+        return "CUST" + String.format(Locale.ROOT, "%016d", userId);
+    }
+
+    private static String normalizeMobileNumber(String mobileNumber) {
+        return mobileNumber.replace(" ", "").replace("-", "");
+    }
+
     public LoginChallengeResponse beginLogin(LoginRequest request) {
-        AppUser user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
+        AppUser user;
+        try {
+            user = userService.requireByUsernameOrEmail(request.usernameOrEmail().trim());
+        } catch (UnauthorizedException exception) {
+            audit.denied(null, "LOGIN_REJECTED", "USER", null, "unknownPrincipal");
+            throw exception;
+        }
         userService.requireEligibleForLogin(user);
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             userService.recordFailedLogin(user.getUserId());
@@ -93,6 +143,7 @@ public class AuthService {
             userService.recordFailedLogin(user.getUserId());
             throw exception;
         }
+        audit.success(user.getUserId(), "TOTP_ENABLED", "USER", String.valueOf(user.getUserId()));
         userService.recordSuccessfulLogin(user);
         Set<String> roles =
                 user.getRoles().stream()
