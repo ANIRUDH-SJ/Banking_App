@@ -59,6 +59,7 @@ class GatewayIntegrationTest {
             p.add("app.internal.token-hashes." + name, () -> "a".repeat(64));
         p.add("eureka.client.enabled", () -> false);
         p.add("app.scheduling.enabled", () -> false);
+        p.add("app.gateway.auth-rate-limit.max-requests", () -> 1_000);
     }
 
     @BeforeEach
