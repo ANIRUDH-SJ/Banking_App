@@ -1,6 +1,7 @@
 package com.netbanking.otp.service;
 
 import com.netbanking.common.exception.UnauthorizedException;
+import com.netbanking.contracts.RequestFingerprint;
 import com.netbanking.otp.domain.*;
 import com.netbanking.otp.repository.OtpVerificationRepository;
 import com.netbanking.user.domain.AppUser;
@@ -52,6 +53,7 @@ public class OtpService {
         return issue(user, purpose, null);
     }
 
+    @Transactional(noRollbackFor = OtpIssueLimitException.class)
     public Challenge issue(AppUser user, OtpPurpose purpose, String intentDigest) {
         userRepository
                 .findByIdForUpdate(user.getUserId())
@@ -65,7 +67,7 @@ public class OtpService {
                     repository.countByUserIdAndPurposeAndCreatedAtAfter(
                             user.getUserId(), purpose, now.minus(issueWindow));
             if (recentIssues >= maxIssuesPerWindow) {
-                throw new IllegalStateException(
+                throw new OtpIssueLimitException(
                         "Too many OTP challenges have been requested. Please try again later.");
             }
             repository.expirePendingByUserIdAndPurpose(
@@ -94,6 +96,31 @@ public class OtpService {
             Long userId, String challengeId, String code, OtpPurpose purpose, String intentDigest) {
         OtpVerificationAttemptService.Result result =
                 verificationAttemptService.verify(userId, challengeId, code, purpose, intentDigest);
+        requireVerified(result);
+    }
+
+    public Long verifyPasswordReset(String challengeId, String code) {
+        OtpVerification challenge =
+                repository
+                        .findByChallengeId(challengeId)
+                        .filter(otp -> otp.getPurpose() == OtpPurpose.PASSWORD_RESET)
+                        .orElseThrow(
+                                () ->
+                                        new UnauthorizedException(
+                                                "Password reset challenge is invalid or expired."));
+        Long userId = challenge.getUserId();
+        OtpVerificationAttemptService.Result result =
+                verificationAttemptService.verify(
+                        userId,
+                        challengeId,
+                        code,
+                        OtpPurpose.PASSWORD_RESET,
+                        RequestFingerprint.of("PASSWORD_RESET", userId));
+        requireVerified(result);
+        return userId;
+    }
+
+    private static void requireVerified(OtpVerificationAttemptService.Result result) {
         switch (result) {
             case VERIFIED -> {
                 return;

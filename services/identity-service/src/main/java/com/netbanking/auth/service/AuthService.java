@@ -9,11 +9,17 @@ import com.netbanking.contracts.CustomerRegistered;
 import com.netbanking.customer.domain.Customer;
 import com.netbanking.customer.repository.CustomerRepository;
 import com.netbanking.events.EventOutbox;
+import com.netbanking.contracts.RequestFingerprint;
+import com.netbanking.otp.domain.OtpPurpose;
+import com.netbanking.otp.service.OtpIssueLimitException;
+import com.netbanking.otp.service.OtpService;
+
 import com.netbanking.role.service.RoleService;
 import com.netbanking.security.JwtService;
 import com.netbanking.totp.api.TotpSetupResponse;
 import com.netbanking.totp.service.TotpService;
 import com.netbanking.user.domain.AppUser;
+import com.netbanking.user.domain.UserStatus;
 import com.netbanking.user.repository.AppUserRepository;
 import com.netbanking.user.service.UserService;
 
@@ -26,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -37,6 +44,7 @@ public class AuthService {
 
     private final UserService userService;
     private final RoleService roleService;
+    private final OtpService otpService;
     private final TotpService totpService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -49,6 +57,7 @@ public class AuthService {
 
             UserService userService,
             RoleService roleService,
+            OtpService otpService,
             TotpService totpService,
             PasswordEncoder passwordEncoder,
             JwtService jwtService) {
@@ -59,6 +68,7 @@ public class AuthService {
 
         this.userService = userService;
         this.roleService = roleService;
+        this.otpService = otpService;
         this.totpService = totpService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -155,6 +165,59 @@ public class AuthService {
                 user.getUserId(),
                 user.getUsername(),
                 roles);
+    }
+
+    public PasswordResetChallengeResponse beginPasswordReset(
+            PasswordResetChallengeRequest request) {
+        String identifier = request.usernameOrEmail().strip();
+        AppUser user =
+                userRepository
+                        .findByUsernameIgnoreCase(identifier)
+                        .or(() -> userRepository.findByEmailIgnoreCase(identifier))
+                        .filter(
+                                candidate ->
+                                        candidate.getAccountStatus() == UserStatus.ACTIVE
+                                                || candidate.getAccountStatus()
+                                                        == UserStatus.LOCKED)
+                        .orElse(null);
+        String challengeId = UUID.randomUUID().toString();
+        if (user != null) {
+            try {
+                challengeId =
+                        otpService
+                                .issue(
+                                        user,
+                                        OtpPurpose.PASSWORD_RESET,
+                                        RequestFingerprint.of(
+                                                "PASSWORD_RESET", user.getUserId()))
+                                .challengeId();
+            } catch (OtpIssueLimitException ignored) {
+                // Preserve the same public response for existing and unknown accounts.
+            }
+        }
+        return new PasswordResetChallengeResponse(
+                challengeId, "OTP_SENT_IF_ACCOUNT_EXISTS");
+    }
+
+    public void confirmPasswordReset(PasswordResetConfirmRequest request) {
+        Long userId = otpService.verifyPasswordReset(request.challengeId(), request.code());
+        AppUser user =
+                userRepository
+                        .findByIdForUpdate(userId)
+                        .filter(
+                                candidate ->
+                                        candidate.getAccountStatus() == UserStatus.ACTIVE
+                                                || candidate.getAccountStatus()
+                                                        == UserStatus.LOCKED)
+                        .orElseThrow(
+                                () ->
+                                        new UnauthorizedException(
+                                                "Password reset challenge is invalid or expired."));
+        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+            throw new ConflictException("New password must differ from the current password.");
+        }
+        user.changePassword(passwordEncoder.encode(request.newPassword()));
+        user.unlock();
     }
 
     public TotpSetupResponse beginTotpSetup(LoginRequest request) {

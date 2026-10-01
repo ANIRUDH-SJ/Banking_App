@@ -72,6 +72,48 @@ class OtpServiceTest {
         verify(deliveryService, never()).deliver(any(), any(), any(), any(), any());
     }
 
+    @Test
+    void verifiesAPasswordResetAgainstItsUserBoundIntent() {
+        var challenge =
+                new OtpVerification(
+                        7L,
+                        "reset-challenge",
+                        "hash",
+                        OtpPurpose.PASSWORD_RESET,
+                        java.time.Instant.now().plusSeconds(300),
+                        com.netbanking.contracts.RequestFingerprint.of("PASSWORD_RESET", 7L));
+        when(repository.findByChallengeId("reset-challenge"))
+                .thenReturn(Optional.of(challenge));
+        when(verificationAttemptService.verify(
+                        7L,
+                        "reset-challenge",
+                        "123456",
+                        OtpPurpose.PASSWORD_RESET,
+                        com.netbanking.contracts.RequestFingerprint.of("PASSWORD_RESET", 7L)))
+                .thenReturn(OtpVerificationAttemptService.Result.VERIFIED);
+
+        assertThat(service().verifyPasswordReset("reset-challenge", "123456")).isEqualTo(7L);
+    }
+
+    @Test
+    void rejectsAChallengeIssuedForAnotherPurpose() {
+        var challenge =
+                new OtpVerification(
+                        7L,
+                        "transfer-challenge",
+                        "hash",
+                        OtpPurpose.FUND_TRANSFER,
+                        java.time.Instant.now().plusSeconds(300));
+        when(repository.findByChallengeId("transfer-challenge"))
+                .thenReturn(Optional.of(challenge));
+
+        assertThatThrownBy(
+                        () -> service().verifyPasswordReset("transfer-challenge", "123456"))
+                .isInstanceOf(com.netbanking.common.exception.UnauthorizedException.class);
+        verify(verificationAttemptService, never())
+                .verify(any(), any(), any(), any(), any());
+    }
+
     private OtpService service() {
         return new OtpService(
                 repository,
