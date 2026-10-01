@@ -26,4 +26,12 @@ public class LedgerClient {
                 command,
                 LedgerReceipt.class);
     }
+
+    public LedgerReceipt reverse(LedgerReversalCommand command) {
+        return client.post(
+                "accounts-ledger-service",
+                "/internal/ledger/reversals",
+                command,
+                LedgerReceipt.class);
+    }
 }

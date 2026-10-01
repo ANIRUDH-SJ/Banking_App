@@ -5,11 +5,15 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.netbanking.audit.service.AuditLogService;
+import com.netbanking.discovery.NotificationRecipientDirectory.NotificationRecipient;
 import com.netbanking.notification.domain.Notification;
+import com.netbanking.notification.domain.NotificationDelivery;
+import com.netbanking.notification.repository.NotificationDeliveryRepository;
 import com.netbanking.notification.repository.NotificationRepository;
 
 import org.junit.jupiter.api.Test;
@@ -28,6 +32,7 @@ import java.util.Optional;
 class NotificationServiceTest {
 
     @Mock private NotificationRepository repository;
+    @Mock private NotificationDeliveryRepository deliveries;
     @Mock private AuditLogService auditLogService;
 
     @Test
@@ -36,9 +41,11 @@ class NotificationServiceTest {
                 new Notification(7L, "ACCOUNT", "Deposit received", "A deposit was received.");
         when(repository.save(any(Notification.class))).thenReturn(notification);
 
-        NotificationService service = new NotificationService(repository, auditLogService);
+        NotificationService service =
+                new NotificationService(repository, deliveries, auditLogService);
         service.createInApp(7L, "ACCOUNT", "Deposit received", "A deposit was received.");
 
+        verify(deliveries).save(any(NotificationDelivery.class));
         verify(auditLogService)
                 .record(
                         eq(7L),
@@ -46,6 +53,23 @@ class NotificationServiceTest {
                         eq("NOTIFICATION"),
                         any(),
                         eq("SUCCESS"));
+    }
+
+    @Test
+    void queuesEmailAndSmsAlongsideTheInAppNotification() {
+        Notification notification =
+                new Notification(7L, "SECURITY", "New sign-in", "A sign-in was recorded.");
+        when(repository.save(any(Notification.class))).thenReturn(notification);
+
+        new NotificationService(repository, deliveries, auditLogService)
+                .create(
+                        7L,
+                        "SECURITY",
+                        "New sign-in",
+                        "A sign-in was recorded.",
+                        new NotificationRecipient("asha@example.com", "9999999999"));
+
+        verify(deliveries, times(3)).save(any(NotificationDelivery.class));
     }
 
     @Test
@@ -68,7 +92,8 @@ class NotificationServiceTest {
                 new Notification(7L, "ACCOUNT", "Deposit received", "A deposit was received.");
         when(repository.findById(15L)).thenReturn(Optional.of(notification));
 
-        NotificationService service = new NotificationService(repository, auditLogService);
+        NotificationService service =
+                new NotificationService(repository, deliveries, auditLogService);
 
         assertThatThrownBy(() -> service.markRead(8L, 15L)).isInstanceOf(SecurityException.class);
     }
@@ -79,7 +104,8 @@ class NotificationServiceTest {
                 new Notification(7L, "ACCOUNT", "Deposit received", "A deposit was received.");
         when(repository.findById(15L)).thenReturn(Optional.of(notification));
 
-        NotificationService service = new NotificationService(repository, auditLogService);
+        NotificationService service =
+                new NotificationService(repository, deliveries, auditLogService);
 
         assertThatCode(() -> service.markRead(7L, 15L)).doesNotThrowAnyException();
     }
@@ -91,14 +117,17 @@ class NotificationServiceTest {
         when(repository.findByUserId(eq(7L), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(notification)));
 
-        var page = new NotificationService(repository, auditLogService).getForUser(7L, 0, 20);
+        var page =
+                new NotificationService(repository, deliveries, auditLogService)
+                        .getForUser(7L, 0, 20);
 
         org.assertj.core.api.Assertions.assertThat(page.getContent()).containsExactly(notification);
     }
 
     @Test
     void rejectsNotificationContentThatExceedsDatabaseLimits() {
-        NotificationService service = new NotificationService(repository, auditLogService);
+        NotificationService service =
+                new NotificationService(repository, deliveries, auditLogService);
 
         assertThatThrownBy(() -> service.createInApp(7L, "ACCOUNT", "x".repeat(201), "message"))
                 .isInstanceOf(IllegalArgumentException.class)

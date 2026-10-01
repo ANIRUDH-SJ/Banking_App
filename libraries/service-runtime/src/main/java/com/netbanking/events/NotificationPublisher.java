@@ -13,8 +13,15 @@ public class NotificationPublisher {
     }
 
     public void publish(Long userId, String title, String message) {
-        outbox.publish("notification-service", "NOTIFICATION", new Notice(userId, title, message));
+        publish(userId, "GENERAL", title, message);
     }
 
-    public record Notice(Long userId, String title, String message) {}
+    public void publish(Long userId, String type, String title, String message) {
+        outbox.publish(
+                "notification-service",
+                "NOTIFICATION",
+                new Notice(userId, type, title, message));
+    }
+
+    public record Notice(Long userId, String type, String title, String message) {}
 }

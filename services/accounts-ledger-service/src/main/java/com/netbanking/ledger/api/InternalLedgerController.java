@@ -37,4 +37,10 @@ public class InternalLedgerController {
     public LedgerReceipt post(@Valid @RequestBody LedgerCommand command, Authentication caller) {
         return ledger.post(caller.getName(), command);
     }
+
+    @PostMapping("/ledger/reversals")
+    public LedgerReceipt reverse(
+            @Valid @RequestBody LedgerReversalCommand command, Authentication caller) {
+        return ledger.reverse(caller.getName(), command);
+    }
 }

@@ -38,6 +38,20 @@ public class AuthController {
         return authService.verifyLoginTotp(request, LoginAttemptContext.from(httpRequest));
     }
 
+    @PostMapping("/password-reset/challenges")
+    public ResponseEntity<PasswordResetChallengeResponse> requestPasswordReset(
+            @Valid @RequestBody PasswordResetChallengeRequest request) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(authService.beginPasswordReset(request));
+    }
+
+    @PostMapping("/password-reset/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        authService.confirmPasswordReset(request);
+    }
+
     @PostMapping("/totp/setup")
     public ResponseEntity<com.netbanking.totp.api.TotpSetupResponse> setupTotp(
             @Valid @RequestBody LoginRequest request) {

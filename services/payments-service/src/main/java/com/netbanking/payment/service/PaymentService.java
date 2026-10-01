@@ -1,6 +1,7 @@
 package com.netbanking.payment.service;
 
 import com.netbanking.beneficiary.service.BeneficiaryService;
+import com.netbanking.biller.provider.*;
 import com.netbanking.biller.service.BillerService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.contracts.*;
@@ -23,6 +24,7 @@ public class PaymentService {
     private final LedgerClient ledger;
     private final OtpClient otp;
     private final PaymentWorkflowStore store;
+    private final BillerPaymentAdapter billerPayments;
     private final BigDecimal limit;
     private final PaymentAuditService audit;
 
@@ -32,6 +34,7 @@ public class PaymentService {
             LedgerClient ledger,
             OtpClient otp,
             PaymentWorkflowStore store,
+            BillerPaymentAdapter billerPayments,
             PaymentAuditService audit,
             @Value("${app.payments.transfer-max-amount:100000}") BigDecimal limit) {
         this.beneficiaries = beneficiaries;
@@ -39,6 +42,7 @@ public class PaymentService {
         this.ledger = ledger;
         this.otp = otp;
         this.store = store;
+        this.billerPayments = billerPayments;
         this.audit = audit;
         this.limit = limit;
     }
@@ -102,6 +106,7 @@ public class PaymentService {
                             UUID.randomUUID().toString(),
                             userId,
                             r.sourceAccountId(),
+                            r.beneficiaryId(),
                             beneficiary.getAccountNumber(),
                             beneficiary.getIfscCode(),
                             "TRANSFER",
@@ -118,6 +123,7 @@ public class PaymentService {
                             command,
                             new PaymentWorkflowStore.Details(
                                     r.beneficiaryId(),
+                                    null,
                                     null,
                                     null,
                                     PaymentIntent.normalize(r.narration())));
@@ -151,6 +157,7 @@ public class PaymentService {
                             r.sourceAccountId(),
                             null,
                             null,
+                            null,
                             "WITHDRAWAL",
                             r.amount(),
                             account.currencyCode(),
@@ -168,7 +175,11 @@ public class PaymentService {
                                     r.billReference()),
                             command,
                             new PaymentWorkflowStore.Details(
-                                    null, r.billerId(), r.billReference().strip(), null));
+                                    null,
+                                    r.billerId(),
+                                    biller.getBillerCode(),
+                                    r.billReference().strip(),
+                                    null));
         }
         return authorizeAndComplete(
                 operation, fingerprint, r.otpChallengeId(), r.otpCode(), "BILL_PAYMENT");
@@ -198,7 +209,9 @@ public class PaymentService {
             String purpose) {
         if (!operation.fingerprint().equals(fingerprint))
             throw new ConflictException("Idempotency key was used for different payment details.");
-        if ("COMPLETED".equals(operation.state())) return operation.receipt();
+        if (java.util.Set.of("COMPLETED", "REVERSED").contains(operation.state())) {
+            return operation.receipt();
+        }
         if ("FAILED".equals(operation.state()))
             throw new ConflictException(
                     "Payment failed. Use a new request key after correcting the request.");
@@ -223,6 +236,34 @@ public class PaymentService {
             if (java.util.Set.of(400, 403, 404, 409, 422)
                     .contains(rejected.getStatusCode().value())) store.failed(operation.key());
             throw rejected;
+        }
+        if ("BILL_PAYMENT".equals(operation.kind())) {
+            store.debited(operation.key(), receipt);
+            var details = store.details(operation.key());
+            var provider =
+                    billerPayments.collect(
+                            new BillerPaymentCommand(
+                                    operation.key(),
+                                    details.billerCode(),
+                                    details.billReference(),
+                                    operation.command().amount(),
+                                    operation.command().currencyCode()));
+            if (provider.accepted()) {
+                return store.completeBill(operation.key(), receipt, provider);
+            }
+            if (!provider.rejected()) {
+                throw new IllegalStateException("Biller provider returned an unknown status.");
+            }
+            var reversal =
+                    ledger.reverse(
+                            new LedgerReversalCommand(
+                                    operation.key() + ":reversal",
+                                    operation.command().userId(),
+                                    receipt.transactionId(),
+                                    provider.reason() == null || provider.reason().isBlank()
+                                            ? "Biller rejected the payment."
+                                            : provider.reason()));
+            return store.reversed(operation.key(), receipt, reversal, provider);
         }
         return store.complete(operation.key(), receipt);
     }

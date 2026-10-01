@@ -8,6 +8,7 @@ public record LedgerCommand(
         @NotBlank @Size(max = 64) String operationId,
         @NotNull Long userId,
         @NotNull Long sourceAccountId,
+        Long beneficiaryId,
         @Size(max = 20) String destinationAccountNumber,
         @Size(max = 20) String destinationIfsc,
         @NotBlank @Pattern(regexp = "TRANSFER|WITHDRAWAL|LOAN_PAYMENT") String type,

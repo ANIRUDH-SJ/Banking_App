@@ -34,6 +34,7 @@ class LoanPaymentServiceTest {
                     8L,
                     null,
                     null,
+                    null,
                     "LOAN_PAYMENT",
                     request.amount(),
                     "INR",
