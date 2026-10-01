@@ -9,13 +9,14 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.netbanking.auth.api.*;
-import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.common.exception.UnauthorizedException;
 import com.netbanking.contracts.CustomerRegistered;
 import com.netbanking.customer.domain.Customer;
 import com.netbanking.customer.repository.CustomerRepository;
 import com.netbanking.events.EventOutbox;
+import com.netbanking.loginaudit.service.LoginAttemptContext;
+import com.netbanking.loginaudit.service.LoginAuditService;
 import com.netbanking.contracts.RequestFingerprint;
 import com.netbanking.otp.domain.OtpPurpose;
 import com.netbanking.otp.service.OtpIssueLimitException;
@@ -47,7 +48,7 @@ class AuthServiceTest {
     @Mock private AppUserRepository userRepository;
     @Mock private CustomerRepository customerRepository;
     @Mock private EventOutbox eventOutbox;
-    @Mock private IdentityAuditService audit;
+    @Mock private LoginAuditService loginAudit;
     @Mock private UserService userService;
     @Mock private RoleService roleService;
     @Mock private OtpService otpService;
@@ -63,7 +64,7 @@ class AuthServiceTest {
         when(totpService.isEnabled(user)).thenReturn(true);
         when(jwtService.createTotpLoginChallenge(user)).thenReturn("login-challenge");
 
-        var response = service().beginLogin(new LoginRequest("asha", "password"));
+        var response = service().beginLogin(new LoginRequest("asha", "password"), attempt());
 
         assertThat(response.status()).isEqualTo("TOTP_REQUIRED");
         assertThat(response.challengeId()).isEqualTo("login-challenge");
@@ -77,10 +78,13 @@ class AuthServiceTest {
         when(jwtService.createToken(user)).thenReturn("access-token");
 
         var response =
-                service().verifyLoginTotp(new LoginTotpVerifyRequest("login-challenge", "123456"));
+                service()
+                        .verifyLoginTotp(
+                                new LoginTotpVerifyRequest("login-challenge", "123456"), attempt());
 
         verify(totpService).verifyLogin(user, "123456");
         verify(userService).recordSuccessfulLogin(user);
+        verify(loginAudit).success(user, attempt());
         assertThat(response.accessToken()).isEqualTo("access-token");
     }
 
@@ -98,9 +102,11 @@ class AuthServiceTest {
                                 service()
                                         .verifyLoginTotp(
                                                 new LoginTotpVerifyRequest(
-                                                        "login-challenge", "000000")))
+                                                        "login-challenge", "000000"),
+                                                attempt()))
                 .isInstanceOf(UnauthorizedException.class);
         verify(userService).recordFailedLogin(7L);
+        verify(loginAudit).failure(user, "asha", "INVALID_TOTP", attempt());
     }
 
     @Test
@@ -161,14 +167,18 @@ class AuthServiceTest {
     }
 
     @Test
-    void unknownLoginPrincipalIsAuditedAsDenied() {
+    void unknownLoginPrincipalCreatesFailedLoginAudit() {
         when(userService.requireByUsernameOrEmail("missing"))
                 .thenThrow(new UnauthorizedException("Invalid credentials."));
 
-        assertThatThrownBy(() -> service().beginLogin(new LoginRequest("missing", "password")))
+        assertThatThrownBy(
+                        () ->
+                                service()
+                                        .beginLogin(
+                                                new LoginRequest("missing", "password"), attempt()))
                 .isInstanceOf(UnauthorizedException.class);
 
-        verify(audit).denied(null, "LOGIN_REJECTED", "USER", null, "unknownPrincipal");
+        verify(loginAudit).failure(null, "missing", "UNKNOWN_PRINCIPAL", attempt());
     }
 
     @Test
@@ -260,7 +270,7 @@ class AuthServiceTest {
                 userRepository,
                 customerRepository,
                 eventOutbox,
-                audit,
+                loginAudit,
                 userService,
                 roleService,
                 otpService,
@@ -280,6 +290,10 @@ class AuthServiceTest {
                 LocalDate.of(1998, 1, 1),
                 "9999999999");
 
+    }
+
+    private static LoginAttemptContext attempt() {
+        return new LoginAttemptContext("203.0.113.8", "test-agent");
     }
 
     private static AppUser user() {
