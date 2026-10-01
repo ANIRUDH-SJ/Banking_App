@@ -7,18 +7,24 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+
 @Service
 @Profile("local")
 public class LocalLogOtpDeliveryService implements OtpDeliveryService {
     private static final Logger log = LoggerFactory.getLogger(LocalLogOtpDeliveryService.class);
 
     @Override
-    public void deliver(Long userId, OtpPurpose purpose, String code) {
+    public void deliver(
+            Long userId,
+            String challengeId,
+            OtpPurpose purpose,
+            String code,
+            Instant expiresAt) {
         log.warn(
-                "LOCAL DEVELOPMENT OTP for user {} purpose {}: {}. Replace this adapter before"
-                        + " deployment.",
+                "Local OTP generated for user {} purpose {} challenge {}; the code is suppressed.",
                 userId,
                 purpose,
-                code);
+                challengeId);
     }
 }

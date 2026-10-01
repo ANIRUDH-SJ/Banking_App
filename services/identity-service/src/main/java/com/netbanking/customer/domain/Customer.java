@@ -44,6 +44,25 @@ public class Customer {
 
     protected Customer() {}
 
+    public static Customer create(
+            Long userId,
+            String customerNumber,
+            String firstName,
+            String lastName,
+            LocalDate dateOfBirth,
+            String mobileNumber) {
+        return new Customer(
+                null,
+                userId,
+                customerNumber,
+                firstName,
+                lastName,
+                dateOfBirth,
+                mobileNumber,
+                "PENDING",
+                "Y");
+    }
+
     public Customer(
             Long customerId,
             Long userId,
@@ -85,6 +104,10 @@ public class Customer {
         return lastName;
     }
 
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
     public String getMobileNumber() {
         return mobileNumber;
     }
@@ -95,5 +118,11 @@ public class Customer {
 
     public String getIsActive() {
         return isActive;
+    }
+
+    public void updateProfile(String firstName, String lastName, String mobileNumber) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.mobileNumber = mobileNumber;
     }
 }

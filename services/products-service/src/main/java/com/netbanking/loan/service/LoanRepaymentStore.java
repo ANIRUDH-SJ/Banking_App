@@ -122,6 +122,7 @@ public class LoanRepaymentStore {
                         request.sourceAccountId(),
                         null,
                         null,
+                        null,
                         "LOAN_PAYMENT",
                         request.amount(),
                         loan.getCurrencyCode().trim(),
@@ -176,6 +177,7 @@ public class LoanRepaymentStore {
         audit.recordCompleted(current.command().userId(), current.loanId(), receipt.reference());
         notifications.publish(
                 current.command().userId(),
+                "LOAN_PAYMENT",
                 "Loan repayment completed",
                 "Repayment completed. Reference: " + receipt.reference());
         return LoanPaymentService.toResponse(payment);

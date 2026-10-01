@@ -3,7 +3,13 @@ package com.netbanking.payment.service;
 import static org.assertj.core.api.Assertions.*;
 
 import com.netbanking.ServiceTestBase;
+import com.netbanking.common.exception.ResourceNotFoundException;
+import com.netbanking.biller.provider.BillerPaymentReceipt;
+
 import com.netbanking.contracts.*;
+import com.netbanking.payment.api.PaymentKind;
+import com.netbanking.payment.api.PaymentSearchFilter;
+import com.netbanking.payment.api.PaymentStatus;
 
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,12 +19,14 @@ import java.math.BigDecimal;
 
 class PaymentWorkflowIntegrationTest extends ServiceTestBase {
     @Autowired PaymentWorkflowStore store;
+    @Autowired PaymentSearchService search;
     @Autowired JdbcTemplate jdbc;
     final LedgerCommand command =
             new LedgerCommand(
                     "operation-key",
                     7L,
                     10L,
+                    20L,
                     "1234567890",
                     "ABCD0001234",
                     "TRANSFER",
@@ -34,6 +42,8 @@ class PaymentWorkflowIntegrationTest extends ServiceTestBase {
                     + " UNIQUE,user_id BIGINT,request_key VARCHAR(100),request_fingerprint"
                     + " VARCHAR(64),intent_digest VARCHAR(64),ledger_command CLOB,payment_details"
                     + " CLOB,state VARCHAR(20),transaction_id BIGINT,transaction_reference"
+                    + " VARCHAR(50),provider_reference VARCHAR(100),provider_status VARCHAR(20),"
+                    + " reversal_transaction_id BIGINT,reversal_transaction_reference"
                     + " VARCHAR(50),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,next_attempt_at"
                     + " TIMESTAMP DEFAULT CURRENT_TIMESTAMP,UNIQUE(user_id,kind,request_key))");
         jdbc.execute(
@@ -50,7 +60,31 @@ class PaymentWorkflowIntegrationTest extends ServiceTestBase {
                 "a".repeat(64),
                 "b".repeat(64),
                 command,
-                new PaymentWorkflowStore.Details(20L, null, null, "Rent"));
+                new PaymentWorkflowStore.Details(20L, null, null, null, "Rent"));
+    }
+
+    LedgerCommand createBill(String operationKey, String requestKey) {
+        var bill =
+                new LedgerCommand(
+                        operationKey,
+                        7L,
+                        10L,
+                        null,
+                        null,
+                        "WITHDRAWAL",
+                        new BigDecimal("100"),
+                        "INR",
+                        "Bill payment: WATER");
+        store.create(
+                "BILL_PAYMENT",
+                requestKey,
+                "c".repeat(64),
+                "d".repeat(64),
+                bill,
+                new PaymentWorkflowStore.Details(
+                        null, 3L, "WATER", "ABC-123", null));
+        store.authorized(operationKey);
+        return bill;
     }
 
     @Test
@@ -97,5 +131,81 @@ class PaymentWorkflowIntegrationTest extends ServiceTestBase {
         jdbc.update(
                 "UPDATE payment_operation SET next_attempt_at = TIMESTAMP '2000-01-01 00:00:00'");
         assertThat(store.recoverable()).hasSize(1);
+    }
+
+    @Test
+    void acceptedBillerReceiptCompletesARecordedDebit() {
+        var bill = createBill("bill-accepted", "bill-request-1");
+        var debit = new LedgerReceipt(61L, "TXN-61", "COMPLETED", bill.amount(), "INR");
+        var provider = new BillerPaymentReceipt("PROVIDER-61", "ACCEPTED", null);
+
+        store.debited(bill.operationId(), debit);
+        var completed = store.completeBill(bill.operationId(), debit, provider);
+
+        assertThat(completed.status()).isEqualTo("COMPLETED");
+        assertThat(store.details(bill.operationId()).billerCode()).isEqualTo("WATER");
+        assertThat(store.recoverable()).isEmpty();
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT provider_reference FROM payment_operation WHERE"
+                                        + " operation_key = ?",
+                                String.class,
+                                bill.operationId()))
+                .isEqualTo("PROVIDER-61");
+    }
+
+    @Test
+    void rejectedBillerReceiptPersistsTheCompensatingTransaction() {
+        var bill = createBill("bill-rejected", "bill-request-2");
+        var debit = new LedgerReceipt(71L, "TXN-71", "COMPLETED", bill.amount(), "INR");
+        var reversal = new LedgerReceipt(72L, "TXN-72", "COMPLETED", bill.amount(), "INR");
+        var provider =
+                new BillerPaymentReceipt("PROVIDER-71", "REJECTED", "Reference closed");
+
+        store.debited(bill.operationId(), debit);
+        var reversed = store.reversed(bill.operationId(), debit, reversal, provider);
+
+        assertThat(reversed.status()).isEqualTo("REVERSED");
+        assertThat(store.reversed(bill.operationId(), debit, reversal, provider))
+                .isEqualTo(reversed);
+        assertThat(
+                        jdbc.queryForObject(
+                                "SELECT reversal_transaction_reference FROM payment_operation"
+                                        + " WHERE operation_key = ?",
+                                String.class,
+                                bill.operationId()))
+                .isEqualTo("TXN-72");
+    }
+
+    @Test
+    void paymentSearchFiltersResultsAndEnforcesOwnership() {
+        create();
+        store.authorized(command.operationId());
+        store.complete(
+                command.operationId(),
+                new LedgerReceipt(55L, "TXN-55", "COMPLETED", command.amount(), "INR"));
+
+        var result =
+                search.search(
+                        7L,
+                        new PaymentSearchFilter(
+                                PaymentKind.TRANSFER,
+                                PaymentStatus.COMPLETED,
+                                null,
+                                null,
+                                "TXN-55"),
+                        0,
+                        20);
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        var payment = result.getContent().get(0);
+        assertThat(payment.transactionReference()).isEqualTo("TXN-55");
+        assertThat(payment.sourceAccountId()).isEqualTo(10L);
+        assertThat(payment.beneficiaryId()).isEqualTo(20L);
+        assertThat(payment.narration()).isEqualTo("Rent");
+        assertThat(search.get(7L, payment.paymentId())).isEqualTo(payment);
+        assertThatThrownBy(() -> search.get(8L, payment.paymentId()))
+                .isInstanceOf(ResourceNotFoundException.class);
+
     }
 }

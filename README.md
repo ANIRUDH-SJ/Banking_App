@@ -62,10 +62,13 @@ The normal Java suite uses H2 for transactional tests. It does not establish Ora
 
 - [Service discovery and local startup](docs/service-discovery.md)
 - [Microsoft Authenticator setup](docs/authenticator-setup.md)
+- [Password reset](docs/password-reset.md)
+- [OTP delivery](docs/otp-delivery.md)
 - [Card controls](docs/card-api.md)
 - [Loan information and payments](docs/loan-api.md)
 - [Beneficiaries, transfers and bill payments](docs/payment-api.md)
 - [Transaction history and statements](docs/transaction-statement-api.md)
 - [Gateway authentication rate limits](docs/gateway-rate-limits.md)
+- [SMTP email delivery](docs/smtp-email.md)
 
-The Oracle JET application remains a scaffold. Customer screens, production SMTP/SMS providers, real settlement integrations and production deployment infrastructure require separate work.
+The Oracle JET application remains a scaffold. Customer screens, a production SMS provider, real settlement integrations and production deployment infrastructure require separate work.
