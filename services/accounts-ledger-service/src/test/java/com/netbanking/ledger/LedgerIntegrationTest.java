@@ -104,6 +104,7 @@ class LedgerIntegrationTest extends ServiceTestBase {
                 1L,
                 null,
                 null,
+                null,
                 "WITHDRAWAL",
                 new BigDecimal(amount),
                 "INR",

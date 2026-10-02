@@ -2,14 +2,13 @@ package com.netbanking.discovery;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.net.http.HttpClient;
 import java.time.Duration;
 
 @Component
@@ -25,9 +24,8 @@ public class ServiceHttpClient {
             throw new IllegalStateException(
                     "A service token of at least 32 characters is required.");
         this.resolver = resolver;
-        var factory =
-                new JdkClientHttpRequestFactory(
-                        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build());
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(3));
         factory.setReadTimeout(Duration.ofSeconds(10));
         this.client =
                 RestClient.builder()
