@@ -4,6 +4,7 @@ import com.netbanking.loginaudit.domain.LoginAudit;
 import com.netbanking.loginaudit.repository.LoginAuditRepository;
 import com.netbanking.user.domain.AppUser;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ public class LoginAuditService {
     private final LoginAuditRepository repository;
     private final Clock clock;
 
+    @Autowired
     public LoginAuditService(LoginAuditRepository repository) {
         this(repository, Clock.systemUTC());
     }
