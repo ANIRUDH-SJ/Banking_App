@@ -52,6 +52,28 @@ define([
       registry.go('loans');
       return false;
     };
+    self.openTransfer = function () {
+      registry.go('transfer');
+      return false;
+    };
+    self.openPayments = function () {
+      registry.go('bill-payments');
+      return false;
+    };
+    self.openNotices = function () {
+      registry.go('notifications');
+      return false;
+    };
+    self.statusClass = function (status) {
+      var value = String(status || '').toUpperCase();
+      if (value === 'ACTIVE' || value === 'OPEN' || value === 'CURRENT') {
+        return 'is-good';
+      }
+      if (value === 'CLOSED' || value === 'BLOCKED' || value === 'FROZEN' || value === 'DORMANT') {
+        return 'is-bad';
+      }
+      return '';
+    };
 
     function loadTransactions(account, ticket) {
       self.transactionsLoading(true);

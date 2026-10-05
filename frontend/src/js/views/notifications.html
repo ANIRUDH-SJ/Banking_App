@@ -3,7 +3,7 @@
     <p class="nb-kicker">Messages from the bank</p>
     <h1>Notices</h1>
   </header>
-  <section class="nb-panel" aria-labelledby="notices-heading">
+  <section aria-labelledby="notices-heading">
     <h2 id="notices-heading" class="nb-sr">Notice list</h2>
     <p class="nb-status" role="status" data-bind="visible: loading">Loading notices…</p>
     <div class="nb-alert" role="alert" data-bind="visible: error, text: error"></div>
@@ -11,9 +11,11 @@
     <p class="nb-empty" data-bind="visible: !loading() && !error() && notices().length === 0">You have no notices.</p>
     <ul class="nb-notices" data-bind="foreach: notices">
       <li class="nb-notice" data-bind="css: { 'is-unread': !read }">
-        <h3 data-bind="text: title"></h3>
-        <p data-bind="text: message"></p>
-        <p class="nb-meta"><time data-bind="text: $parent.when(createdAt)"></time></p>
+        <p class="nb-notice-when"><time data-bind="text: $parent.when(createdAt)"></time></p>
+        <div>
+          <h3 data-bind="text: title"></h3>
+          <p data-bind="text: message"></p>
+        </div>
         <button type="button" class="nb-text-button" data-bind="visible: !read, click: function () { $parent.markRead($data); }, enable: $parent.busyId() !== notificationId">Mark as read</button>
       </li>
     </ul>

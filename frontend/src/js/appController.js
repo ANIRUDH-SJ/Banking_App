@@ -25,6 +25,27 @@ define([
     this.showDesk = ko.observable(false);
     this.customerNav = ko.observableArray([]);
     this.adminNav = ko.observableArray([]);
+    var navSections = [
+      { label: 'Accounts', paths: ['dashboard', 'accounts', 'transactions', 'beneficiaries', 'transfer'] },
+      { label: 'Payments', paths: ['billers', 'bill-payments', 'cards', 'loans'] },
+      { label: 'Profile', paths: ['profile', 'notifications'] }
+    ];
+    this.customerGroups = ko.pureComputed(function () {
+      var byPath = {};
+      self.customerNav().forEach(function (item) {
+        byPath[item.path] = item;
+      });
+      return navSections.map(function (section) {
+        return {
+          label: section.label,
+          items: section.paths.map(function (path) {
+            return byPath[path];
+          }).filter(Boolean)
+        };
+      }).filter(function (section) {
+        return section.items.length;
+      });
+    });
     this.customerLabel = ko.observable('');
     this.sessionLabel = ko.observable('');
     this.unreadCount = ko.observable(0);

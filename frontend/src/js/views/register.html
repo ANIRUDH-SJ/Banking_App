@@ -1,11 +1,14 @@
-<div class="nb-page nb-narrow">
-  <section class="nb-panel" aria-labelledby="register-heading" data-bind="visible: !registered()">
-    <p class="nb-kicker">New customer access</p>
-    <h1 id="register-heading">Register</h1>
-    <p class="nb-lede">This creates your Internet Banking profile. You will set up Microsoft Authenticator the first time you sign in.</p>
+<div class="nb-page nb-register">
+  <section data-bind="visible: !registered()">
+    <header class="nb-page-head">
+      <p class="nb-kicker">New customer</p>
+      <h1 id="register-heading">Register</h1>
+      <p class="nb-lede">This opens your Internet Banking profile. Microsoft Authenticator is set up the first time you sign in.</p>
+    </header>
     <div class="nb-alert" role="alert" data-bind="visible: formError, text: formError"></div>
     <p class="nb-reference" data-bind="visible: reference, text: reference"></p>
     <form class="nb-form nb-form-wide" data-bind="submit: register">
+      <h2 class="nb-form-section">Your details</h2>
       <oj-form-layout label-edge="top" direction="row" max-columns="2" user-assistance-density="reflow">
         <oj-input-text label-hint="First name" value="{{firstName}}" messages-custom="[[firstNameMessages]]" autocomplete="given-name"></oj-input-text>
         <oj-input-text label-hint="Last name" value="{{lastName}}" messages-custom="[[lastNameMessages]]" autocomplete="family-name"></oj-input-text>
@@ -13,6 +16,9 @@
         <oj-input-text label-hint="Email" value="{{email}}" messages-custom="[[emailMessages]]" autocomplete="email"></oj-input-text>
         <oj-input-text label-hint="Mobile number" value="{{mobileNumber}}" messages-custom="[[mobileMessages]]" autocomplete="tel"></oj-input-text>
         <oj-input-date label-hint="Date of birth" value="{{dateOfBirth}}" messages-custom="[[dobMessages]]"></oj-input-date>
+      </oj-form-layout>
+      <h2 class="nb-form-section">Password</h2>
+      <oj-form-layout label-edge="top" direction="row" max-columns="2" user-assistance-density="reflow">
         <oj-input-password label-hint="Password" value="{{password}}" messages-custom="[[passwordMessages]]" autocomplete="new-password"></oj-input-password>
         <oj-input-password label-hint="Confirm password" value="{{confirmPassword}}" messages-custom="[[confirmMessages]]" autocomplete="new-password"></oj-input-password>
       </oj-form-layout>
@@ -22,11 +28,13 @@
       </div>
     </form>
   </section>
-  <section class="nb-panel" aria-labelledby="registered-heading" data-bind="visible: registered">
-    <p class="nb-kicker">Registration complete</p>
-    <h1 id="registered-heading">Your customer number</h1>
+  <section data-bind="visible: registered">
+    <header class="nb-page-head">
+      <p class="nb-kicker">Registration complete</p>
+      <h1 id="registered-heading">Your customer number</h1>
+    </header>
     <p class="nb-customer-number" data-bind="text: customerNumber"></p>
-    <p class="nb-lede">Keep this number for your records. Sign in with the user ID you chose, then set up Microsoft Authenticator.</p>
+    <p class="nb-lede">Keep this number with your records. Sign in with the user ID you chose, then set up Microsoft Authenticator.</p>
     <div class="nb-actions">
       <oj-button chroming="callToAction" on-oj-action="[[goToSignIn]]">Sign in</oj-button>
     </div>

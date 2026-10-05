@@ -16,75 +16,110 @@
     <link rel="stylesheet" href="css/app.css" type="text/css">
   </head>
   <body class="nb-body">
-    <div id="globalBody" class="nb-app">
+    <div id="globalBody" class="nb-shell" data-bind="css: { 'is-public': !showDesk(), 'is-desk': showDesk, 'is-long': currentPath() === 'register' || currentPath() === 'totp-setup' }">
       <a class="nb-skip" href="#main">Skip to content</a>
       <div id="announce" tabindex="-1" class="nb-sr" data-bind="attr: { 'aria-live': manner }">
         <p id="ariaLiveMessage"><oj-bind-text value="[[message]]"></oj-bind-text></p>
       </div>
 
-      <header class="nb-mast" role="banner">
+      <header class="nb-mast" role="banner" data-bind="visible: showDesk">
         <div class="nb-mast-inner">
-          <button type="button" class="nb-menu-button oj-md-hide" data-bind="click: toggleDrawer, visible: showDesk, attr: { 'aria-expanded': sideDrawerOn() ? 'true' : 'false' }">
-            Menu
+          <button type="button" class="nb-menu-button" data-bind="click: toggleDrawer, attr: { 'aria-expanded': sideDrawerOn() ? 'true' : 'false' }">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+            <span>Menu</span>
           </button>
           <a class="nb-brand" href="#" data-bind="click: goHome">
-            <svg class="nb-mark" viewBox="0 0 36 36" aria-hidden="true">
-              <rect width="36" height="36" fill="#F4F7FB"></rect>
-              <rect x="7" y="8" width="22" height="2.5" fill="#0B3A66"></rect>
-              <rect x="7" y="16" width="15" height="2.5" fill="#0B3A66"></rect>
-              <rect x="7" y="24" width="22" height="2.5" fill="#8E1B1B"></rect>
+            <svg class="nb-mark" viewBox="0 0 32 32" aria-hidden="true">
+              <rect width="32" height="32" fill="#E7EEF5"></rect>
+              <path fill="#102033" d="M4 14.2 16 5l12 9.2v1.3H4v-1.3zm2.2 2.3h2.4V24H6.2v-7.5zm5.4 0h2.4V24h-2.4v-7.5zm5.6 0h2.4V24h-2.4v-7.5zm5.6 0H25.2V24h-2.4v-7.5zM4 25.2h24V27H4z"></path>
             </svg>
             <span class="nb-brand-text">
               <span class="nb-brand-name">Internet Banking</span>
-              <span class="nb-brand-product">Customer access</span>
+              <span class="nb-brand-product">Personal</span>
             </span>
           </a>
-          <div class="nb-mast-end" data-bind="if: showDesk">
-            <div class="nb-identity">
+          <div class="nb-mast-end">
+            <p class="nb-identity">
               <span class="nb-identity-name" data-bind="text: customerLabel"></span>
-              <span class="nb-identity-session" data-bind="text: sessionLabel"></span>
-            </div>
-            <a class="nb-notice-link" href="#" data-bind="click: openNotices">
+            </p>
+            <a class="nb-notice-link" href="#" data-bind="click: openNotices, css: { 'is-current': currentPath() === 'notifications' }">
               Notices
               <span class="nb-count" data-bind="visible: unreadCount() > 0, text: unreadCount"></span>
             </a>
             <button type="button" class="nb-signout" data-bind="click: signOut">Sign out</button>
           </div>
-          <div class="nb-mast-end" data-bind="ifnot: showDesk">
-            <a class="nb-mast-link" href="#" data-bind="click: function () { return open('register'); }, visible: currentPath() !== 'register'">Register</a>
-            <a class="nb-mast-link" href="#" data-bind="click: function () { return open('login'); }, visible: currentPath() === 'register' || currentPath() === 'password-recovery' || currentPath() === 'session-expired'">Sign in</a>
-          </div>
         </div>
       </header>
-      <div class="nb-stripe" aria-hidden="true"></div>
-      <p class="nb-session-mobile oj-md-hide" data-bind="visible: showDesk, text: sessionLabel"></p>
+      <div class="nb-utility" data-bind="visible: showDesk">
+        <p data-bind="text: sessionLabel"></p>
+      </div>
 
-      <div id="pageContent" class="nb-frame" data-bind="css: { 'is-desk': showDesk }">
-        <div class="nb-nav-wrap oj-sm-only-hide" data-bind="visible: showDesk">
-          <nav class="nb-nav" aria-label="Banking menu">
-            <p class="nb-nav-kicker">Services</p>
-            <ul data-bind="foreach: customerNav">
+      <div id="pageContent" class="nb-workspace">
+        <aside class="nb-brandpane" data-bind="ifnot: showDesk">
+          <div class="nb-brandpane-top">
+            <a class="nb-brand" href="#" data-bind="click: goHome">
+              <svg class="nb-mark" viewBox="0 0 32 32" aria-hidden="true">
+                <rect width="32" height="32" fill="#E7EEF5"></rect>
+                <path fill="#102033" d="M4 14.2 16 5l12 9.2v1.3H4v-1.3zm2.2 2.3h2.4V24H6.2v-7.5zm5.4 0h2.4V24h-2.4v-7.5zm5.6 0h2.4V24h-2.4v-7.5zm5.6 0H25.2V24h-2.4v-7.5zM4 25.2h24V27H4z"></path>
+              </svg>
+              <span class="nb-brand-text">
+                <span class="nb-brand-name">Internet Banking</span>
+                <span class="nb-brand-product">Personal</span>
+              </span>
+            </a>
+            <p class="nb-brandpane-lead">Sign in with your password, then a code from Microsoft Authenticator.</p>
+          </div>
+          <div class="nb-secure">
+            <p class="nb-secure-label">Before you sign in</p>
+            <ul>
               <li>
-                <a href="#" data-bind="text: label, click: function () { return $parent.open(path); }, css: { 'is-current': $parent.currentPath() === path }, attr: { 'aria-current': $parent.currentPath() === path ? 'page' : null }"></a>
+                <strong>Keep codes private</strong>
+                <span>Internet Banking does not ask for your password or authenticator code by phone, email, or message.</span>
+              </li>
+              <li>
+                <strong>Check this address</strong>
+                <span>Confirm you are on the bank site you expect before entering a password.</span>
+              </li>
+              <li>
+                <strong>Sign out</strong>
+                <span>End the session when you finish, including on a shared computer.</span>
               </li>
             </ul>
-            <div data-bind="if: adminNav().length">
-              <p class="nb-nav-kicker">Administration</p>
-              <ul data-bind="foreach: adminNav">
-                <li>
-                  <a href="#" data-bind="text: label, click: function () { return $parent.open(path); }, css: { 'is-current': $parent.currentPath() === path }, attr: { 'aria-current': $parent.currentPath() === path ? 'page' : null }"></a>
-                </li>
-              </ul>
-            </div>
-          </nav>
+          </div>
+        </aside>
+
+        <nav class="nb-nav" aria-label="Banking menu" data-bind="if: showDesk">
+          <div data-bind="foreach: customerGroups">
+            <p class="nb-nav-label" data-bind="text: label"></p>
+            <ul data-bind="foreach: items">
+              <li>
+                <a href="#" data-bind="text: label, click: function () { return $root.open(path); }, css: { 'is-current': $root.currentPath() === path }, attr: { 'data-path': path, 'aria-current': $root.currentPath() === path ? 'page' : null }"></a>
+              </li>
+            </ul>
+          </div>
+          <div data-bind="if: adminNav().length">
+            <p class="nb-nav-label">Administration</p>
+            <ul data-bind="foreach: adminNav">
+              <li>
+                <a href="#" data-bind="text: label, click: function () { return $root.open(path); }, css: { 'is-current': $root.currentPath() === path }, attr: { 'data-path': path, 'aria-current': $root.currentPath() === path ? 'page' : null }"></a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <div class="nb-stage">
+          <div class="nb-public-bar" data-bind="ifnot: showDesk">
+            <a href="#" data-bind="click: function () { return open('register'); }, visible: currentPath() !== 'register'">Register</a>
+            <a href="#" data-bind="click: function () { return open('login'); }, visible: currentPath() !== 'login'">Sign in</a>
+          </div>
+          <main id="main" tabindex="-1">
+            <oj-module config="[[moduleConfig]]"></oj-module>
+          </main>
         </div>
-        <main id="main" class="nb-main" tabindex="-1">
-          <oj-module config="[[moduleConfig]]"></oj-module>
-        </main>
       </div>
 
       <footer class="nb-foot" role="contentinfo">
-        <p>Authorised customers only. Balances, permissions, and payment results shown in Internet Banking come from the bank's records.</p>
+        <p>Authorised customers only. Balances, permissions, and payment results come from the bank's records.</p>
         <p>Do not share passwords or Microsoft Authenticator codes.</p>
       </footer>
 
@@ -92,16 +127,19 @@
         <div class="nb-drawer-body">
           <p class="nb-drawer-title">Menu</p>
           <nav aria-label="Banking menu">
-            <ul data-bind="foreach: customerNav">
-              <li>
-                <a href="#" data-bind="text: label, click: function () { return $parent.open(path); }, css: { 'is-current': $parent.currentPath() === path }"></a>
-              </li>
-            </ul>
+            <div data-bind="foreach: customerGroups">
+              <p class="nb-nav-label" data-bind="text: label"></p>
+              <ul data-bind="foreach: items">
+                <li>
+                  <a href="#" data-bind="text: label, click: function () { return $root.open(path); }, css: { 'is-current': $root.currentPath() === path }, attr: { 'data-path': path }"></a>
+                </li>
+              </ul>
+            </div>
             <div data-bind="if: adminNav().length">
-              <p class="nb-nav-kicker">Administration</p>
+              <p class="nb-nav-label">Administration</p>
               <ul data-bind="foreach: adminNav">
                 <li>
-                  <a href="#" data-bind="text: label, click: function () { return $parent.open(path); }, css: { 'is-current': $parent.currentPath() === path }"></a>
+                  <a href="#" data-bind="text: label, click: function () { return $root.open(path); }, css: { 'is-current': $root.currentPath() === path }, attr: { 'data-path': path }"></a>
                 </li>
               </ul>
             </div>
@@ -111,7 +149,7 @@
 
       <oj-dialog id="sessionWarning" dialog-title="Session ending" modality="modal" cancel-behavior="icon">
         <div slot="body">
-          <p>Your Internet Banking session is about to end. Signing in again is required after it expires. This sign-in cannot be extended.</p>
+          <p>Your Internet Banking session is about to end. Sign in again after it expires. This sign-in cannot be extended.</p>
         </div>
         <div slot="footer">
           <oj-button chroming="callToAction" on-oj-action="[[dismissWarning]]">Continue</oj-button>

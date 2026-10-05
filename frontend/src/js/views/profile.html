@@ -1,39 +1,40 @@
-<div class="nb-page nb-narrow">
-  <section class="nb-panel" aria-labelledby="profile-heading">
+<div class="nb-page">
+  <header class="nb-page-head">
     <p class="nb-kicker">Customer profile</p>
     <h1 id="profile-heading">Profile</h1>
-    <p class="nb-status" role="status" data-bind="visible: loading">Loading profile…</p>
-    <div class="nb-alert" role="alert" data-bind="visible: formError, text: formError"></div>
-    <p class="nb-success" role="status" data-bind="visible: formSuccess, text: formSuccess"></p>
-    <p class="nb-reference" data-bind="visible: reference, text: reference"></p>
-    <dl class="nb-facts" data-bind="visible: !loading() && customerNumber">
-      <div>
-        <dt>Customer number</dt>
-        <dd data-bind="text: customerNumber"></dd>
-      </div>
-      <div>
-        <dt>Date of birth</dt>
-        <dd data-bind="text: dateOfBirth"></dd>
-      </div>
-      <div>
-        <dt>KYC status</dt>
-        <dd data-bind="text: kycStatus"></dd>
-      </div>
-      <div>
-        <dt>Profile status</dt>
-        <dd data-bind="text: profileStatus"></dd>
-      </div>
-    </dl>
-    <form class="nb-form" data-bind="submit: save, visible: !loading()">
-      <oj-form-layout label-edge="top" direction="column" user-assistance-density="reflow">
-        <oj-input-text label-hint="First name" value="{{firstName}}" messages-custom="[[firstNameMessages]]" autocomplete="given-name"></oj-input-text>
-        <oj-input-text label-hint="Last name" value="{{lastName}}" messages-custom="[[lastNameMessages]]" autocomplete="family-name"></oj-input-text>
-        <oj-input-text label-hint="Mobile number" value="{{mobileNumber}}" messages-custom="[[mobileMessages]]" autocomplete="tel"></oj-input-text>
-      </oj-form-layout>
-      <p class="nb-hint">Customer number, date of birth, and KYC status are held by the bank and are not changed here.</p>
-      <div class="nb-actions">
-        <oj-button chroming="callToAction" on-oj-action="[[save]]" disabled="[[busy]]">Save profile</oj-button>
-      </div>
-    </form>
-  </section>
+    <p class="nb-lede">Name and mobile number can be updated here. The customer number, date of birth, and KYC status stay with the bank.</p>
+  </header>
+  <p class="nb-status" role="status" data-bind="visible: loading">Loading profile…</p>
+  <div class="nb-alert" role="alert" data-bind="visible: formError, text: formError"></div>
+  <p class="nb-success" role="status" data-bind="visible: formSuccess, text: formSuccess"></p>
+  <p class="nb-reference" data-bind="visible: reference, text: reference"></p>
+  <dl class="nb-facts" data-bind="visible: !loading() && customerNumber">
+    <div>
+      <dt>Customer number</dt>
+      <dd data-bind="text: customerNumber"></dd>
+    </div>
+    <div>
+      <dt>Date of birth</dt>
+      <dd data-bind="text: dateOfBirth"></dd>
+    </div>
+    <div>
+      <dt>KYC status</dt>
+      <dd data-bind="text: kycStatus"></dd>
+    </div>
+    <div>
+      <dt>Profile status</dt>
+      <dd data-bind="text: profileStatus"></dd>
+    </div>
+  </dl>
+  <form class="nb-form" data-bind="submit: save, visible: !loading()">
+    <h2 class="nb-form-section">Details you can update</h2>
+    <oj-form-layout label-edge="top" direction="row" max-columns="2" user-assistance-density="reflow">
+      <oj-input-text label-hint="First name" value="{{firstName}}" messages-custom="[[firstNameMessages]]" autocomplete="given-name"></oj-input-text>
+      <oj-input-text label-hint="Last name" value="{{lastName}}" messages-custom="[[lastNameMessages]]" autocomplete="family-name"></oj-input-text>
+      <oj-input-text label-hint="Mobile number" value="{{mobileNumber}}" messages-custom="[[mobileMessages]]" autocomplete="tel"></oj-input-text>
+    </oj-form-layout>
+    <div class="nb-actions">
+      <oj-button chroming="callToAction" on-oj-action="[[save]]" disabled="[[busy]]">Save profile</oj-button>
+    </div>
+  </form>
 </div>

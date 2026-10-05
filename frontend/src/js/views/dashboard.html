@@ -1,116 +1,137 @@
-<div class="nb-page">
-  <header class="nb-page-head">
-    <p class="nb-kicker">Overview</p>
-    <h1>Home</h1>
-    <p class="nb-lede" data-bind="text: greeting"></p>
-    <p class="nb-meta" data-bind="visible: customerNumber">Customer number <span data-bind="text: customerNumber"></span></p>
+<div class="nb-page nb-home">
+  <header class="nb-home-head">
+    <div>
+      <h1 data-bind="text: greeting"></h1>
+      <p class="nb-lede">Balances are shown for each account. They are taken from the bank and are not added together.</p>
+    </div>
+    <p class="nb-home-id" data-bind="visible: customerNumber">
+      <span>Customer number</span>
+      <strong data-bind="text: customerNumber"></strong>
+    </p>
   </header>
 
-  <section class="nb-panel" aria-labelledby="accounts-heading">
+  <nav class="nb-quick" aria-label="Frequent tasks">
+    <a href="#" data-bind="click: openTransfer">
+      <strong>Transfer</strong>
+      <span>Send to a beneficiary</span>
+    </a>
+    <a href="#" data-bind="click: openPayments">
+      <strong>Pay a bill</strong>
+      <span>Billers and history</span>
+    </a>
+    <a href="#" data-bind="click: openAccounts">
+      <strong>Statements</strong>
+      <span>Accounts and export</span>
+    </a>
+    <a href="#" data-bind="click: openNotices">
+      <strong>Notices</strong>
+      <span>Messages from the bank</span>
+    </a>
+  </nav>
+
+  <section class="nb-section" aria-labelledby="accounts-heading">
     <div class="nb-section-head">
       <h2 id="accounts-heading">Accounts</h2>
-      <a href="#" data-bind="click: openAccounts">View accounts</a>
+      <a href="#" data-bind="click: openAccounts">All accounts</a>
     </div>
     <p class="nb-status" role="status" data-bind="visible: accountsLoading">Loading accounts…</p>
     <div class="nb-alert" role="alert" data-bind="visible: accountsError, text: accountsError"></div>
     <p class="nb-empty" data-bind="visible: !accountsLoading() && !accountsError() && accounts().length === 0">No accounts are open on this profile.</p>
-    <div class="nb-table-wrap" data-bind="visible: accounts().length">
-      <table class="nb-table">
-        <caption class="nb-sr">Balances reported for your accounts</caption>
-        <thead>
-          <tr>
-            <th scope="col">Account</th>
-            <th scope="col">Type</th>
-            <th scope="col">Status</th>
-            <th scope="col" class="nb-num">Available balance</th>
-            <th scope="col" class="nb-num">Current balance</th>
-          </tr>
-        </thead>
-        <tbody data-bind="foreach: accounts">
-          <tr>
-            <td>
-              <span class="nb-account-mask" data-bind="text: $parent.mask(accountNumber)"></span>
-              <span class="nb-currency" data-bind="text: currencyCode"></span>
-            </td>
-            <td data-bind="text: $parent.label(accountType)"></td>
-            <td data-bind="text: $parent.label(accountStatus)"></td>
-            <td class="nb-num" data-bind="text: $parent.money(availableBalance, currencyCode)"></td>
-            <td class="nb-num" data-bind="text: $parent.money(currentBalance, currencyCode)"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ul class="nb-accounts" data-bind="visible: accounts().length, foreach: accounts">
+      <li class="nb-account">
+        <div>
+          <p class="nb-account-type">
+            <span data-bind="text: $parent.label(accountType)"></span>
+            <span class="nb-tag" data-bind="text: $parent.label(accountStatus), css: $parent.statusClass(accountStatus)"></span>
+          </p>
+          <p class="nb-account-no">
+            <span data-bind="text: $parent.mask(accountNumber)"></span>
+            <span class="nb-currency" data-bind="text: currencyCode"></span>
+          </p>
+        </div>
+        <div class="nb-account-bal">
+          <p class="nb-bal-label">Available balance</p>
+          <p class="nb-bal-figure" data-bind="text: $parent.money(availableBalance, currencyCode)"></p>
+          <p class="nb-bal-sub">Current <span data-bind="text: $parent.money(currentBalance, currencyCode)"></span></p>
+        </div>
+        <p class="nb-account-links">
+          <a href="#" data-bind="click: $parent.openAccounts">View</a>
+          <a href="#" data-bind="click: $parent.openTransfer">Transfer</a>
+        </p>
+      </li>
+    </ul>
   </section>
 
-  <section class="nb-panel" aria-labelledby="activity-heading">
-    <div class="nb-section-head">
-      <h2 id="activity-heading">Recent transactions</h2>
-      <p class="nb-meta" data-bind="visible: transactionAccount">Account <span data-bind="text: transactionAccount"></span></p>
-    </div>
-    <p class="nb-status" role="status" data-bind="visible: transactionsLoading">Loading transactions…</p>
-    <div class="nb-alert" role="alert" data-bind="visible: transactionsError, text: transactionsError"></div>
-    <p class="nb-empty" data-bind="visible: accountsError">Recent transactions are shown after the accounts load.</p>
-    <p class="nb-empty" data-bind="visible: !accountsLoading() && !accountsError() && !hasAccounts()">No accounts are open, so there are no transactions to show.</p>
-    <p class="nb-empty" data-bind="visible: !transactionsLoading() && !transactionsError() && hasAccounts() && transactions().length === 0">No transactions are posted for this account.</p>
-    <div class="nb-table-wrap" data-bind="visible: transactions().length">
-      <table class="nb-table">
-        <caption class="nb-sr">Latest transactions reported for the first account</caption>
-        <thead>
-          <tr>
-            <th scope="col">Posted</th>
-            <th scope="col">Description</th>
-            <th scope="col">Entry</th>
-            <th scope="col" class="nb-num">Amount</th>
-          </tr>
-        </thead>
-        <tbody data-bind="foreach: transactions">
-          <tr>
-            <td data-bind="text: $parent.when(postedAt)"></td>
-            <td>
-              <span data-bind="text: narration || reference"></span>
-              <span class="nb-currency" data-bind="text: $parent.label(status)"></span>
-            </td>
-            <td data-bind="text: $parent.label(entryType)"></td>
-            <td class="nb-num" data-bind="text: $parent.money(amount, currencyCode), css: { 'is-credit': entryType === 'CREDIT' }"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+  <div class="nb-home-grid">
+    <section class="nb-section" aria-labelledby="activity-heading">
+      <div class="nb-section-head">
+        <h2 id="activity-heading">Recent transactions</h2>
+        <p class="nb-meta" data-bind="visible: transactionAccount">Account <span data-bind="text: transactionAccount"></span></p>
+      </div>
+      <p class="nb-status" role="status" data-bind="visible: transactionsLoading">Loading transactions…</p>
+      <div class="nb-alert" role="alert" data-bind="visible: transactionsError, text: transactionsError"></div>
+      <p class="nb-empty" data-bind="visible: accountsError">Recent transactions are shown after the accounts load.</p>
+      <p class="nb-empty" data-bind="visible: !accountsLoading() && !accountsError() && !hasAccounts()">No accounts are open, so there are no transactions to show.</p>
+      <p class="nb-empty" data-bind="visible: !transactionsLoading() && !transactionsError() && hasAccounts() && transactions().length === 0">No transactions are posted for this account.</p>
+      <div class="nb-table-wrap" data-bind="visible: transactions().length">
+        <table class="nb-table">
+          <caption class="nb-sr">Latest transactions reported for the first account</caption>
+          <thead>
+            <tr>
+              <th scope="col">Posted</th>
+              <th scope="col">Details</th>
+              <th scope="col" class="nb-num">Debit</th>
+              <th scope="col" class="nb-num">Credit</th>
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: transactions">
+            <tr>
+              <td class="nb-when" data-bind="text: $parent.when(postedAt)"></td>
+              <td>
+                <span class="nb-narration" data-bind="text: narration || reference"></span>
+                <span class="nb-currency" data-bind="text: $parent.label(status)"></span>
+              </td>
+              <td class="nb-num" data-bind="text: entryType === 'DEBIT' ? $parent.money(amount, currencyCode) : '—', css: { 'is-empty': entryType !== 'DEBIT' }"></td>
+              <td class="nb-num is-credit" data-bind="text: entryType === 'CREDIT' ? $parent.money(amount, currencyCode) : '—', css: { 'is-empty': entryType !== 'CREDIT' }"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-  <div class="nb-split">
-    <section class="nb-panel" aria-labelledby="cards-heading">
-      <div class="nb-section-head">
-        <h2 id="cards-heading">Cards</h2>
-        <a href="#" data-bind="click: openCards">View cards</a>
-      </div>
-      <p class="nb-status" role="status" data-bind="visible: cardsLoading">Loading cards…</p>
-      <div class="nb-alert" role="alert" data-bind="visible: cardsError, text: cardsError"></div>
-      <p class="nb-empty" data-bind="visible: !cardsLoading() && !cardsError() && cards().length === 0">No cards are issued on this profile.</p>
-      <ul class="nb-summary" data-bind="foreach: cards">
-        <li>
-          <span class="nb-summary-title" data-bind="text: maskedCardNumber"></span>
-          <span data-bind="text: $parent.label(cardType)"></span>
-          <span class="nb-currency" data-bind="text: $parent.label(status)"></span>
-        </li>
-      </ul>
-    </section>
-    <section class="nb-panel" aria-labelledby="loans-heading">
-      <div class="nb-section-head">
-        <h2 id="loans-heading">Loans</h2>
-        <a href="#" data-bind="click: openLoans">View loans</a>
-      </div>
-      <p class="nb-status" role="status" data-bind="visible: loansLoading">Loading loans…</p>
-      <div class="nb-alert" role="alert" data-bind="visible: loansError, text: loansError"></div>
-      <p class="nb-empty" data-bind="visible: !loansLoading() && !loansError() && loans().length === 0">No loans are open on this profile.</p>
-      <ul class="nb-summary" data-bind="foreach: loans">
-        <li>
-          <span class="nb-summary-title" data-bind="text: loanAccountNumber"></span>
-          <span data-bind="text: $parent.label(loanType)"></span>
-          <span class="nb-num" data-bind="text: $parent.money(outstandingPrincipal, currencyCode)"></span>
-          <span class="nb-currency" data-bind="text: nextDueDate ? ('Due ' + $parent.day(nextDueDate)) : $parent.label(status)"></span>
-        </li>
-      </ul>
-    </section>
+    <div class="nb-side">
+      <section class="nb-section" aria-labelledby="cards-heading">
+        <div class="nb-section-head">
+          <h2 id="cards-heading">Cards</h2>
+          <a href="#" data-bind="click: openCards">View cards</a>
+        </div>
+        <p class="nb-status" role="status" data-bind="visible: cardsLoading">Loading cards…</p>
+        <div class="nb-alert" role="alert" data-bind="visible: cardsError, text: cardsError"></div>
+        <p class="nb-empty" data-bind="visible: !cardsLoading() && !cardsError() && cards().length === 0">No cards are issued on this profile.</p>
+        <ul class="nb-ledger" data-bind="foreach: cards">
+          <li>
+            <span class="nb-ledger-title" data-bind="text: maskedCardNumber"></span>
+            <span class="nb-ledger-meta" data-bind="text: $parent.label(cardType)"></span>
+            <span class="nb-tag" data-bind="text: $parent.label(status), css: $parent.statusClass(status)"></span>
+          </li>
+        </ul>
+      </section>
+      <section class="nb-section" aria-labelledby="loans-heading">
+        <div class="nb-section-head">
+          <h2 id="loans-heading">Loans</h2>
+          <a href="#" data-bind="click: openLoans">View loans</a>
+        </div>
+        <p class="nb-status" role="status" data-bind="visible: loansLoading">Loading loans…</p>
+        <div class="nb-alert" role="alert" data-bind="visible: loansError, text: loansError"></div>
+        <p class="nb-empty" data-bind="visible: !loansLoading() && !loansError() && loans().length === 0">No loans are open on this profile.</p>
+        <ul class="nb-ledger" data-bind="foreach: loans">
+          <li>
+            <span class="nb-ledger-title" data-bind="text: loanAccountNumber"></span>
+            <span class="nb-ledger-meta" data-bind="text: $parent.label(loanType) + (nextDueDate ? ' · Due ' + $parent.day(nextDueDate) : '')"></span>
+            <span class="nb-ledger-figure" data-bind="text: $parent.money(outstandingPrincipal, currencyCode)"></span>
+          </li>
+        </ul>
+      </section>
+    </div>
   </div>
 </div>

@@ -1,20 +1,20 @@
-<div class="nb-page nb-narrow">
-  <section class="nb-panel" aria-labelledby="verify-heading">
+<div class="nb-page">
+  <header class="nb-page-head">
     <p class="nb-kicker">Microsoft Authenticator</p>
     <h1 id="verify-heading">Enter the current code</h1>
-    <p class="nb-lede">Open Microsoft Authenticator and enter the 6-digit code for Internet Banking. The code changes every 30 seconds. This sign-in step expires after a few minutes.</p>
-    <div class="nb-alert" role="alert" data-bind="visible: formError, text: formError"></div>
-    <p class="nb-reference" data-bind="visible: reference, text: reference"></p>
-    <form class="nb-form" data-bind="submit: verify">
-      <oj-form-layout label-edge="top" direction="column" user-assistance-density="reflow">
-        <oj-input-text label-hint="6-digit code" value="{{code}}" messages-custom="[[codeMessages]]" autocomplete="one-time-code" virtual-keyboard="number"></oj-input-text>
-      </oj-form-layout>
-      <div class="nb-actions">
-        <oj-button chroming="callToAction" on-oj-action="[[verify]]" disabled="[[busy]]">Continue</oj-button>
-      </div>
-    </form>
-    <p class="nb-form-links">
-      <a href="#" data-bind="click: restart">Start sign-in again</a>
-    </p>
-  </section>
+    <p class="nb-lede">Open Microsoft Authenticator and enter the 6-digit code for Internet Banking. It changes about every 30 seconds. This step expires after a few minutes.</p>
+  </header>
+  <div class="nb-alert" role="alert" data-bind="visible: formError, text: formError"></div>
+  <p class="nb-reference" data-bind="visible: reference, text: reference"></p>
+  <form class="nb-form" data-bind="submit: verify">
+    <oj-form-layout label-edge="top" direction="column" user-assistance-density="reflow">
+      <oj-input-text label-hint="6-digit code" value="{{code}}" messages-custom="[[codeMessages]]" autocomplete="one-time-code" virtual-keyboard="number"></oj-input-text>
+    </oj-form-layout>
+    <div class="nb-actions nb-actions-block">
+      <oj-button chroming="callToAction" on-oj-action="[[verify]]" disabled="[[busy]]">Continue</oj-button>
+    </div>
+  </form>
+  <p class="nb-form-links">
+    <a href="#" data-bind="click: restart">Start sign-in again</a>
+  </p>
 </div>
