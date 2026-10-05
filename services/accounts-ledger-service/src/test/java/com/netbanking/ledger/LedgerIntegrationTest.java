@@ -10,6 +10,7 @@ import com.netbanking.ledger.external.ExternalTransferAdapter;
 import com.netbanking.ledger.external.ExternalTransferCommand;
 import com.netbanking.ledger.external.ExternalTransferReceipt;
 import com.netbanking.ledger.service.LedgerService;
+import com.netbanking.ledger.service.DepositLedgerService;
 
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import java.util.concurrent.*;
 class LedgerIntegrationTest extends ServiceTestBase {
     @Autowired JdbcTemplate jdbc;
     @Autowired LedgerService ledger;
+    @Autowired DepositLedgerService depositLedger;
     @MockitoBean CustomerDirectory customers;
     @MockitoBean ExternalTransferAdapter externalTransfers;
 
@@ -271,5 +273,38 @@ class LedgerIntegrationTest extends ServiceTestBase {
                                         + " 'REVERSAL'",
                                 Integer.class))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void depositFundingAndPayoutAreIdempotentAndOwned() {
+        var fund = new DepositLedgerCommand("fd-open-1", 7L, 1L, "FUND",
+                new BigDecimal("200.00"), "FD opening");
+        var funding = depositLedger.post(fund);
+        assertThat(depositLedger.post(fund)).isEqualTo(funding);
+        assertThat(balance(1)).isEqualByComparingTo("800");
+
+        var payout = new DepositLedgerCommand("fd-mature-1", 7L, 1L, "PAYOUT",
+                new BigDecimal("210.00"), "FD maturity");
+        var paid = depositLedger.post(payout);
+        assertThat(depositLedger.post(payout)).isEqualTo(paid);
+        assertThat(balance(1)).isEqualByComparingTo("1010");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM bank_transaction", Integer.class))
+                .isEqualTo(2);
+        assertThatThrownBy(() -> depositLedger.post(new DepositLedgerCommand("fd-open-1", 7L,
+                1L, "FUND", new BigDecimal("201.00"), "FD opening")))
+                .isInstanceOf(com.netbanking.common.exception.ConflictException.class);
+        assertThatThrownBy(() -> depositLedger.post(new DepositLedgerCommand("wrong-user", 8L,
+                1L, "FUND", new BigDecimal("10"), "FD opening")))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void rejectedDepositFundingLeavesNoLedgerEntry() {
+        assertThatThrownBy(() -> depositLedger.post(new DepositLedgerCommand("too-much", 7L,
+                1L, "FUND", new BigDecimal("2000"), "FD opening")))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(balance(1)).isEqualByComparingTo("1000");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ledger_operation", Integer.class))
+                .isZero();
     }
 }
