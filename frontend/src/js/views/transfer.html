@@ -1,0 +1,50 @@
+<div class="oj-hybrid-padding">
+  <h1>Transfer Money</h1>
+  <p class="oj-typography-body-md">Review every detail before confirming with a one-time password.</p>
+
+  <p class="oj-typography-body-sm" aria-live="polite" data-bind="text: message"></p>
+
+  <form class="member2-form oj-sm-margin-4x-top" data-bind="visible: step() === 'form', submit: reviewTransfer">
+    <h2 class="oj-typography-heading-sm">Transfer details</h2>
+    <label>From account
+      <select class="oj-form-control" data-bind="value: sourceAccountId">
+        <!-- ko foreach: accounts --><option data-bind="value: accountId, text: label"></option><!-- /ko -->
+      </select>
+    </label>
+    <label>To beneficiary
+      <select class="oj-form-control" data-bind="value: beneficiaryId">
+        <!-- ko foreach: beneficiaries --><option data-bind="value: beneficiaryId, text: label"></option><!-- /ko -->
+      </select>
+    </label>
+    <label>Amount (INR)<input class="oj-form-control" type="number" min="0.01" step="0.01" inputmode="decimal" data-bind="value: amount" /></label>
+    <label>Narration (optional)<input class="oj-form-control" maxlength="500" data-bind="value: narration" /></label>
+    <oj-button type="submit">Review transfer</oj-button>
+  </form>
+
+  <section class="member2-review oj-sm-margin-4x-top" data-bind="visible: step() === 'review'">
+    <h2 class="oj-typography-heading-sm">Review transfer</h2>
+    <dl>
+      <dt>From</dt><dd data-bind="text: selectedAccountLabel"></dd>
+      <dt>To</dt><dd data-bind="text: selectedBeneficiaryLabel"></dd>
+      <dt>Amount</dt><dd data-bind="text: formattedAmount"></dd>
+      <dt>Narration</dt><dd data-bind="text: narration"></dd>
+    </dl>
+    <oj-button on-oj-action="[[backToForm]]">Back</oj-button>
+    <oj-button on-oj-action="[[requestOtp]]">Request OTP</oj-button>
+  </section>
+
+  <form class="member2-form oj-sm-margin-4x-top" data-bind="visible: step() === 'otp', submit: confirmTransfer">
+    <h2 class="oj-typography-heading-sm">Confirm transfer</h2>
+    <p>Enter the six-digit OTP supplied through the shared OTP flow.</p>
+    <label>OTP<input class="oj-form-control" inputmode="numeric" maxlength="6" data-bind="value: otpCode" /></label>
+    <oj-button type="submit">Confirm transfer</oj-button>
+  </form>
+
+  <section class="member2-review oj-sm-margin-4x-top" data-bind="visible: step() === 'receipt'">
+    <h2 class="oj-typography-heading-sm">Transfer completed</h2>
+    <p><strong>Reference:</strong> <span data-bind="text: receiptReference"></span></p>
+    <p><strong>Amount:</strong> <span data-bind="text: formattedAmount"></span></p>
+    <p><strong>Status:</strong> COMPLETED</p>
+    <oj-button on-oj-action="[[startAnotherTransfer]]">Make another transfer</oj-button>
+  </section>
+</div>
