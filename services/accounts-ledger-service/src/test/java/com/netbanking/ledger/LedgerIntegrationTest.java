@@ -112,6 +112,36 @@ class LedgerIntegrationTest extends ServiceTestBase {
     }
 
     @Test
+    void forexConversionPostsTwoCurrenciesAtomicallyAndOnlyOnce() {
+        jdbc.update("UPDATE bank_account SET currency_code='USD' WHERE account_id=2");
+        var command = new ForexLedgerCommand("fx-1", 7L, 1L, 2L,
+                new BigDecimal("850.0000"), new BigDecimal("10.0000"), "INR", "USD");
+
+        var first = ledger.convert("payments-service", command);
+        assertThat(ledger.convert("payments-service", command)).isEqualTo(first);
+        assertThat(balance(1)).isEqualByComparingTo("150.0000");
+        assertThat(balance(2)).isEqualByComparingTo("1010.0000");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM bank_transaction", Integer.class))
+                .isEqualTo(2);
+        assertThat(first.debitReference()).isNotEqualTo(first.creditReference());
+        assertThatThrownBy(() -> ledger.convert("products-service", command))
+                .isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void forexConversionRollsBackWhenSourceFundsAreInsufficient() {
+        jdbc.update("UPDATE bank_account SET currency_code='USD' WHERE account_id=2");
+        var command = new ForexLedgerCommand("fx-insufficient", 7L, 1L, 2L,
+                new BigDecimal("1500.0000"), new BigDecimal("17.0000"), "INR", "USD");
+        assertThatThrownBy(() -> ledger.convert("payments-service", command))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(balance(1)).isEqualByComparingTo("1000.0000");
+        assertThat(balance(2)).isEqualByComparingTo("1000.0000");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM bank_transaction", Integer.class))
+                .isZero();
+    }
+
+    @Test
     void commitsBothBalancesEntriesAndOutboxOnce() {
         var request = command("transfer-1", 1L, "1234567892", "100.1234");
         var first = ledger.post("payments-service", request);

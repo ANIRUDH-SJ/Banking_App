@@ -274,6 +274,82 @@ public class LedgerService {
         return receipt;
     }
 
+    /** Both postings share one database transaction; a retry returns the original receipt. */
+    @Transactional
+    public ForexLedgerReceipt convert(String caller, ForexLedgerCommand command) {
+        if (!"payments-service".equals(caller))
+            throw new SecurityException("Caller cannot convert currencies.");
+        if (command.sourceAccountId().equals(command.destinationAccountId())
+                || command.sourceCurrency().equals(command.destinationCurrency()))
+            throw new IllegalArgumentException("Forex requires different accounts and currencies.");
+        String fingerprint = RequestFingerprint.of(
+                "FOREX", command.userId(), command.sourceAccountId(),
+                command.destinationAccountId(), command.sourceAmount(),
+                command.destinationAmount(), command.sourceCurrency(), command.destinationCurrency());
+        ForexLedgerReceipt previous = priorForex(caller, command.operationId(), fingerprint);
+        if (previous != null) return previous;
+        ownership.requireOwnership(command.userId(), command.sourceAccountId());
+        ownership.requireOwnership(command.userId(), command.destinationAccountId());
+        BankAccount source;
+        BankAccount destination;
+        if (command.sourceAccountId() < command.destinationAccountId()) {
+            source = lock(command.sourceAccountId());
+            destination = lock(command.destinationAccountId());
+        } else {
+            destination = lock(command.destinationAccountId());
+            source = lock(command.sourceAccountId());
+        }
+        previous = priorForex(caller, command.operationId(), fingerprint);
+        if (previous != null) return previous;
+        if (!source.getCurrencyCode().trim().equals(command.sourceCurrency())
+                || !destination.getCurrencyCode().trim().equals(command.destinationCurrency()))
+            throw new IllegalArgumentException("Account currency does not match the forex quote.");
+        jdbc.update(
+                "INSERT INTO ledger_operation (caller, operation_id, request_fingerprint) VALUES (?, ?, ?)",
+                caller, command.operationId(), fingerprint);
+        var debit = transactions.createTransaction(new CreateTransactionCommand(
+                source.getAccountId(), null, null, command.userId(),
+                TransactionType.WITHDRAWAL, command.sourceAmount(), command.sourceCurrency(),
+                "Forex conversion debit"));
+        transactions.changeStatus(debit.transactionId(), TransactionStatus.PROCESSING, command.userId(), null);
+        source.debit(command.sourceAmount());
+        transactions.postEntry(debit.transactionId(), source.getAccountId(), EntryType.DEBIT, source.getCurrentBalance());
+        var debitDone = transactions.changeStatus(debit.transactionId(), TransactionStatus.COMPLETED, command.userId(), null);
+        var credit = transactions.createTransaction(new CreateTransactionCommand(
+                null, destination.getAccountId(), null, command.userId(),
+                TransactionType.DEPOSIT, command.destinationAmount(), command.destinationCurrency(),
+                "Forex conversion credit; debit=" + debitDone.reference()));
+        transactions.changeStatus(credit.transactionId(), TransactionStatus.PROCESSING, command.userId(), null);
+        destination.credit(command.destinationAmount());
+        transactions.postEntry(credit.transactionId(), destination.getAccountId(), EntryType.CREDIT, destination.getCurrentBalance());
+        var creditDone = transactions.changeStatus(credit.transactionId(), TransactionStatus.COMPLETED, command.userId(), null);
+        var receipt = new ForexLedgerReceipt(
+                debitDone.transactionId(), debitDone.reference(), creditDone.transactionId(),
+                creditDone.reference(), command.sourceAmount(), command.destinationAmount());
+        try {
+            jdbc.update("UPDATE ledger_operation SET receipt = ? WHERE caller = ? AND operation_id = ?",
+                    json.writeValueAsString(receipt), caller, command.operationId());
+        } catch (com.fasterxml.jackson.core.JsonProcessingException failure) {
+            throw new IllegalStateException(failure);
+        }
+        audit.record(command.userId(), "FOREX_CONVERTED", "TRANSACTION", creditDone.reference(), "SUCCESS");
+        return receipt;
+    }
+
+    private ForexLedgerReceipt priorForex(String caller, String operation, String fingerprint) {
+        var rows = jdbc.query(
+                "SELECT request_fingerprint, receipt FROM ledger_operation WHERE caller = ? AND operation_id = ?",
+                (rs, n) -> new String[] {rs.getString(1), rs.getString(2)}, caller, operation);
+        if (rows.isEmpty()) return null;
+        if (!fingerprint.equals(rows.get(0)[0]))
+            throw new ConflictException("Operation key was already used for different ledger instructions.");
+        try {
+            return json.readValue(rows.get(0)[1], ForexLedgerReceipt.class);
+        } catch (Exception failure) {
+            throw new IllegalStateException("Stored forex ledger receipt is invalid.", failure);
+        }
+    }
+
     private static void requireTransferDestination(LedgerCommand command) {
         if (command.beneficiaryId() == null) {
             throw new IllegalArgumentException("A beneficiary is required for this transfer.");

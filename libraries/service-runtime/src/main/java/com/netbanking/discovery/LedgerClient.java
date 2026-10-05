@@ -34,4 +34,12 @@ public class LedgerClient {
                 command,
                 LedgerReceipt.class);
     }
+
+    public ForexLedgerReceipt convert(ForexLedgerCommand command) {
+        return client.post(
+                "accounts-ledger-service",
+                "/internal/ledger/forex-conversions",
+                command,
+                ForexLedgerReceipt.class);
+    }
 }

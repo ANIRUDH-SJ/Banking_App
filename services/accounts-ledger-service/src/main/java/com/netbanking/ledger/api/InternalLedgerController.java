@@ -43,4 +43,10 @@ public class InternalLedgerController {
             @Valid @RequestBody LedgerReversalCommand command, Authentication caller) {
         return ledger.reverse(caller.getName(), command);
     }
+
+    @PostMapping("/ledger/forex-conversions")
+    public ForexLedgerReceipt convert(
+            @Valid @RequestBody ForexLedgerCommand command, Authentication caller) {
+        return ledger.convert(caller.getName(), command);
+    }
 }
