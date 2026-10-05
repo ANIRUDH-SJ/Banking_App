@@ -44,3 +44,9 @@ export SMTP_STARTTLS_REQUIRED=false
 ```
 
 Use the default `log` provider when no SMTP server is running. Never commit SMTP credentials or place them in a shared service configuration file.
+
+## Health and Eureka
+
+The default `log` provider does not need an SMTP server. The mail health indicator is disabled by default, so an unavailable local SMTP server does not make Eureka report the notification service as DOWN.
+
+When using the `smtp` provider with a configured server and credentials, set `NOTIFICATION_MAIL_HEALTH_ENABLED=true` to enable the mail health check. An SMTP outage can then mark the service DOWN; delivery failures are still handled by the notification retry flow.
