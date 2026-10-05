@@ -16,6 +16,9 @@
     "node": ">=16.0.0"
   },
   "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
   "overrides": {
     "@types/minimatch": "5.1.2",
     "form-data": "4.0.6",

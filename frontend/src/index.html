@@ -27,7 +27,7 @@
   ***************************** IMPORTANT INFORMATION ************************************ -->
 <html lang="en-us">
   <head>
-    <title>Oracle JET Starter Template - Web Nav Drawer</title>
+    <title>Internet Banking</title>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1">
@@ -89,39 +89,48 @@
           <div class="oj-web-applayout-max-width oj-flex-bar oj-sm-align-items-center">
             <!-- Drawer toggle button -->
             <div class="oj-flex-bar-start oj-md-hide">
-              <oj-button id="drawerToggleButton" class="oj-button-lg" on-oj-action="[[toggleDrawer]]" chroming="borderless" display="icons">
-                <span slot="startIcon" class="oj-web-applayout-offcanvas-icon"></span>
-                <span>Application Navigation</span>
-              </oj-button>
+              <oj-bind-if test="[[hasNavigation]]">
+                <oj-button id="drawerToggleButton" class="oj-button-lg" on-oj-action="[[toggleDrawer]]" chroming="borderless" display="icons">
+                  <span slot="startIcon" class="oj-web-applayout-offcanvas-icon"></span>
+                  <span>Application Navigation</span>
+                </oj-button>
+              </oj-bind-if>
             </div>
             <div class="oj-flex-bar-middle oj-sm-align-items-baseline">
-              <img class="oj-icon demo-oracle-icon" title="Oracle Logo" alt="Oracle Logo"></img>
-              <h1 class="oj-sm-only-hide oj-web-applayout-header-title" title="Application Name"><oj-bind-text value="[[appName]]"></oj-bind-text></h1>
+              <h1 class="oj-web-applayout-header-title" title="Internet Banking"><oj-bind-text value="[[appName]]"></oj-bind-text></h1>
             </div>
             <div class="oj-flex-bar-end">
-              <!-- Responsive Toolbar -->
               <oj-toolbar>
-                <oj-menu-button id="userMenu" display="[[smScreen() ? 'icons' : 'all']]" chroming="borderless">
-                  <span><oj-bind-text value="[[userLogin]]"></oj-bind-text></span>
-                  <span slot="endIcon" :class="[[{'oj-icon demo-appheader-avatar': smScreen(), 'oj-component-icon oj-button-menu-dropdown-icon': !smScreen()}]]"></span>
-                  <oj-menu id="menu1" slot="menu">
-                    <oj-option id="pref" value="pref">Preferences</oj-option>
-                    <oj-option id="help" value="help">Help</oj-option>
-                    <oj-option id="about" value="about">About</oj-option>
-                    <oj-option id="out" value="out">Sign Out</oj-option>
-                  </oj-menu>
-                </oj-menu-button>
+                <oj-bind-if test="[[signedIn]]">
+                  <span class="nb-user"><oj-bind-text value="[[displayName]]"></oj-bind-text></span>
+                  <oj-button id="signOutButton" chroming="borderless" on-oj-action="[[signOut]]">Sign out</oj-button>
+                </oj-bind-if>
+                <oj-bind-if test="[[!signedIn()]]">
+                  <oj-button id="signInButton" chroming="borderless" on-oj-action="[[goToLogin]]">Sign in</oj-button>
+                  <oj-button id="registerButton" chroming="callToAction" on-oj-action="[[goToRegister]]">Register</oj-button>
+                </oj-bind-if>
               </oj-toolbar>
             </div>
           </div>
-          <div role="navigation" class="oj-web-applayout-max-width oj-web-applayout-navbar">
-            <oj-tab-bar id="navTabBar" class="oj-sm-only-hide oj-md-condense oj-md-justify-content-flex-end"
-                                data="[[navDataProvider]]"
-                                edge="top"
-                                item.renderer="[[KnockoutTemplateUtils.getRenderer('navTemplate', true)]]"
-                                selection="{{selection.path}}">
-            </oj-tab-bar>
-          </div>
+          <oj-bind-if test="[[sessionWarning]]">
+            <div class="nb-banner nb-session-banner" role="status">
+              <p>Your session will end in less than a minute. Finish your work and sign in again. This sign-in cannot be extended.</p>
+              <div class="nb-actions">
+                <oj-button id="dismissSessionWarning" chroming="borderless" on-oj-action="[[dismissSessionWarning]]">Dismiss</oj-button>
+                <oj-button id="sessionSignOut" chroming="callToAction" on-oj-action="[[signOut]]">Sign out</oj-button>
+              </div>
+            </div>
+          </oj-bind-if>
+          <oj-bind-if test="[[hasNavigation]]">
+            <div role="navigation" class="oj-web-applayout-max-width oj-web-applayout-navbar">
+              <oj-tab-bar id="navTabBar" class="oj-sm-only-hide oj-md-condense oj-md-justify-content-flex-end"
+                                  data="[[navDataProvider]]"
+                                  edge="top"
+                                  item.renderer="[[KnockoutTemplateUtils.getRenderer('navTemplate', true)]]"
+                                  selection="{{selection.path}}">
+              </oj-tab-bar>
+            </div>
+          </oj-bind-if>
         </header>
         <oj-module role="main" class="oj-web-applayout-max-width oj-web-applayout-content" config="[[moduleAdapter.koObservableConfig]]">
         </oj-module>
@@ -140,7 +149,7 @@
             </ul>
           </div>
           <div class="oj-web-applayout-footer-item oj-web-applayout-max-width oj-text-color-secondary oj-typography-body-sm">
-            Copyright © 2014, 2026 Oracle and/or its affiliates All rights reserved.
+            Internet Banking
           </div>
         </footer>
       </div>

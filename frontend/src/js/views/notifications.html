@@ -1,0 +1,40 @@
+<div class="oj-hybrid-padding nb-page">
+  <h1>Notifications</h1>
+  <p class="nb-status" role="status"><oj-bind-if test="[[loading]]">Loading notifications…</oj-bind-if></p>
+  <oj-bind-if test="[[formError]]">
+    <p class="nb-banner nb-banner-error" role="alert"><oj-bind-text value="[[formError]]"></oj-bind-text></p>
+  </oj-bind-if>
+  <oj-bind-if test="[[empty]]">
+    <p>No notifications yet.</p>
+  </oj-bind-if>
+  <ul class="nb-list">
+    <oj-bind-for-each data="[[items]]">
+      <template>
+        <li>
+          <div class="nb-list-row">
+            <div>
+              <strong><oj-bind-text value="[[$current.data.title]]"></oj-bind-text></strong>
+              <span class="nb-meta"><oj-bind-text value="[[$current.data.statusLabel]]"></oj-bind-text></span>
+              <p><oj-bind-text value="[[$current.data.message]]"></oj-bind-text></p>
+              <p class="nb-hint"><oj-bind-text value="[[$current.data.createdAt]]"></oj-bind-text></p>
+            </div>
+            <oj-bind-if test="[[!$current.data.read]]">
+              <oj-button class="nb-mark-read" chroming="borderless" on-oj-action="[[$current.data.markRead]]">Mark as read</oj-button>
+            </oj-bind-if>
+          </div>
+        </li>
+      </template>
+    </oj-bind-for-each>
+  </ul>
+  <div class="nb-actions">
+    <oj-bind-if test="[[hasPrevious]]">
+      <oj-button id="notificationsPrevious" on-oj-action="[[previousPage]]">Previous</oj-button>
+    </oj-bind-if>
+    <oj-bind-if test="[[hasNext]]">
+      <oj-button id="notificationsNext" on-oj-action="[[nextPage]]">Next</oj-button>
+    </oj-bind-if>
+  </div>
+  <oj-bind-if test="[[totalElements() > 0]]">
+    <p class="nb-hint"><oj-bind-text value="[[totalElements]]"></oj-bind-text> notifications</p>
+  </oj-bind-if>
+</div>

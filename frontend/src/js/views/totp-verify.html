@@ -1,0 +1,23 @@
+<div class="oj-hybrid-padding nb-page">
+  <div class="nb-panel">
+    <h1>Verify sign-in</h1>
+    <p>Enter the current 6-digit code from Microsoft Authenticator. The sign-in challenge expires after a few minutes.</p>
+    <oj-bind-if test="[[formError]]">
+      <p class="nb-banner nb-banner-error" role="alert"><oj-bind-text value="[[formError]]"></oj-bind-text></p>
+    </oj-bind-if>
+    <form class="nb-form" data-bind="submit: verify">
+      <div>
+        <oj-label for="totp-verify-code">Authenticator code</oj-label>
+        <oj-input-text id="totp-verify-code" value="{{code}}" autocomplete="one-time-code" required></oj-input-text>
+        <oj-bind-if test="[[codeError]]">
+          <p class="nb-field-error" role="alert"><oj-bind-text value="[[codeError]]"></oj-bind-text></p>
+        </oj-bind-if>
+      </div>
+      <div class="nb-actions">
+        <oj-button id="totpVerifySubmit" chroming="callToAction" on-oj-action="[[verify]]" disabled="[[loading]]">Verify and continue</oj-button>
+        <oj-button id="totpVerifyCancel" chroming="borderless" on-oj-action="[[cancel]]">Cancel</oj-button>
+      </div>
+    </form>
+    <p class="nb-status" role="status"><oj-bind-if test="[[loading]]">Checking the code…</oj-bind-if></p>
+  </div>
+</div>

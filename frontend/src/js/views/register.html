@@ -1,0 +1,77 @@
+<div class="oj-hybrid-padding nb-page">
+  <div class="nb-panel">
+    <h1>Create an account</h1>
+    <oj-bind-if test="[[completed]]">
+      <div role="status">
+        <p>Your account is ready. Customer number <strong><oj-bind-text value="[[customerNumber]]"></oj-bind-text></strong>.</p>
+        <p>Sign in next to set up Microsoft Authenticator. An authenticator is required before the account can be used.</p>
+        <oj-button id="registerDone" chroming="callToAction" on-oj-action="[[goToLogin]]">Continue to sign in</oj-button>
+      </div>
+    </oj-bind-if>
+    <oj-bind-if test="[[!completed()]]">
+      <p>Registration creates a customer profile. The password must be 12 to 128 characters.</p>
+      <oj-bind-if test="[[formError]]">
+        <p class="nb-banner nb-banner-error" role="alert"><oj-bind-text value="[[formError]]"></oj-bind-text></p>
+      </oj-bind-if>
+      <form class="nb-form" data-bind="submit: register">
+        <div class="nb-form-grid">
+          <div>
+            <oj-label for="register-first-name">First name</oj-label>
+            <oj-input-text id="register-first-name" value="{{firstName}}" autocomplete="given-name" required></oj-input-text>
+            <oj-bind-if test="[[errors.firstName]]">
+              <p class="nb-field-error" role="alert"><oj-bind-text value="[[errors.firstName]]"></oj-bind-text></p>
+            </oj-bind-if>
+          </div>
+          <div>
+            <oj-label for="register-last-name">Last name</oj-label>
+            <oj-input-text id="register-last-name" value="{{lastName}}" autocomplete="family-name" required></oj-input-text>
+            <oj-bind-if test="[[errors.lastName]]">
+              <p class="nb-field-error" role="alert"><oj-bind-text value="[[errors.lastName]]"></oj-bind-text></p>
+            </oj-bind-if>
+          </div>
+        </div>
+        <div>
+          <oj-label for="register-username">Username</oj-label>
+          <oj-input-text id="register-username" value="{{username}}" autocomplete="username" required></oj-input-text>
+          <oj-bind-if test="[[errors.username]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[errors.username]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div>
+          <oj-label for="register-email">Email</oj-label>
+          <oj-input-text id="register-email" value="{{email}}" autocomplete="email" required></oj-input-text>
+          <oj-bind-if test="[[errors.email]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[errors.email]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div>
+          <oj-label for="register-mobile">Mobile number</oj-label>
+          <oj-input-text id="register-mobile" value="{{mobileNumber}}" autocomplete="tel" required></oj-input-text>
+          <oj-bind-if test="[[errors.mobileNumber]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[errors.mobileNumber]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div>
+          <oj-label for="register-dob">Date of birth</oj-label>
+          <oj-input-text id="register-dob" value="{{dateOfBirth}}" autocomplete="bday" placeholder="YYYY-MM-DD" required></oj-input-text>
+          <p class="nb-hint">Use the format YYYY-MM-DD.</p>
+          <oj-bind-if test="[[errors.dateOfBirth]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[errors.dateOfBirth]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div>
+          <oj-label for="register-password">Password</oj-label>
+          <oj-input-password id="register-password" value="{{password}}" autocomplete="new-password" required mask-icon="visible"></oj-input-password>
+          <oj-bind-if test="[[errors.password]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[errors.password]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div class="nb-actions">
+          <oj-button id="registerSubmit" chroming="callToAction" on-oj-action="[[register]]" disabled="[[loading]]">Create account</oj-button>
+          <oj-button id="registerCancel" chroming="borderless" on-oj-action="[[goToLogin]]">Back to sign in</oj-button>
+        </div>
+      </form>
+      <p class="nb-status" role="status"><oj-bind-if test="[[loading]]">Creating the account…</oj-bind-if></p>
+    </oj-bind-if>
+  </div>
+</div>

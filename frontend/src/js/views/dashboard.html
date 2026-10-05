@@ -1,11 +1,64 @@
-<!--
- Copyright (c) 2014, 2026, Oracle and/or its affiliates.
- Licensed under The Universal Permissive License (UPL), Version 1.0
- as shown at https://oss.oracle.com/licenses/upl/
- -->
-<div class="oj-hybrid-padding">
-  <h1>Dashboard Content Area</h1>
-  <div>
-      To change the content of this section, you will make edits to the dashboard.html file located in the /js/views folder.
+<div class="oj-hybrid-padding nb-page">
+  <h1>Dashboard</h1>
+  <p class="nb-status" role="status"><oj-bind-if test="[[loading]]">Loading your overview…</oj-bind-if></p>
+  <oj-bind-if test="[[profileError]]">
+    <p class="nb-banner nb-banner-error" role="alert"><oj-bind-text value="[[profileError]]"></oj-bind-text></p>
+  </oj-bind-if>
+  <div class="nb-grid">
+    <section class="nb-card" aria-labelledby="profile-summary-heading">
+      <h2 id="profile-summary-heading">Profile</h2>
+      <oj-bind-if test="[[displayName]]">
+        <p class="nb-lead"><oj-bind-text value="[[displayName]]"></oj-bind-text></p>
+        <dl class="nb-details">
+          <dt>Customer number</dt>
+          <dd><oj-bind-text value="[[customerNumber]]"></oj-bind-text></dd>
+          <dt>KYC status</dt>
+          <dd><oj-bind-text value="[[kycStatus]]"></oj-bind-text></dd>
+          <dt>Account</dt>
+          <dd><oj-bind-text value="[[active() ? 'Active' : 'Inactive']]"></oj-bind-text></dd>
+        </dl>
+        <oj-button id="openProfile" chroming="borderless" on-oj-action="[[openProfile]]">View profile</oj-button>
+      </oj-bind-if>
+    </section>
+    <section class="nb-card" aria-labelledby="notification-summary-heading">
+      <h2 id="notification-summary-heading">Notifications</h2>
+      <oj-bind-if test="[[notificationError]]">
+        <p class="nb-banner nb-banner-error" role="alert"><oj-bind-text value="[[notificationError]]"></oj-bind-text></p>
+      </oj-bind-if>
+      <oj-bind-if test="[[!loading() && !notificationError() && notifications().length === 0]]">
+        <p>No notifications yet.</p>
+      </oj-bind-if>
+      <ul class="nb-list">
+        <oj-bind-for-each data="[[notifications]]">
+          <template>
+            <li>
+              <strong><oj-bind-text value="[[$current.data.title]]"></oj-bind-text></strong>
+              <span class="nb-meta"><oj-bind-text value="[[$current.data.read ? 'Read' : 'Unread']]"></oj-bind-text></span>
+              <p><oj-bind-text value="[[$current.data.message]]"></oj-bind-text></p>
+            </li>
+          </template>
+        </oj-bind-for-each>
+      </ul>
+      <oj-button id="openNotifications" chroming="borderless" on-oj-action="[[openNotifications]]">Open notification center</oj-button>
+    </section>
+    <section class="nb-card" aria-labelledby="account-summary-heading">
+      <h2 id="account-summary-heading">Accounts and products</h2>
+      <oj-bind-if test="[[!hasSummaries()]]">
+        <p>Account balances, recent transactions, cards, and loans appear here when those modules register their summaries. This page does not calculate balances itself.</p>
+      </oj-bind-if>
+      <oj-bind-for-each data="[[summaries]]">
+        <template>
+          <article class="nb-summary">
+            <h3><oj-bind-text value="[[$current.data.title]]"></oj-bind-text></h3>
+            <oj-bind-if test="[[$current.data.status === 'error']]">
+              <p role="alert">This summary could not be loaded.</p>
+            </oj-bind-if>
+            <oj-bind-if test="[[$current.data.status === 'ready']]">
+              <p><oj-bind-text value="[[$current.data.value]]"></oj-bind-text></p>
+            </oj-bind-if>
+          </article>
+        </template>
+      </oj-bind-for-each>
+    </section>
   </div>
 </div>

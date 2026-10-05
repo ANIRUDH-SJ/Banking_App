@@ -1,0 +1,36 @@
+<div class="oj-hybrid-padding nb-page">
+  <div class="nb-panel">
+    <h1>Sign in</h1>
+    <p>Use your username or email, then confirm with Microsoft Authenticator.</p>
+    <oj-bind-if test="[[info]]">
+      <p class="nb-banner" role="status"><oj-bind-text value="[[info]]"></oj-bind-text></p>
+    </oj-bind-if>
+    <oj-bind-if test="[[formError]]">
+      <p class="nb-banner nb-banner-error" role="alert"><oj-bind-text value="[[formError]]"></oj-bind-text></p>
+    </oj-bind-if>
+    <form class="nb-form" aria-describedby="login-status" data-bind="submit: signIn">
+      <div>
+        <oj-label for="login-username">Username or email</oj-label>
+        <oj-input-text id="login-username" value="{{usernameOrEmail}}" autocomplete="username" required></oj-input-text>
+        <oj-bind-if test="[[usernameError]]">
+          <p class="nb-field-error" role="alert"><oj-bind-text value="[[usernameError]]"></oj-bind-text></p>
+        </oj-bind-if>
+      </div>
+      <div>
+        <oj-label for="login-password">Password</oj-label>
+        <oj-input-password id="login-password" value="{{password}}" autocomplete="current-password" required mask-icon="visible"></oj-input-password>
+        <oj-bind-if test="[[passwordError]]">
+          <p class="nb-field-error" role="alert"><oj-bind-text value="[[passwordError]]"></oj-bind-text></p>
+        </oj-bind-if>
+      </div>
+      <div class="nb-actions">
+        <oj-button id="signInSubmit" chroming="callToAction" on-oj-action="[[signIn]]" disabled="[[loading]]">Sign in</oj-button>
+        <oj-button id="forgotPassword" chroming="borderless" on-oj-action="[[goToReset]]">Forgot password</oj-button>
+      </div>
+    </form>
+    <p id="login-status" class="nb-status" role="status">
+      <oj-bind-if test="[[loading]]">Signing in…</oj-bind-if>
+    </p>
+    <p>New customer? <button type="button" class="nb-text-button" data-bind="click: goToRegister">Create an account</button></p>
+  </div>
+</div>

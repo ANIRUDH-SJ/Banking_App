@@ -12,7 +12,7 @@
  * objects in the callback
  */
  require(['ojs/ojbootstrap', 'knockout', './appController', 'ojs/ojlogger', 'ojs/ojknockout',
- 'ojs/ojmodule', 'ojs/ojrouter', 'ojs/ojnavigationlist', 'ojs/ojbutton', 'ojs/ojtoolbar'],
+ 'ojs/ojmodule', 'ojs/ojnavigationlist', 'ojs/ojbutton', 'ojs/ojtoolbar'],
  function (Bootstrap, ko, app, Logger) { // this callback gets executed when all required modules are loaded
    Bootstrap.whenDocumentReady().then(
     function() {

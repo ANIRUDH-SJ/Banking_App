@@ -80,5 +80,6 @@ fresh build; the all-services launcher builds only once for its child services.
 - [Gateway authentication rate limits](docs/gateway-rate-limits.md)
 - [SMTP email delivery](docs/smtp-email.md)
 - [Login audit trail](docs/login-audit.md)
+- [Customer access frontend](frontend/docs/member-1-api-contract.md)
 
-The Oracle JET application remains a scaffold. Customer screens, a production SMS provider, real settlement integrations and production deployment infrastructure require separate work.
+The Oracle JET application includes the customer access shell: registration, sign-in, Microsoft Authenticator, password reset, profile, dashboard, and notifications. Account, payment, and administration screens remain separate work. A production SMS provider, real settlement integrations, and production deployment infrastructure are still outstanding.

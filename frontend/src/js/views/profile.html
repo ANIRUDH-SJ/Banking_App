@@ -1,0 +1,51 @@
+<div class="oj-hybrid-padding nb-page">
+  <div class="nb-panel">
+    <h1>Profile</h1>
+    <p class="nb-status" role="status"><oj-bind-if test="[[loading]]">Loading profile…</oj-bind-if></p>
+    <oj-bind-if test="[[formError]]">
+      <p class="nb-banner nb-banner-error" role="alert"><oj-bind-text value="[[formError]]"></oj-bind-text></p>
+    </oj-bind-if>
+    <oj-bind-if test="[[success]]">
+      <p class="nb-banner" role="status"><oj-bind-text value="[[success]]"></oj-bind-text></p>
+    </oj-bind-if>
+    <oj-bind-if test="[[!loading()]]">
+      <dl class="nb-details">
+        <dt>Customer number</dt>
+        <dd><oj-bind-text value="[[customerNumber]]"></oj-bind-text></dd>
+        <dt>Date of birth</dt>
+        <dd><oj-bind-text value="[[dateOfBirth]]"></oj-bind-text></dd>
+        <dt>KYC status</dt>
+        <dd><oj-bind-text value="[[kycStatus]]"></oj-bind-text></dd>
+        <dt>Status</dt>
+        <dd><oj-bind-text value="[[activeLabel]]"></oj-bind-text></dd>
+      </dl>
+      <form class="nb-form" data-bind="submit: save">
+        <div>
+          <oj-label for="profile-first-name">First name</oj-label>
+          <oj-input-text id="profile-first-name" value="{{firstName}}" autocomplete="given-name" required></oj-input-text>
+          <oj-bind-if test="[[firstNameError]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[firstNameError]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div>
+          <oj-label for="profile-last-name">Last name</oj-label>
+          <oj-input-text id="profile-last-name" value="{{lastName}}" autocomplete="family-name" required></oj-input-text>
+          <oj-bind-if test="[[lastNameError]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[lastNameError]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div>
+          <oj-label for="profile-mobile">Mobile number</oj-label>
+          <oj-input-text id="profile-mobile" value="{{mobileNumber}}" autocomplete="tel" required></oj-input-text>
+          <oj-bind-if test="[[mobileError]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[mobileError]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div class="nb-actions">
+          <oj-button id="profileSave" chroming="callToAction" on-oj-action="[[save]]" disabled="[[saving]]">Save profile</oj-button>
+        </div>
+      </form>
+      <p class="nb-status" role="status"><oj-bind-if test="[[saving]]">Saving profile…</oj-bind-if></p>
+    </oj-bind-if>
+  </div>
+</div>

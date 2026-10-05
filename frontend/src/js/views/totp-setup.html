@@ -1,0 +1,38 @@
+<div class="oj-hybrid-padding nb-page">
+  <div class="nb-panel">
+    <h1>Set up Microsoft Authenticator</h1>
+    <p>Add an account in Microsoft Authenticator, choose other account, and scan the code. The code changes every 30 seconds.</p>
+    <oj-bind-if test="[[formError]]">
+      <p class="nb-banner nb-banner-error" role="alert"><oj-bind-text value="[[formError]]"></oj-bind-text></p>
+    </oj-bind-if>
+    <p class="nb-status" role="status"><oj-bind-if test="[[loading]]">Contacting the identity service…</oj-bind-if></p>
+    <oj-bind-if test="[[completed]]">
+      <p role="status">Authenticator setup is complete. Sign in again and enter the current code.</p>
+      <oj-button id="totpSetupDone" chroming="callToAction" on-oj-action="[[goToLogin]]">Continue to sign in</oj-button>
+    </oj-bind-if>
+    <oj-bind-if test="[[ready() && !completed()]]">
+      <div class="nb-qr">
+        <img class="nb-qr-image" alt="Scan this QR code with Microsoft Authenticator" data-bind="attr: { src: qrCodeDataUri }">
+        <p><oj-bind-text value="[[issuer]]"></oj-bind-text> · <oj-bind-text value="[[accountName]]"></oj-bind-text></p>
+      </div>
+      <div class="nb-form">
+        <div>
+          <oj-label for="totp-manual-key">Manual entry key</oj-label>
+          <oj-input-text id="totp-manual-key" value="[[manualEntryKey]]" readonly></oj-input-text>
+          <p class="nb-hint">Use this key only when the camera cannot scan the image.</p>
+        </div>
+        <div>
+          <oj-label for="totp-setup-code">6-digit authenticator code</oj-label>
+          <oj-input-text id="totp-setup-code" value="{{code}}" autocomplete="one-time-code" required></oj-input-text>
+          <oj-bind-if test="[[codeError]]">
+            <p class="nb-field-error" role="alert"><oj-bind-text value="[[codeError]]"></oj-bind-text></p>
+          </oj-bind-if>
+        </div>
+        <div class="nb-actions">
+          <oj-button id="totpSetupConfirm" chroming="callToAction" on-oj-action="[[confirm]]" disabled="[[loading]]">Confirm setup</oj-button>
+          <oj-button id="totpSetupCancel" chroming="borderless" on-oj-action="[[goToLogin]]">Cancel</oj-button>
+        </div>
+      </div>
+    </oj-bind-if>
+  </div>
+</div>
