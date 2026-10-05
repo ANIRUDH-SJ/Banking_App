@@ -19,6 +19,7 @@ public class GatewayRoutes {
                     Map.entry("bill-payments", "payments-service"),
                     Map.entry("cards", "products-service"),
                     Map.entry("loans", "products-service"),
+                    Map.entry("deposits", "products-service"),
                     Map.entry("notifications", "notification-service"));
 
     private static final Map<String, String> ADMIN_ROUTES =
