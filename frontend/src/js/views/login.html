@@ -1,0 +1,42 @@
+<div class="nb-access">
+  <section class="nb-tips" aria-labelledby="security-heading">
+    <p class="nb-kicker">Before you sign in</p>
+    <h1 id="security-heading">Use your own credentials</h1>
+    <ul>
+      <li>Internet Banking never asks for your password or Microsoft Authenticator code by phone, email, or message.</li>
+      <li>Check that the address is the bank site you expect before entering a password.</li>
+      <li>Sign out when you finish, especially on a shared computer.</li>
+    </ul>
+  </section>
+  <section class="nb-panel" aria-labelledby="signin-heading">
+    <p class="nb-kicker">Customer access</p>
+    <h2 id="signin-heading">Sign in</h2>
+    <p class="nb-lede">Password first. Then a code from Microsoft Authenticator.</p>
+    <div class="nb-alert" role="alert" data-bind="visible: formError, text: formError"></div>
+    <p class="nb-reference" data-bind="visible: reference, text: reference"></p>
+    <form class="nb-form" data-bind="submit: signIn">
+      <oj-form-layout label-edge="top" direction="column" user-assistance-density="reflow">
+        <oj-input-text
+          id="login-user"
+          label-hint="User ID or email"
+          autocomplete="username"
+          value="{{username}}"
+          messages-custom="[[usernameMessages]]"
+          required="false"></oj-input-text>
+        <oj-input-password
+          id="login-password"
+          label-hint="Password"
+          autocomplete="current-password"
+          value="{{password}}"
+          messages-custom="[[passwordMessages]]"></oj-input-password>
+      </oj-form-layout>
+      <div class="nb-actions">
+        <oj-button id="sign-in" chroming="callToAction" on-oj-action="[[signIn]]" disabled="[[busy]]">Sign in</oj-button>
+      </div>
+    </form>
+    <p class="nb-form-links">
+      <a href="#" data-bind="click: openRecovery">Forgot password</a>
+      <a href="#" data-bind="click: openRegister">Register for Internet Banking</a>
+    </p>
+  </section>
+</div>

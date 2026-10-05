@@ -1,0 +1,26 @@
+<div class="nb-page nb-narrow">
+  <section class="nb-panel" aria-labelledby="totp-setup-heading">
+    <p class="nb-kicker">Microsoft Authenticator</p>
+    <h1 id="totp-setup-heading">Set up your code</h1>
+    <p class="nb-lede">Open Microsoft Authenticator, add an account, and choose <strong>Other account</strong>. Scan the code. The account name in the app should match the issuer shown here.</p>
+    <p class="nb-status" role="status" data-bind="visible: loading">Preparing the setup code…</p>
+    <div class="nb-alert" role="alert" data-bind="visible: formError, text: formError"></div>
+    <p class="nb-reference" data-bind="visible: reference, text: reference"></p>
+    <div class="nb-qr-block" data-bind="visible: qrCodeDataUri">
+      <img data-bind="attr: { src: qrCodeDataUri, alt: 'Scan this QR code with Microsoft Authenticator for ' + issuer() }" width="180" height="180">
+      <p class="nb-hint">Issuer: <span data-bind="text: issuer"></span>. Account: <span data-bind="text: accountName"></span>.</p>
+    </div>
+    <div data-bind="visible: manualEntryKey">
+      <button type="button" class="nb-text-button" data-bind="click: toggleKey, text: showKey() ? 'Hide manual entry key' : 'Show manual entry key'"></button>
+      <p class="nb-secret" data-bind="visible: showKey, text: manualEntryKey" aria-live="polite"></p>
+    </div>
+    <form class="nb-form" data-bind="submit: confirm, visible: !loading()">
+      <oj-form-layout label-edge="top" direction="column" user-assistance-density="reflow">
+        <oj-input-text label-hint="6-digit code" value="{{code}}" messages-custom="[[codeMessages]]" autocomplete="one-time-code" virtual-keyboard="number"></oj-input-text>
+      </oj-form-layout>
+      <div class="nb-actions">
+        <oj-button chroming="callToAction" on-oj-action="[[confirm]]" disabled="[[busy]]">Confirm authenticator</oj-button>
+      </div>
+    </form>
+  </section>
+</div>

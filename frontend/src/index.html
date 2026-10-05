@@ -1,155 +1,126 @@
 <!DOCTYPE html>
-<!--
- Copyright (c) 2014, 2026, Oracle and/or its affiliates.
- Licensed under The Universal Permissive License (UPL), Version 1.0
- as shown at https://oss.oracle.com/licenses/upl/
- -->
-
-<!-- ************************ IMPORTANT INFORMATION ************************************
-  This web navigation drawer template is provided as an example of how to configure
-  a JET web application with a navigation drawer as a single page application
-  using ojRouter and oj-module.  It contains the Oracle JET framework and a default
-  requireJS configuration file to show how JET can be setup in a common application.
-  This project template can be used in conjunction with demo code from the JET
-  website to test JET component behavior and interactions.
-
-  Any CSS styling with the prefix "demo-" is for demonstration only and is not
-  provided as part of the JET framework.
-
-  Please see the demos under Cookbook/Patterns/App Shell: Web and the CSS documentation
-  under Support/API Docs/Non-Component Styling on the JET website for more information on how to use
-  the best practice patterns shown in this template.
-
-  Aria Landmark role attributes are added to the different sections of the application
-  for accessibility compliance. If you change the type of content for a specific
-  section from what is defined, you should also change the role value for that
-  section to represent the appropriate content type.
-  ***************************** IMPORTANT INFORMATION ************************************ -->
-<html lang="en-us">
+<html lang="en">
   <head>
-    <title>Oracle JET Starter Template - Web Nav Drawer</title>
-
+    <title>Internet Banking</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1">
-    <link rel="icon" href="css/images/JET-Favicon-Red-32x32.png" type="image/x-icon" />
+    <meta name="description" content="Internet Banking customer access, profile, and notices.">
+    <link rel="icon" href="css/images/favicon.svg" type="image/svg+xml">
 
-    <!-- This is the main css file for the default theme -->
 		<!-- injector:theme -->
 		<!-- endinjector -->
 
-    <!-- This contains icon fonts used by the starter template -->
 		<!-- injector:font -->
 		<!-- endinjector:font -->
 
-    <!-- This is where you would add any app specific styling -->
-    <link rel="stylesheet" href="css/app.css" type="text/css"/>
-
+    <link rel="stylesheet" href="css/app.css" type="text/css">
   </head>
-  <body class="oj-web-applayout-body">
-    <!-- Template for rendering navigation items shared between nav bar and nav list -->
-    <script type="text/html" id="navTemplate">
-      <li><a href="#">
-        <span :class="[[$data.detail.iconClass]]"></span>
-        <oj-bind-text value="[[$data.detail.label]]"></oj-bind-text>
-      </a></li>
-    </script>
-
-    <div id="globalBody">
-
-      <div id="announce" tabindex="-1" class="send-off-screen" :aria-live="[[manner]]" aria-atomic="true">
-          <p id="ariaLiveMessage"><oj-bind-text value="[[message]]"></oj-bind-text></p>
+  <body class="nb-body">
+    <div id="globalBody" class="nb-app">
+      <a class="nb-skip" href="#main">Skip to content</a>
+      <div id="announce" tabindex="-1" class="nb-sr" data-bind="attr: { 'aria-live': manner }">
+        <p id="ariaLiveMessage"><oj-bind-text value="[[message]]"></oj-bind-text></p>
       </div>
 
-      <!--
-         ** Oracle JET V21.0.0 web application navigation drawer pattern.
-         ** Please see the demos under Cookbook/Patterns/App Shell: Web
-         ** and the CSS documentation under Support/API Docs/Non-Component Styling
-         ** on the JET website for more information on how to use this pattern.
-         ** The off-canvas section is used when the browser is resized to a smaller media
-         ** query size for a phone format and hidden until a user clicks on
-         ** the header hamburger icon.
-      -->
-      <oj-drawer-popup id="navDrawer" edge="start" opened="{{sideDrawerOn}}"
-                       modality="modeless" role="navigation"
-                       class="oj-bg-neutral-170 oj-color-invert">
-        <oj-navigation-list id="navDrawerList" data="[[navDataProvider]]"
-                            item.renderer="[[KnockoutTemplateUtils.getRenderer('navTemplate', true)]]"
-                            on-click="[[toggleDrawer]]"
-                            selection="{{selection.path}}">
-        </oj-navigation-list>
-      </oj-drawer-popup>
-      <div id="pageContent" class="oj-web-applayout-page">
-        <!--
-           ** Oracle JET V21.0.0 web application header pattern.
-           ** Please see the demos under Cookbook/Patterns/App Shell: Web
-           ** and the CSS documentation under Support/API Docs/Non-Component Styling
-           ** on the JET website for more information on how to use this pattern.
-        -->
-        <header role="banner" class="oj-web-applayout-header">
-          <div class="oj-web-applayout-max-width oj-flex-bar oj-sm-align-items-center">
-            <!-- Drawer toggle button -->
-            <div class="oj-flex-bar-start oj-md-hide">
-              <oj-button id="drawerToggleButton" class="oj-button-lg" on-oj-action="[[toggleDrawer]]" chroming="borderless" display="icons">
-                <span slot="startIcon" class="oj-web-applayout-offcanvas-icon"></span>
-                <span>Application Navigation</span>
-              </oj-button>
+      <header class="nb-mast" role="banner">
+        <div class="nb-mast-inner">
+          <button type="button" class="nb-menu-button oj-md-hide" data-bind="click: toggleDrawer, visible: showDesk, attr: { 'aria-expanded': sideDrawerOn() ? 'true' : 'false' }">
+            Menu
+          </button>
+          <a class="nb-brand" href="#" data-bind="click: goHome">
+            <svg class="nb-mark" viewBox="0 0 36 36" aria-hidden="true">
+              <rect width="36" height="36" fill="#F4F7FB"></rect>
+              <rect x="7" y="8" width="22" height="2.5" fill="#0B3A66"></rect>
+              <rect x="7" y="16" width="15" height="2.5" fill="#0B3A66"></rect>
+              <rect x="7" y="24" width="22" height="2.5" fill="#8E1B1B"></rect>
+            </svg>
+            <span class="nb-brand-text">
+              <span class="nb-brand-name">Internet Banking</span>
+              <span class="nb-brand-product">Customer access</span>
+            </span>
+          </a>
+          <div class="nb-mast-end" data-bind="if: showDesk">
+            <div class="nb-identity">
+              <span class="nb-identity-name" data-bind="text: customerLabel"></span>
+              <span class="nb-identity-session" data-bind="text: sessionLabel"></span>
             </div>
-            <div class="oj-flex-bar-middle oj-sm-align-items-baseline">
-              <img class="oj-icon demo-oracle-icon" title="Oracle Logo" alt="Oracle Logo"></img>
-              <h1 class="oj-sm-only-hide oj-web-applayout-header-title" title="Application Name"><oj-bind-text value="[[appName]]"></oj-bind-text></h1>
-            </div>
-            <div class="oj-flex-bar-end">
-              <!-- Responsive Toolbar -->
-              <oj-toolbar>
-                <oj-menu-button id="userMenu" display="[[smScreen() ? 'icons' : 'all']]" chroming="borderless">
-                  <span><oj-bind-text value="[[userLogin]]"></oj-bind-text></span>
-                  <span slot="endIcon" :class="[[{'oj-icon demo-appheader-avatar': smScreen(), 'oj-component-icon oj-button-menu-dropdown-icon': !smScreen()}]]"></span>
-                  <oj-menu id="menu1" slot="menu">
-                    <oj-option id="pref" value="pref">Preferences</oj-option>
-                    <oj-option id="help" value="help">Help</oj-option>
-                    <oj-option id="about" value="about">About</oj-option>
-                    <oj-option id="out" value="out">Sign Out</oj-option>
-                  </oj-menu>
-                </oj-menu-button>
-              </oj-toolbar>
-            </div>
+            <a class="nb-notice-link" href="#" data-bind="click: openNotices">
+              Notices
+              <span class="nb-count" data-bind="visible: unreadCount() > 0, text: unreadCount"></span>
+            </a>
+            <button type="button" class="nb-signout" data-bind="click: signOut">Sign out</button>
           </div>
-          <div role="navigation" class="oj-web-applayout-max-width oj-web-applayout-navbar">
-            <oj-tab-bar id="navTabBar" class="oj-sm-only-hide oj-md-condense oj-md-justify-content-flex-end"
-                                data="[[navDataProvider]]"
-                                edge="top"
-                                item.renderer="[[KnockoutTemplateUtils.getRenderer('navTemplate', true)]]"
-                                selection="{{selection.path}}">
-            </oj-tab-bar>
+          <div class="nb-mast-end" data-bind="ifnot: showDesk">
+            <a class="nb-mast-link" href="#" data-bind="click: function () { return open('register'); }, visible: currentPath() !== 'register'">Register</a>
+            <a class="nb-mast-link" href="#" data-bind="click: function () { return open('login'); }, visible: currentPath() === 'register' || currentPath() === 'password-recovery' || currentPath() === 'session-expired'">Sign in</a>
           </div>
-        </header>
-        <oj-module role="main" class="oj-web-applayout-max-width oj-web-applayout-content" config="[[moduleAdapter.koObservableConfig]]">
-        </oj-module>
-        <footer class="oj-web-applayout-footer" role="contentinfo">
-          <div class="oj-web-applayout-footer-item oj-web-applayout-max-width">
-            <ul>
-              <oj-bind-for-each data="[[footerLinks]]">
-                <template>
-                  <li>
-                    <a :id="[[$current.data.linkId]]" :href="[[$current.data.linkTarget]]">
-                      <oj-bind-text value="[[$current.data.name]]"></oj-bind-text>
-                    </a>
-                  </li>
-                </template>
-              </oj-bind-for-each>
+        </div>
+      </header>
+      <div class="nb-stripe" aria-hidden="true"></div>
+      <p class="nb-session-mobile oj-md-hide" data-bind="visible: showDesk, text: sessionLabel"></p>
+
+      <div id="pageContent" class="nb-frame" data-bind="css: { 'is-desk': showDesk }">
+        <div class="nb-nav-wrap oj-sm-only-hide" data-bind="visible: showDesk">
+          <nav class="nb-nav" aria-label="Banking menu">
+            <p class="nb-nav-kicker">Services</p>
+            <ul data-bind="foreach: customerNav">
+              <li>
+                <a href="#" data-bind="text: label, click: function () { return $parent.open(path); }, css: { 'is-current': $parent.currentPath() === path }, attr: { 'aria-current': $parent.currentPath() === path ? 'page' : null }"></a>
+              </li>
             </ul>
-          </div>
-          <div class="oj-web-applayout-footer-item oj-web-applayout-max-width oj-text-color-secondary oj-typography-body-sm">
-            Copyright © 2014, 2026 Oracle and/or its affiliates All rights reserved.
-          </div>
-        </footer>
+            <div data-bind="if: adminNav().length">
+              <p class="nb-nav-kicker">Administration</p>
+              <ul data-bind="foreach: adminNav">
+                <li>
+                  <a href="#" data-bind="text: label, click: function () { return $parent.open(path); }, css: { 'is-current': $parent.currentPath() === path }, attr: { 'aria-current': $parent.currentPath() === path ? 'page' : null }"></a>
+                </li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+        <main id="main" class="nb-main" tabindex="-1">
+          <oj-module config="[[moduleConfig]]"></oj-module>
+        </main>
       </div>
+
+      <footer class="nb-foot" role="contentinfo">
+        <p>Authorised customers only. Balances, permissions, and payment results shown in Internet Banking come from the bank's records.</p>
+        <p>Do not share passwords or Microsoft Authenticator codes.</p>
+      </footer>
+
+      <oj-drawer-popup id="navDrawer" class="nb-drawer" edge="start" opened="{{sideDrawerOn}}" modality="modal" auto-dismiss="focus-loss">
+        <div class="nb-drawer-body">
+          <p class="nb-drawer-title">Menu</p>
+          <nav aria-label="Banking menu">
+            <ul data-bind="foreach: customerNav">
+              <li>
+                <a href="#" data-bind="text: label, click: function () { return $parent.open(path); }, css: { 'is-current': $parent.currentPath() === path }"></a>
+              </li>
+            </ul>
+            <div data-bind="if: adminNav().length">
+              <p class="nb-nav-kicker">Administration</p>
+              <ul data-bind="foreach: adminNav">
+                <li>
+                  <a href="#" data-bind="text: label, click: function () { return $parent.open(path); }, css: { 'is-current': $parent.currentPath() === path }"></a>
+                </li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </oj-drawer-popup>
+
+      <oj-dialog id="sessionWarning" dialog-title="Session ending" modality="modal" cancel-behavior="icon">
+        <div slot="body">
+          <p>Your Internet Banking session is about to end. Signing in again is required after it expires. This sign-in cannot be extended.</p>
+        </div>
+        <div slot="footer">
+          <oj-button chroming="callToAction" on-oj-action="[[dismissWarning]]">Continue</oj-button>
+          <oj-button chroming="outlined" on-oj-action="[[signOut]]">Sign out</oj-button>
+        </div>
+      </oj-dialog>
     </div>
 
-    <!-- This injects script tags for the main javascript files -->
 		<!-- injector:scripts -->
 		<!-- endinjector -->
-
   </body>
-
 </html>
