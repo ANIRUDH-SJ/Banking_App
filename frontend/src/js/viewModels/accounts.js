@@ -1,8 +1,7 @@
 define([
   'knockout',
   '../accUtils',
-  'ojs/ojbutton',
-  'ojs/ojpanel'
+  'ojs/ojbutton'
 ], function (ko, accUtils) {
   function AccountsViewModel() {
     var self = this;

@@ -18,14 +18,14 @@
   </p>
   <div class="oj-flex oj-sm-flex-wrap-wrap oj-sm-margin-4x-top" data-bind="foreach: beneficiaries">
     <div class="oj-flex-item oj-sm-12 oj-md-6 oj-lg-4 oj-sm-padding-2x">
-      <oj-panel>
+      <section class="member2-card">
         <h2 class="oj-typography-heading-sm" data-bind="text: nickname"></h2>
         <p data-bind="text: beneficiaryName"></p>
         <p class="oj-typography-body-sm"><span data-bind="text: maskedAccountNumber"></span> · <span data-bind="text: ifscCode"></span></p>
         <p class="oj-typography-body-sm"><span data-bind="text: bankName"></span> · <strong data-bind="text: status"></strong></p>
         <button type="button" class="member2-inline-action" data-bind="click: function () { $parent.requestActivation($data); }, visible: status === 'PENDING'">Verify</button>
         <button type="button" class="member2-inline-action" data-bind="click: function () { $parent.disableBeneficiary($data); }">Remove</button>
-      </oj-panel>
+      </section>
     </div>
   </div>
 </div>

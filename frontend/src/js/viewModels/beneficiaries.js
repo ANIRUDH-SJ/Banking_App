@@ -1,4 +1,4 @@
-define(['knockout', '../accUtils', 'ojs/ojbutton', 'ojs/ojpanel'], function (ko, accUtils) {
+define(['knockout', '../accUtils', 'ojs/ojbutton'], function (ko, accUtils) {
   function BeneficiariesViewModel() {
     var self = this;
     self.message = ko.observable('Manage beneficiaries here. Verification will use the shared OTP flow.');
