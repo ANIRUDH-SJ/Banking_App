@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createConnection } from 'node:net';
 import { fileURLToPath } from 'node:url';
+import { buildFreshJars } from './local-build.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const node = process.execPath;
@@ -11,6 +12,7 @@ let stopping = false;
 function startService(name) {
   const child = spawn(node, [runner, name], {
     cwd: root,
+    env: { ...process.env, BANKING_JARS_BUILT: '1' },
     stdio: ['inherit', 'pipe', 'pipe'],
     windowsHide: true,
   });
@@ -52,6 +54,8 @@ function waitForPort(port, name, timeoutMs = 60000) {
 
 async function main() {
   console.log('Starting local banking backend services...');
+  console.log('Building fresh service JARs from this checkout first...');
+  await buildFreshJars(root);
   startService('service-registry');
   await waitForPort(8761, 'Service Registry');
 

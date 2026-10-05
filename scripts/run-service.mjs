@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { buildFreshJars } from './local-build.mjs';
 
 const modules = {
   'service-registry': 'platform',
@@ -20,8 +21,14 @@ const config = JSON.parse(readFileSync(join(root, '.local', `${name}.json`), 'ut
 for (const [key, value] of Object.entries(config)) {
   if (typeof value !== 'string' || value.startsWith('REPLACE_')) throw new Error(`Configure ${key} in .local/${name}.json`);
 }
+// The all-services launcher builds once and marks its children as prebuilt.
+// A direct single-service launch must not silently reuse a stale JAR.
+if (process.env.BANKING_JARS_BUILT !== '1') {
+  console.log('Building fresh service JARs from this checkout first...');
+  await buildFreshJars(root);
+}
 const jar = join(root, modules[name], name, 'target', `${name}-0.0.1-SNAPSHOT.jar`);
-if (!existsSync(jar)) throw new Error('Build the repository with ./mvnw verify first.');
+if (!existsSync(jar)) throw new Error('Build service JARs with ./mvnw clean package -DskipTests first, or start all services with node scripts/run-all-services.mjs.');
 // Windows environment variables are sometimes saved with surrounding quotes.
 // Remove only those outer quotes before constructing the Java executable path.
 const javaHome = process.env.JAVA_HOME?.replace(/^["']|["']$/g, '');
