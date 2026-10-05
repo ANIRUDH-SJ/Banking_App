@@ -21,6 +21,8 @@ class GatewayRoutesTest {
                 .isEqualTo("accounts-ledger-service");
         assertThat(routes.serviceFor("/api/v1/admin/audit-events"))
                 .isEqualTo("audit-reporting-service");
+        assertThat(routes.serviceFor("/api/v1/deposits/quotes"))
+                .isEqualTo("products-service");
         for (String path :
                 new String[] {
                     "/internal/ledger/operations",
