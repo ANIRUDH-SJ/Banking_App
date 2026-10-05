@@ -38,7 +38,7 @@ public class OtpClient {
 
     public record Issue(
             @NotNull @Positive Long userId,
-            @NotBlank @Pattern(regexp = "FUND_TRANSFER|BILL_PAYMENT|BENEFICIARY_ACTIVATION")
+            @NotBlank @Pattern(regexp = "FUND_TRANSFER|BILL_PAYMENT|BENEFICIARY_ACTIVATION|FOREX_CONVERSION")
                     String purpose,
             @NotBlank @Pattern(regexp = "[a-f0-9]{64}") String intentDigest) {}
 
@@ -47,7 +47,7 @@ public class OtpClient {
             @NotNull @Positive Long userId,
             @NotBlank @Size(max = 100) String challengeId,
             @NotBlank @Pattern(regexp = "[0-9]{6}") String code,
-            @NotBlank @Pattern(regexp = "FUND_TRANSFER|BILL_PAYMENT|BENEFICIARY_ACTIVATION")
+            @NotBlank @Pattern(regexp = "FUND_TRANSFER|BILL_PAYMENT|BENEFICIARY_ACTIVATION|FOREX_CONVERSION")
                     String purpose,
             @NotBlank @Pattern(regexp = "[a-f0-9]{64}") String intentDigest) {}
 }

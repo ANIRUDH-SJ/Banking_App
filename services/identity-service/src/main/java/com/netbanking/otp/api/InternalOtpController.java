@@ -49,7 +49,8 @@ public class InternalOtpController {
         var purpose = OtpPurpose.valueOf(value);
         if (purpose != OtpPurpose.FUND_TRANSFER
                 && purpose != OtpPurpose.BILL_PAYMENT
-                && purpose != OtpPurpose.BENEFICIARY_ACTIVATION)
+                && purpose != OtpPurpose.BENEFICIARY_ACTIVATION
+                && purpose != OtpPurpose.FOREX_CONVERSION)
             throw new IllegalArgumentException("Unsupported authorization purpose.");
         return purpose;
     }
