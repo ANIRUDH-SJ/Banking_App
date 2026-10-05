@@ -112,6 +112,16 @@ Each developer runs their **own local Oracle database**. Do not share passwords,
 4. Run `Test-NetConnection 127.0.0.1 -Port 1521`.
 5. If the port test is false, start the SSH tunnel using the full guide.
 6. Open SQL Developer and connect using `netbanking-app-local`.
+7. Make sure your project checkout includes the latest approved changes, then
+   start the backend from the repository root:
+
+   ```powershell
+   node scripts/run-all-services.mjs
+   ```
+
+   This performs a clean Maven package build before starting the services.
+   Do not launch an old JAR from `target` after updating the source. If the
+   build fails, fix that error first; the launcher will not start the services.
 
 ## Never share
 

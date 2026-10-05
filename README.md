@@ -58,6 +58,12 @@ Create the schema users first by running every script under `database/bootstrap/
 
 The normal Java suite uses H2 for transactional tests. It does not establish Oracle compatibility. `verify-oracle.mjs` applies Flyway migrations and validates every service's Hibernate mappings against a live local Oracle instance.
 
+Start the local backend with `node scripts/run-all-services.mjs` after local
+configuration is complete. The launcher runs a clean Maven package build before
+starting any service, so a checked-out source change cannot silently run an old
+`target/*.jar`. If the build fails, nothing starts. The build skips test execution;
+run `./mvnw verify` (or `mvnw.cmd verify` on Windows) separately for the full suite.
+
 ## Existing documentation
 
 - [Service discovery and local startup](docs/service-discovery.md)
