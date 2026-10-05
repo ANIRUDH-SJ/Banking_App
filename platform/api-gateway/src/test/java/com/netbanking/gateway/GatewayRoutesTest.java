@@ -12,6 +12,7 @@ class GatewayRoutesTest {
         assertThat(routes.serviceFor("/api/v1/accounts/1/statement.csv"))
                 .isEqualTo("accounts-ledger-service");
         assertThat(routes.serviceFor("/api/v1/transfers")).isEqualTo("payments-service");
+        assertThat(routes.serviceFor("/api/v1/forex/quotes")).isEqualTo("payments-service");
         assertThat(routes.serviceFor("/api/v1/admin/users"))
                 .isEqualTo("identity-service");
         assertThat(routes.serviceFor("/api/v1/admin/accounts/7/status"))
