@@ -1,5 +1,6 @@
 package com.netbanking.gateway;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ final class AuthRateLimiter {
     private final ConcurrentMap<String, Window> windows = new ConcurrentHashMap<>();
     private final AtomicLong acquisitions = new AtomicLong();
 
+    @Autowired
     AuthRateLimiter(
             @Value("${app.gateway.auth-rate-limit.max-requests:10}") int maxRequests,
             @Value("${app.gateway.auth-rate-limit.window-seconds:60}") long windowSeconds) {
