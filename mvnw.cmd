@@ -31,20 +31,23 @@
 @SET __MVNW_CMD__=
 @SET __MVNW_ERROR__=
 @REM Some Windows installations set JAVA_HOME with surrounding quotes. Maven requires the raw path.
-@SET JAVA_HOME=%JAVA_HOME:"=%
+@SET "JAVA_HOME=%JAVA_HOME:"=%"
 @SET __MVNW_PSMODULEP_SAVE=%PSModulePath%
 @SET PSModulePath=
 @FOR /F "usebackq tokens=1* delims==" %%A IN (`powershell -noprofile "& {$scriptDir='%~dp0'; $script='%__MVNW_ARG0_NAME__%'; icm -ScriptBlock ([Scriptblock]::Create((Get-Content -Raw '%~f0'))) -NoNewScope}"`) DO @(
-  IF "%%A"=="MVN_CMD" (set __MVNW_CMD__=%%B) ELSE IF "%%B"=="" (echo %%A) ELSE (echo %%A=%%B)
+  IF "%%A"=="MVN_CMD" (set "__MVNW_CMD__=%%B") ELSE IF "%%B"=="" (echo %%A) ELSE (echo %%A=%%B)
 )
 @SET PSModulePath=%__MVNW_PSMODULEP_SAVE%
 @SET __MVNW_PSMODULEP_SAVE=
 @SET __MVNW_ARG0_NAME__=
 @SET MVNW_USERNAME=
 @SET MVNW_PASSWORD=
-@IF NOT "%__MVNW_CMD__%"=="" ("%__MVNW_CMD__%" %*)
-@echo Cannot start maven from wrapper >&2 && exit /b 1
-@GOTO :EOF
+@IF NOT DEFINED __MVNW_CMD__ GOTO :wrapperError
+@CALL "%__MVNW_CMD__%" %*
+@EXIT /B %ERRORLEVEL%
+:wrapperError
+@echo Cannot start maven from wrapper >&2
+@EXIT /B 1
 : end batch / begin powershell #>
 
 $ErrorActionPreference = "Stop"
