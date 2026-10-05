@@ -12,6 +12,7 @@ let stopping = false;
 function startService(name) {
   const child = spawn(node, [runner, name], {
     cwd: root,
+    env: { ...process.env, BANKING_JARS_BUILT: '1' },
     stdio: ['inherit', 'pipe', 'pipe'],
     windowsHide: true,
   });

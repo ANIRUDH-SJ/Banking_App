@@ -63,6 +63,8 @@ configuration is complete. The launcher runs a clean Maven package build before
 starting any service, so a checked-out source change cannot silently run an old
 `target/*.jar`. If the build fails, nothing starts. The build skips test execution;
 run `./mvnw verify` (or `mvnw.cmd verify` on Windows) separately for the full suite.
+Direct `node scripts/run-service.mjs <service-name>` launches also perform a
+fresh build; the all-services launcher builds only once for its child services.
 
 ## Existing documentation
 
