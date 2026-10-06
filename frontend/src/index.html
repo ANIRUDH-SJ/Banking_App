@@ -101,14 +101,15 @@
             <div class="oj-flex-bar-end">
               <!-- Responsive Toolbar -->
               <oj-toolbar>
-                <oj-menu-button id="userMenu" display="[[smScreen() ? 'icons' : 'all']]" chroming="borderless">
+                <oj-button chroming="borderless" data-bind="visible: !isAuthenticated()" on-oj-action="[[openSignIn]]">Sign in</oj-button>
+                <oj-menu-button id="userMenu" data-bind="visible: isAuthenticated" display="[[smScreen() ? 'icons' : 'all']]" chroming="borderless" on-oj-menu-action="[[handleUserMenu]]">
                   <span><oj-bind-text value="[[userLogin]]"></oj-bind-text></span>
                   <span slot="endIcon" :class="[[{'oj-icon demo-appheader-avatar': smScreen(), 'oj-component-icon oj-button-menu-dropdown-icon': !smScreen()}]]"></span>
                   <oj-menu id="menu1" slot="menu">
                     <oj-option id="pref" value="pref">Preferences</oj-option>
                     <oj-option id="help" value="help">Help</oj-option>
                     <oj-option id="about" value="about">About</oj-option>
-                    <oj-option id="out" value="out">Sign Out</oj-option>
+                    <oj-option id="out" value="out" data-bind="visible: isAuthenticated">Sign Out</oj-option>
                   </oj-menu>
                 </oj-menu-button>
               </oj-toolbar>
@@ -123,6 +124,43 @@
             </oj-tab-bar>
           </div>
         </header>
+        <div class="auth-overlay" data-bind="visible: signInOpen">
+          <section id="signInDialog" class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="signInTitle">
+            <h2 id="signInTitle">Sign in to your account</h2>
+            <div class="auth-dialog-body">
+            <p class="auth-error" data-bind="visible: authError" role="alert"><oj-bind-text value="[[authError]]"></oj-bind-text></p>
+
+            <div data-bind="visible: authStep() === 'credentials'">
+              <p>Enter your account credentials to continue.</p>
+              <label for="authUsername">Username or email</label>
+              <input id="authUsername" type="text" autocomplete="username" data-bind="value: authUsername, valueUpdate: 'input'">
+              <label for="authPassword">Password</label>
+              <input id="authPassword" type="password" autocomplete="current-password" data-bind="value: authPassword, valueUpdate: 'input'">
+            </div>
+
+            <div data-bind="visible: authStep() === 'setup'">
+              <p>Set up your authenticator app. Scan this QR code, or enter the key manually.</p>
+              <img class="auth-qr" data-bind="attr: { src: authSetup() && authSetup().qrCodeDataUri }" alt="Authenticator setup QR code">
+              <p>Account: <strong><oj-bind-text value="[[authSetup() && authSetup().accountName]]"></oj-bind-text></strong></p>
+              <p>Manual entry key: <code data-bind="text: authSetup() && authSetup().manualEntryKey"></code></p>
+              <label for="setupCode">Six-digit authenticator code</label>
+              <input id="setupCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" data-bind="value: authCode, valueUpdate: 'input'">
+            </div>
+
+            <div data-bind="visible: authStep() === 'verify'">
+              <p>Enter the current six-digit code from your authenticator app. If this code was already used in a sign-in attempt, wait for the next code.</p>
+              <label for="loginCode">Authenticator code</label>
+              <input id="loginCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" data-bind="value: authCode, valueUpdate: 'input'">
+            </div>
+            </div>
+            <div class="auth-dialog-actions">
+            <oj-button chroming="borderless" on-oj-action="[[() => signInOpen(false)]]">Cancel</oj-button>
+            <oj-button chroming="callToAction" disabled="[[authBusy]]" data-bind="visible: authStep() === 'credentials'" on-oj-action="[[beginSignIn]]">Continue</oj-button>
+            <oj-button chroming="callToAction" disabled="[[authBusy]]" data-bind="visible: authStep() === 'setup'" on-oj-action="[[confirmAuthenticatorSetup]]">Confirm setup</oj-button>
+            <oj-button chroming="callToAction" disabled="[[authBusy]]" data-bind="visible: authStep() === 'verify'" on-oj-action="[[verifyAuthenticatorCode]]">Verify and sign in</oj-button>
+            </div>
+          </section>
+          </div>
         <oj-module role="main" class="oj-web-applayout-max-width oj-web-applayout-content" config="[[moduleAdapter.koObservableConfig]]">
         </oj-module>
         <footer class="oj-web-applayout-footer" role="contentinfo">

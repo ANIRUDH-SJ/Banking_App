@@ -48,3 +48,507 @@ html[dir="rtl"] .demo-oracle-icon {
       transform:translate(-25%, -25%) scale(0.5)
   }
 }
+
+.billers-page {
+   max-width: 1280px; margin: 0 auto; color: #172b3a;
+   }
+.billers-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.billers-heading h1 { margin: .1rem 0 .35rem; font-size: 2rem; }
+.billers-eyebrow { margin: 0; color: #536b7b; font-size: .75rem; font-weight: 700; letter-spacing: .12em; }
+.billers-intro { margin: 0; color: #536b7b; }
+.billers-toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+.billers-toolbar oj-input-text { flex: 1; max-width: 32rem; }
+.billers-toolbar oj-select-single { width: 14rem; }
+.billers-count { margin-left: auto; color: #536b7b; font-size: .9rem; }
+.billers-status, .billers-message { display: flex; align-items: center; justify-content: center; gap: .75rem; min-height: 9rem; color: #536b7b; }
+.billers-message { flex-direction: column; text-align: center; border: 1px solid #d8e1e7; border-radius: 12px; background: #fff; padding: 1.5rem; }
+.billers-message h2, .billers-message p { margin: 0; }
+.billers-error { flex-direction: row; border-color: #e8b5b5; color: #8b2525; }
+.billers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem; }
+.biller-card { display: flex; flex-direction: column; min-height: 15rem; padding: 1.25rem; border: 1px solid #d8e1e7; border-radius: 14px; background: #fff; }
+.biller-card-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.biller-mark { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 12px; background: #e8f1f7; color: #145b7b; font-weight: 700; }
+.biller-category { border-radius: 99px; background: #f1f5f7; color: #536b7b; padding: .3rem .65rem; font-size: .78rem; }
+.biller-card h2 { margin: 1rem 0 .35rem; font-size: 1.15rem; }
+.biller-reference { margin: 0; color: #536b7b; font-size: .9rem; }
+.biller-range { display: flex; flex-direction: column; gap: .2rem; margin: 1rem 0; padding: .8rem 0; border-top: 1px solid #e7edf0; border-bottom: 1px solid #e7edf0; color: #536b7b; font-size: .85rem; }
+.biller-range strong { color: #172b3a; font-size: .95rem; }
+.biller-pay-button { margin-top: auto; }
+
+@media (max-width: 640px) {
+  .billers-heading { align-items: flex-start; flex-direction: column; }
+  .billers-toolbar { align-items: stretch; flex-direction: column; }
+  .billers-toolbar oj-input-text, .billers-toolbar oj-select-single { width: 100%; max-width: none; }
+  .billers-count { margin-left: 0; }
+}
+.history-list {
+  display: grid;
+  gap: .75rem;
+  margin-top: 1rem;
+}
+
+.history-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #d8e1e7;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.history-card > div:first-child {
+  display: grid;
+  gap: .35rem;
+}
+
+.history-status,
+.history-meta {
+  color: #536b7b;
+  font-size: .9rem;
+}
+
+.history-amount {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .history-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+.cards-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  color: #172b3a;
+}
+
+.cards-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.cards-heading h1 {
+  margin: .1rem 0 .35rem;
+  font-size: 2rem;
+}
+
+.cards-eyebrow {
+  margin: 0;
+  color: #536b7b;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.cards-intro {
+  margin: 0;
+  color: #536b7b;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+}
+
+.bank-card {
+  padding: 1.25rem;
+  border: 1px solid #d8e1e7;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #f8fbfd, #e9f1f6);
+  box-shadow: 0 3px 12px rgba(25, 48, 64, .06);
+}
+
+.bank-card-top,
+.bank-card-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.bank-card-network {
+  color: #145b7b;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.bank-card-status {
+  padding: .3rem .65rem;
+  border-radius: 99px;
+  background: #e5edf1;
+  color: #536b7b;
+  font-size: .8rem;
+  text-transform: capitalize;
+}
+
+.bank-card-status.status-active {
+  background: #e2f4e8;
+  color: #176738;
+}
+
+.bank-card-status.status-blocked {
+  background: #fae7e7;
+  color: #8b2525;
+}
+
+.bank-card-type {
+  margin: 1.5rem 0 .5rem;
+  color: #536b7b;
+  text-transform: capitalize;
+}
+
+.bank-card-number {
+  margin: 0 0 1.25rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.bank-card-details {
+  padding-top: .85rem;
+  border-top: 1px solid #d8e1e7;
+  color: #536b7b;
+  font-size: .85rem;
+}
+
+.bank-card-details span {
+  display: grid;
+  gap: .2rem;
+}
+
+.bank-card-details strong {
+  color: #172b3a;
+}
+
+.bank-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: 1.25rem;
+}
+
+.cards-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  min-height: 8rem;
+  padding: 1.25rem;
+  border: 1px solid #d8e1e7;
+  border-radius: 12px;
+  background: #fff;
+  color: #536b7b;
+}
+
+.cards-error,
+.cards-page-error {
+  color: #8b2525;
+}
+
+.cards-page-error {
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .cards-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* Member 3: loan repayments and administrator monitoring */
+.feature-page {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.feature-heading,
+.admin-section-heading,
+.loan-card-heading,
+.loan-card-summary,
+.loan-actions,
+.admin-search {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.feature-heading {
+  margin-bottom: 1.5rem;
+}
+
+.feature-heading h1,
+.admin-section h2,
+.loan-card h2 {
+  margin: .25rem 0;
+}
+
+.feature-eyebrow {
+  margin: 0;
+  color: #145b7b;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.feature-heading p:not(.feature-eyebrow),
+.admin-section-heading p {
+  margin: .25rem 0 0;
+  color: #536b7b;
+}
+
+.feature-error,
+.feature-success {
+  padding: .85rem 1rem;
+  border: 1px solid #efb4b4;
+  border-radius: 8px;
+  color: #8b2525;
+  background: #fff8f8;
+}
+
+.feature-success {
+  border-color: #a7d9b4;
+  color: #176738;
+  background: #f4fbf6;
+}
+
+.feature-loading,
+.feature-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  min-height: 7rem;
+  color: #536b7b;
+}
+
+.loan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 1rem;
+}
+
+.loan-card,
+.loan-panel,
+.admin-section,
+.admin-kpis article {
+  padding: 1.25rem;
+  border: 1px solid #d8e1e7;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.loan-card-summary {
+  align-items: flex-start;
+  margin: 1rem 0;
+}
+
+.loan-card-summary div,
+.loan-details div,
+.loan-receipt div {
+  display: grid;
+  gap: .25rem;
+}
+
+.loan-card-summary span,
+.loan-details span,
+.loan-receipt dt {
+  color: #536b7b;
+  font-size: .9rem;
+}
+
+.loan-card-summary strong,
+.loan-details strong,
+.loan-receipt dd {
+  color: #172b3a;
+}
+
+.loan-status {
+  padding: .3rem .65rem;
+  border-radius: 99px;
+  background: #e5edf1;
+  color: #536b7b;
+  font-size: .8rem;
+}
+
+.loan-details,
+.loan-receipt {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.loan-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.loan-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 540px;
+}
+
+.loan-form oj-input-text,
+.loan-form oj-select-single {
+  width: 100%;
+}
+
+.loan-table-wrap,
+.admin-table-wrap {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.loan-table-wrap table,
+.admin-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.loan-table-wrap th,
+.loan-table-wrap td,
+.admin-table-wrap th,
+.admin-table-wrap td {
+  padding: .75rem;
+  border-bottom: 1px solid #d8e1e7;
+  white-space: nowrap;
+}
+
+.loan-table-wrap th,
+.admin-table-wrap th {
+  color: #536b7b;
+  font-size: .85rem;
+}
+
+.admin-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-kpis article {
+  display: grid;
+  gap: .5rem;
+}
+
+.admin-kpis span {
+  color: #536b7b;
+}
+
+.admin-kpis strong {
+  color: #145b7b;
+  font-size: 1.6rem;
+}
+
+.admin-section {
+  margin: 1rem 0;
+}
+
+.admin-search {
+  justify-content: flex-end;
+  min-width: min(100%, 360px);
+}
+
+.admin-search oj-input-text {
+  flex: 1;
+}
+
+@media (max-width: 700px) {
+  .feature-heading,
+  .admin-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-search {
+    width: 100%;
+  }
+}
+
+.auth-dialog-body {
+  display: grid;
+  gap: .75rem;
+  min-width: min(82vw, 420px);
+}
+
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(16, 30, 39, .55);
+}
+
+.auth-dialog {
+  box-sizing: border-box;
+  width: min(100%, 480px);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, .24);
+}
+
+.auth-dialog h2 {
+  margin: 0 0 1rem;
+}
+
+.auth-dialog-body p {
+  margin: .25rem 0;
+}
+
+.auth-dialog-body label {
+  margin-top: .35rem;
+  color: #344b5a;
+  font-weight: 600;
+}
+
+.auth-dialog-body input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.6rem;
+  padding: .55rem .7rem;
+  border: 1px solid #9aaab4;
+  border-radius: 5px;
+  font: inherit;
+}
+
+.auth-dialog-body input:focus {
+  outline: 2px solid #145b7b;
+  outline-offset: 1px;
+}
+
+.auth-error {
+  color: #8b2525;
+}
+
+.auth-qr {
+  display: block;
+  width: 210px;
+  height: 210px;
+  margin: .5rem auto;
+  object-fit: contain;
+}
+
+.auth-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+}

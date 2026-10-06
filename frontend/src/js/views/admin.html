@@ -1,0 +1,44 @@
+<div class="oj-hybrid-padding feature-page admin-page">
+  <div class="feature-heading">
+    <div><p class="feature-eyebrow">ADMINISTRATION</p><h1>Operations overview</h1><p>Monitor users, accounts, transactions, and audit events.</p></div>
+    <oj-button chroming="outlined" disabled="[[isLoading]]" on-oj-action="[[refresh]]">Refresh all</oj-button>
+  </div>
+
+  <p class="feature-error" data-bind="visible: errorMessage" role="alert"><oj-bind-text value="[[errorMessage]]"></oj-bind-text></p>
+  <div class="feature-loading" data-bind="visible: isLoading" role="status"><oj-progress-circle size="sm" value="-1"></oj-progress-circle> Loading administrator data…</div>
+
+  <div class="admin-kpis">
+    <article><span>Users</span><strong><oj-bind-text value="[[userTotal]]"></oj-bind-text></strong></article>
+    <article><span>Accounts</span><strong><oj-bind-text value="[[accountTotal]]"></oj-bind-text></strong></article>
+    <article><span>Transactions</span><strong><oj-bind-text value="[[transactionTotal]]"></oj-bind-text></strong></article>
+    <article><span>Audit events</span><strong><oj-bind-text value="[[auditTotal]]"></oj-bind-text></strong></article>
+  </div>
+
+  <section class="admin-section">
+    <div class="admin-section-heading"><div><h2>User monitoring</h2><p>Search users by username, email, or customer details.</p></div><div class="admin-search"><oj-input-text value="{{userQuery}}" placeholder="Search users" aria-label="Search users"></oj-input-text><oj-button chroming="outlined" on-oj-action="[[loadUsers]]">Search</oj-button></div></div>
+    <div class="admin-table-wrap"><table><thead><tr><th>User</th><th>Email</th><th>Status</th><th>Roles</th><th>Customer</th><th>Last login</th></tr></thead><tbody>
+      <oj-bind-for-each data="[[usersProvider]]"><template><tr><td><oj-bind-text value="[[$current.data.username]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.email]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.status]]"></oj-bind-text></td><td><oj-bind-text value="[[joinValues($current.data.roles)]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.customer ? $current.data.customer.firstName + ' ' + $current.data.customer.lastName : '—']] "></oj-bind-text></td><td><oj-bind-text value="[[dateTime($current.data.lastLoginAt)]]"></oj-bind-text></td></tr></template></oj-bind-for-each>
+    </tbody></table></div>
+  </section>
+
+  <section class="admin-section">
+    <div class="admin-section-heading"><div><h2>Account monitoring</h2><p>Balances, status, and linked customer IDs.</p></div><div class="admin-search"><oj-input-text value="{{accountQuery}}" placeholder="Search account" aria-label="Search accounts"></oj-input-text><oj-button chroming="outlined" on-oj-action="[[loadAccounts]]">Search</oj-button></div></div>
+    <div class="admin-table-wrap"><table><thead><tr><th>Account</th><th>Type</th><th>Status</th><th>Customers</th><th>Available balance</th></tr></thead><tbody>
+      <oj-bind-for-each data="[[accountsProvider]]"><template><tr><td><oj-bind-text value="[[$current.data.accountNumber]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.accountType]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.status]]"></oj-bind-text></td><td><oj-bind-text value="[[joinValues($current.data.customerIds)]]"></oj-bind-text></td><td><oj-bind-text value="[[money($current.data.availableBalance, $current.data.currencyCode)]]"></oj-bind-text></td></tr></template></oj-bind-for-each>
+    </tbody></table></div>
+  </section>
+
+  <section class="admin-section">
+    <div class="admin-section-heading"><div><h2>Transaction monitoring</h2><p>Review the latest transaction activity.</p></div><div class="admin-search"><oj-input-text value="{{transactionQuery}}" placeholder="Search by reference" aria-label="Search transactions"></oj-input-text><oj-button chroming="outlined" on-oj-action="[[loadTransactions]]">Search</oj-button></div></div>
+    <div class="admin-table-wrap"><table><thead><tr><th>Reference</th><th>Type</th><th>Status</th><th>Initiated by</th><th>Amount</th><th>Initiated</th></tr></thead><tbody>
+      <oj-bind-for-each data="[[transactionsProvider]]"><template><tr><td><oj-bind-text value="[[$current.data.reference]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.type]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.status]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.initiatedByUserId]]"></oj-bind-text></td><td><oj-bind-text value="[[money($current.data.amount, $current.data.currencyCode)]]"></oj-bind-text></td><td><oj-bind-text value="[[dateTime($current.data.initiatedAt)]]"></oj-bind-text></td></tr></template></oj-bind-for-each>
+    </tbody></table></div>
+  </section>
+
+  <section class="admin-section">
+    <div class="admin-section-heading"><div><h2>Audit viewer</h2><p>Review recorded events and outcomes.</p></div><div class="admin-search"><oj-input-text value="{{auditQuery}}" placeholder="Filter by event type" aria-label="Filter audit events"></oj-input-text><oj-button chroming="outlined" on-oj-action="[[loadAudit]]">Search</oj-button></div></div>
+    <div class="admin-table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Event</th><th>Entity</th><th>Outcome</th><th>Details</th></tr></thead><tbody>
+      <oj-bind-for-each data="[[auditProvider]]"><template><tr><td><oj-bind-text value="[[dateTime($current.data.occurredAt)]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.userId]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.eventType]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.entityType + ' ' + ($current.data.entityId || '')]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.outcome]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.details]]"></oj-bind-text></td></tr></template></oj-bind-for-each>
+    </tbody></table></div>
+  </section>
+</div>

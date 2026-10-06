@@ -1,0 +1,120 @@
+<div class="oj-hybrid-padding cards-page">
+  <div class="cards-heading">
+    <div>
+      <p class="cards-eyebrow">CARD SERVICES</p>
+      <h1>My cards</h1>
+      <p class="cards-intro">
+        View your cards and manage their available status controls.
+      </p>
+    </div>
+
+    <oj-button
+      chroming="outlined"
+      disabled="[[isLoading]]"
+      on-oj-action="[[refresh]]">
+      Refresh
+    </oj-button>
+  </div>
+
+  <div
+    class="cards-message cards-loading"
+    data-bind="visible: isLoading"
+    role="status"
+    aria-live="polite">
+    <oj-progress-circle size="sm" value="-1"></oj-progress-circle>
+    <span>Loading cards…</span>
+  </div>
+
+  <div
+    class="cards-message cards-error"
+    data-bind="visible: errorMessage"
+    role="alert">
+    <span data-bind="text: errorMessage"></span>
+    <oj-button chroming="borderless" on-oj-action="[[refresh]]">
+      Try again
+    </oj-button>
+  </div>
+
+  <div
+    class="cards-message"
+    data-bind="visible: !isLoading() && !errorMessage() && cards().length === 0">
+    <h2>No cards found</h2>
+    <p>Cards linked to your account will appear here.</p>
+  </div>
+
+  <div
+    class="cards-grid"
+    data-bind="visible: !isLoading() && !errorMessage() && cards().length > 0">
+
+    <oj-bind-for-each data="[[cardsProvider]]">
+      <template>
+        <article class="bank-card">
+          <div class="bank-card-top">
+            <span class="bank-card-network">
+              <oj-bind-text value="[[$current.data.cardNetwork]]"></oj-bind-text>
+            </span>
+            <span class="bank-card-status"
+                  data-bind="css: statusClass($current.data.status)">
+              <oj-bind-text value="[[$current.data.status]]"></oj-bind-text>
+            </span>
+          </div>
+
+          <p class="bank-card-type">
+            <oj-bind-text value="[[$current.data.cardType]]"></oj-bind-text>
+          </p>
+
+          <p class="bank-card-number" aria-label="Masked card number">
+            <oj-bind-text value="[[$current.data.maskedCardNumber]]"></oj-bind-text>
+          </p>
+
+          <div class="bank-card-details">
+            <span>
+              Expires
+              <strong>
+                <oj-bind-text
+                  value="[[formatExpiry($current.data.expiryMonth, $current.data.expiryYear)]]">
+                </oj-bind-text>
+              </strong>
+            </span>
+            <span>
+              Account
+              <strong>
+                <oj-bind-text value="[[$current.data.accountId]]"></oj-bind-text>
+              </strong>
+            </span>
+          </div>
+
+          <div class="bank-card-actions">
+            <oj-button
+              chroming="callToAction"
+              disabled="[[pendingCardId() === $current.data.cardId]]"
+              on-oj-action="[[() => changeStatus($current.data, 'ACTIVATE')]]"
+              data-bind="visible: hasStatus($current.data.status, 'INACTIVE')">
+              Activate
+            </oj-button>
+
+            <oj-button
+              chroming="outlined"
+              disabled="[[pendingCardId() === $current.data.cardId]]"
+              on-oj-action="[[() => changeStatus($current.data, 'BLOCK')]]"
+              data-bind="visible: hasStatus($current.data.status, 'ACTIVE')">
+              Block card
+            </oj-button>
+
+            <oj-button
+              chroming="outlined"
+              disabled="[[pendingCardId() === $current.data.cardId]]"
+              on-oj-action="[[() => changeStatus($current.data, 'UNBLOCK')]]"
+              data-bind="visible: hasStatus($current.data.status, 'BLOCKED')">
+              Unblock
+            </oj-button>
+          </div>
+        </article>
+      </template>
+    </oj-bind-for-each>
+  </div>
+
+  <p class="cards-page-error" data-bind="visible: actionError" role="alert">
+    <oj-bind-text value="[[actionError]]"></oj-bind-text>
+  </p>
+</div>
