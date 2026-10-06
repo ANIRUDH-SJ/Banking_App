@@ -8,7 +8,7 @@
   var PUBLIC = ['login', 'register', 'password-recovery', 'totp-setup', 'totp-verify', 'session-expired'];
   var CUSTOMER = [
     'dashboard', 'profile', 'notifications', 'accounts', 'transactions',
-    'beneficiaries', 'transfer', 'billers', 'bill-payments', 'cards', 'loans'
+    'beneficiaries', 'transfer', 'billers', 'bill-payments', 'cards', 'loans', 'deposits', 'forex'
   ];
   var ADMIN = ['admin', 'admin-users', 'admin-accounts', 'admin-transactions', 'admin-audit'];
 
@@ -22,6 +22,8 @@
     { path: 'bill-payments', label: 'Bill payments' },
     { path: 'cards', label: 'Cards' },
     { path: 'loans', label: 'Loans' },
+    { path: 'deposits', label: 'FD & RD' },
+    { path: 'forex', label: 'Forex' },
     { path: 'profile', label: 'Profile' },
     { path: 'notifications', label: 'Notices' }
   ];
@@ -75,6 +77,16 @@
       owner: 'Payments and administration',
       detail: 'Loan details and repayments are supplied by the payments workspace.'
     },
+    deposits: {
+      title: 'Fixed & recurring deposits',
+      owner: 'Savings and investments',
+      detail: 'Open a fixed or recurring deposit after reviewing a time-limited rate quote. Deposit funding uses an eligible INR account.'
+    },
+    forex: {
+      title: 'Foreign exchange',
+      owner: 'Foreign exchange',
+      detail: 'Review a time-limited exchange quote and confirm a conversion with a one-time code.'
+    },
     admin: {
       title: 'Administration',
       owner: 'Payments and administration',
@@ -111,7 +123,9 @@
     'session-expired': 'Session ended',
     dashboard: 'Home',
     profile: 'Profile',
-    notifications: 'Notices'
+    notifications: 'Notices',
+    deposits: 'Fixed & recurring deposits',
+    forex: 'Foreign exchange'
   };
 
   function hasRole(session, role) {

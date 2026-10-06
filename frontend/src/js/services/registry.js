@@ -11,7 +11,9 @@ define([
   './account-service',
   './transaction-service',
   './card-service',
-  './loan-service'
+  './loan-service',
+  './deposit-service',
+  './forex-service'
 ], function (
   SessionService,
   ApiClientService,
@@ -25,7 +27,9 @@ define([
   AccountService,
   TransactionService,
   CardService,
-  LoanService
+  LoanService,
+  DepositService,
+  ForexService
 ) {
   var handlers = {};
   var router = null;
@@ -50,6 +54,8 @@ define([
     transactions: new TransactionService(apiClient),
     cards: new CardService(apiClient),
     loans: new LoanService(apiClient),
+    deposits: new DepositService(apiClient),
+    forex: new ForexService(apiClient),
     routeGuard: routeGuard,
     authFlow: authFlow,
     events: {
