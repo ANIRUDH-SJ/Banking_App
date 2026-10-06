@@ -1,54 +1,246 @@
-/**
- * @license
- * Copyright (c) 2014, 2026, Oracle and/or its affiliates.
- * Licensed under The Universal Permissive License (UPL), Version 1.0
- * as shown at https://oss.oracle.com/licenses/upl/
- * @ignore
- */
-/*
- * Your dashboard ViewModel code goes here
- */
-define(['../accUtils'],
- function(accUtils) {
-    function DashboardViewModel() {
-      // Below are a set of the ViewModel methods invoked by the oj-module component.
-      // Please reference the oj-module jsDoc for additional information.
+define([
+  'knockout',
+  '../accUtils',
+  '../services/registry',
+  '../services/format',
+  'oj-c/button',
+  'oj-c/badge',
+  'oj-c/skeleton'
+], function (ko, accUtils, registry, format) {
+  function describe(error, fallback) {
+    var message = (error && error.message) || fallback;
+    if (error && error.correlationId) {
+      message += ' Reference ' + error.correlationId + '.';
+    }
+    return message;
+  }
 
-      /**
-       * Optional ViewModel method invoked after the View is inserted into the
-       * document DOM.  The application can put logic that requires the DOM being
-       * attached here.
-       * This method might be called multiple times - after the View is created
-       * and inserted into the DOM and after the View is reconnected
-       * after being disconnected.
-       */
-      this.connected = () => {
-        accUtils.announce('Dashboard page loaded.', 'assertive');
-        document.title = "Dashboard";
-        // Implement further logic if needed
-      };
+  function dayKey(value) {
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return String(value || '');
+    }
+    return date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+  }
 
-      /**
-       * Optional ViewModel method invoked after the View is disconnected from the DOM.
-       */
-      this.disconnected = () => {
-        // Implement if needed
-      };
+  function dayLabel(value) {
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    var today = new Date();
+    var yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    if (dayKey(date) === dayKey(today)) {
+      return 'Today';
+    }
+    if (dayKey(date) === dayKey(yesterday)) {
+      return 'Yesterday';
+    }
+    return new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }).format(date);
+  }
 
-      /**
-       * Optional ViewModel method invoked after transition to the new View is complete.
-       * That includes any possible animation between the old and the new View.
-       */
-      this.transitionCompleted = () => {
-        // Implement if needed
+  function DashboardViewModel() {
+    var self = this;
+    var generation = 0;
+    self.greeting = ko.observable('');
+    self.customerNumber = ko.observable('');
+    self.today = new Intl.DateTimeFormat('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(new Date());
+    self.updatedAt = ko.observable('');
+    self.accountsLoading = ko.observable(true);
+    self.accountsError = ko.observable('');
+    self.accounts = ko.observableArray([]);
+    self.transactionsLoading = ko.observable(false);
+    self.transactionsError = ko.observable('');
+    self.transactions = ko.observableArray([]);
+    self.transactionAccount = ko.observable('');
+    self.cardsLoading = ko.observable(true);
+    self.cardsError = ko.observable('');
+    self.cards = ko.observableArray([]);
+    self.loansLoading = ko.observable(true);
+    self.loansError = ko.observable('');
+    self.loans = ko.observableArray([]);
+    self.noticesLoading = ko.observable(true);
+    self.noticesError = ko.observable('');
+    self.notices = ko.observableArray([]);
+
+    self.money = format.formatMoney;
+    self.moneyParts = format.formatMoneyParts;
+    self.when = format.formatDateTime;
+    self.day = format.formatDate;
+    self.mask = format.maskAccount;
+    self.label = format.labelize;
+    self.hasAccounts = ko.pureComputed(function () {
+      return self.accounts().length > 0;
+    });
+    self.skeletonRows = [1, 2, 3, 4];
+
+    self.activity = ko.pureComputed(function () {
+      var groups = [];
+      var byKey = {};
+      self.transactions().forEach(function (entry) {
+        var key = dayKey(entry.postedAt);
+        if (!byKey[key]) {
+          byKey[key] = { label: dayLabel(entry.postedAt), entries: [] };
+          groups.push(byKey[key]);
+        }
+        byKey[key].entries.push(entry);
+      });
+      return groups;
+    });
+
+    self.signedAmount = function (entry) {
+      var text = format.formatMoney(entry.amount, entry.currencyCode);
+      return (entry.entryType === 'CREDIT' ? '+' : '−') + text;
+    };
+    self.timeOf = function (value) {
+      var date = new Date(value);
+      return Number.isNaN(date.getTime()) ? '' : format.formatTime(date.getTime());
+    };
+    self.accountTitle = function (account) {
+      var type = format.labelize(account.accountType);
+      return type ? type + ' account' : 'Account';
+    };
+    self.statusVariant = function (status) {
+      var value = String(status || '').toUpperCase();
+      if (value === 'ACTIVE' || value === 'OPEN' || value === 'CURRENT') {
+        return 'successSubtle';
+      }
+      if (value === 'CLOSED' || value === 'BLOCKED' || value === 'FROZEN' || value === 'DORMANT' || value === 'OVERDUE') {
+        return 'dangerSubtle';
+      }
+      return 'neutralSubtle';
+    };
+    self.cardTone = function (card) {
+      return String(card.cardType || '').toUpperCase() === 'CREDIT' ? 'is-credit-card' : 'is-debit-card';
+    };
+    self.cardDigits = function (card) {
+      var digits = String(card.maskedCardNumber || '').replace(/[^0-9]/g, '');
+      return digits ? digits.slice(-4) : '';
+    };
+
+    function go(path) {
+      return function () {
+        registry.go(path);
+        return false;
       };
     }
+    self.openAccounts = go('accounts');
+    self.openTransactions = go('transactions');
+    self.openCards = go('cards');
+    self.openLoans = go('loans');
+    self.openTransfer = go('transfer');
+    self.openPayments = go('bill-payments');
+    self.openBeneficiaries = go('beneficiaries');
+    self.openNotices = go('notifications');
 
-    /*
-     * Returns an instance of the ViewModel providing one instance of the ViewModel. If needed,
-     * return a constructor for the ViewModel so that the ViewModel is constructed
-     * each time the view is displayed.
-     */
-    return DashboardViewModel;
+    function loadTransactions(account, ticket) {
+      self.transactionsLoading(true);
+      self.transactionsError('');
+      self.transactionAccount(format.maskAccount(account.accountNumber));
+      registry.transactions.list(account.accountId, '?page=0&size=6').then(function (page) {
+        if (ticket !== generation) {
+          return;
+        }
+        self.transactions(format.asList(page));
+      }).catch(function (error) {
+        if (ticket !== generation) {
+          return;
+        }
+        self.transactions([]);
+        self.transactionsError(describe(error, 'Recent transactions could not be loaded.'));
+      }).finally(function () {
+        if (ticket === generation) {
+          self.transactionsLoading(false);
+        }
+      });
+    }
+
+    function track(promise, ticket, list, loading, error, fallback) {
+      return promise.then(function (rows) {
+        if (ticket === generation) {
+          list(format.asList(rows));
+        }
+      }).catch(function (problem) {
+        if (ticket === generation) {
+          list([]);
+          error(describe(problem, fallback));
+        }
+      }).finally(function () {
+        if (ticket === generation) {
+          loading(false);
+        }
+      });
+    }
+
+    self.connected = function () {
+      var ticket = ++generation;
+      accUtils.announce('Overview. Account balances are loaded from the bank.', 'polite');
+      document.title = 'Overview | Internet Banking';
+      [self.accountsLoading, self.cardsLoading, self.loansLoading, self.noticesLoading].forEach(function (flag) {
+        flag(true);
+      });
+      [self.accountsError, self.cardsError, self.loansError, self.noticesError].forEach(function (message) {
+        message('');
+      });
+      self.transactions([]);
+      self.transactionAccount('');
+
+      var hour = new Date().getHours();
+      var hello = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      self.greeting(hello);
+      registry.profile.get().then(function (profile) {
+        if (ticket !== generation || !profile) {
+          return;
+        }
+        self.greeting(profile.firstName ? hello + ', ' + profile.firstName : hello);
+        self.customerNumber(profile.customerNumber || '');
+      }).catch(function () {
+        if (ticket !== generation) {
+          return;
+        }
+        var session = registry.session.getSession();
+        self.greeting(session && session.username ? hello + ', ' + session.username : hello);
+      });
+
+      registry.accounts.getAccounts().then(function (rows) {
+        if (ticket !== generation) {
+          return;
+        }
+        var accounts = format.asList(rows);
+        self.accounts(accounts);
+        self.updatedAt(format.formatTime(Date.now()));
+        if (accounts.length) {
+          loadTransactions(accounts[0], ticket);
+        } else {
+          self.transactionsLoading(false);
+        }
+      }).catch(function (error) {
+        if (ticket !== generation) {
+          return;
+        }
+        self.accounts([]);
+        self.accountsError(describe(error, 'Accounts could not be loaded.'));
+        self.transactionsLoading(false);
+      }).finally(function () {
+        if (ticket === generation) {
+          self.accountsLoading(false);
+        }
+      });
+
+      track(registry.cards.list(), ticket, self.cards, self.cardsLoading, self.cardsError, 'Cards could not be loaded.');
+      track(registry.loans.list(), ticket, self.loans, self.loansLoading, self.loansError, 'Loans could not be loaded.');
+      track(registry.notifications.list(0, 3), ticket, self.notices, self.noticesLoading, self.noticesError, 'Notices could not be loaded.');
+    };
+
+    self.disconnected = function () {
+      generation += 1;
+    };
   }
-);
+
+  return DashboardViewModel;
+});

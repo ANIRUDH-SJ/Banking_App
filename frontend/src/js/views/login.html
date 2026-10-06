@@ -1,0 +1,32 @@
+<div class="nb-page nb-access">
+  <header class="nb-page-head">
+    <h1 id="signin-heading">Sign in</h1>
+    <p class="nb-lede">Use the user ID or email on your Internet Banking profile.</p>
+  </header>
+  <div class="nb-alert" role="alert" data-bind="visible: formError">
+    <span class="nb-alert-text" data-bind="text: formError"></span>
+    <span class="nb-alert-ref" data-bind="visible: reference, text: reference"></span>
+  </div>
+  <form class="nb-form" novalidate data-bind="submit: signIn" aria-labelledby="signin-heading">
+    <oj-c-form-layout direction="column" label-edge="top" user-assistance-density="reflow">
+      <oj-c-input-text
+        id="login-user"
+        label-hint="User ID or email"
+        autocomplete="username"
+        value="{{username}}"
+        messages-custom="[[usernameMessages]]"></oj-c-input-text>
+      <oj-c-input-password
+        id="login-password"
+        label-hint="Password"
+        autocomplete="current-password"
+        mask-icon="visible"
+        value="{{password}}"
+        messages-custom="[[passwordMessages]]"></oj-c-input-password>
+    </oj-c-form-layout>
+    <p class="nb-inline-link"><a href="#" data-bind="click: openRecovery">Forgot your password?</a></p>
+    <div class="nb-actions">
+      <oj-c-button id="sign-in" class="nb-wide-button" button-type="submit" chroming="callToAction" width="100%" label="[[busy() ? 'Signing in…' : 'Continue']]" disabled="[[busy]]"></oj-c-button>
+    </div>
+  </form>
+  <p class="nb-fineprint">After your password, you will be asked for the code from Microsoft Authenticator.</p>
+</div>

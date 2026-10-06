@@ -10,6 +10,8 @@ backend/target/
 # Future frontend build files
 frontend/node_modules/
 frontend/dist/
+frontend/web/
+frontend/staged-themes/
 
 # Secrets and local configuration
 .env

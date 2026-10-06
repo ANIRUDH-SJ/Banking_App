@@ -1,11 +1,192 @@
-<!--
- Copyright (c) 2014, 2026, Oracle and/or its affiliates.
- Licensed under The Universal Permissive License (UPL), Version 1.0
- as shown at https://oss.oracle.com/licenses/upl/
- -->
-<div class="oj-hybrid-padding">
-  <h1>Dashboard Content Area</h1>
-  <div>
-      To change the content of this section, you will make edits to the dashboard.html file located in the /js/views folder.
+<div class="nb-page nb-overview">
+  <header class="nb-hero">
+    <div class="nb-hero-text">
+      <p class="nb-hero-date" data-bind="text: today"></p>
+      <h1 class="nb-hero-title" data-bind="text: greeting"></h1>
+      <p class="nb-hero-meta">
+        <span data-bind="visible: customerNumber">Customer no. <b data-bind="text: customerNumber"></b></span>
+        <span data-bind="visible: updatedAt">Balances as at <span data-bind="text: updatedAt"></span></span>
+      </p>
+    </div>
+    <div class="nb-hero-actions">
+      <oj-c-button chroming="callToAction" label="Transfer money" on-oj-action="[[openTransfer]]">
+        <span slot="startIcon" class="nb-icon i-transfer" aria-hidden="true"></span>
+      </oj-c-button>
+      <oj-c-button chroming="outlined" label="Pay a bill" on-oj-action="[[openPayments]]">
+        <span slot="startIcon" class="nb-icon i-payments" aria-hidden="true"></span>
+      </oj-c-button>
+      <oj-c-button chroming="outlined" label="Statements" on-oj-action="[[openTransactions]]">
+        <span slot="startIcon" class="nb-icon i-statement" aria-hidden="true"></span>
+      </oj-c-button>
+    </div>
+  </header>
+
+  <section class="nb-block" aria-labelledby="accounts-heading">
+    <div class="nb-block-head">
+      <h2 id="accounts-heading">Your accounts</h2>
+      <a href="#" class="nb-more" data-bind="click: openAccounts, visible: hasAccounts">All accounts</a>
+    </div>
+
+    <div class="nb-tiles" data-bind="visible: accountsLoading" aria-hidden="true">
+      <!-- ko foreach: [1, 2, 3] -->
+      <div class="nb-tile is-skeleton">
+        <oj-c-skeleton height="0.75rem" width="40%"></oj-c-skeleton>
+        <oj-c-skeleton height="2rem" width="70%"></oj-c-skeleton>
+        <oj-c-skeleton height="0.75rem" width="55%"></oj-c-skeleton>
+      </div>
+      <!-- /ko -->
+    </div>
+    <p class="nb-sr" role="status" data-bind="text: accountsLoading() ? 'Loading accounts' : ''"></p>
+
+    <div class="nb-panel-error" role="alert" data-bind="visible: accountsError">
+      <span class="nb-icon i-shield" aria-hidden="true"></span>
+      <span data-bind="text: accountsError"></span>
+    </div>
+
+    <div class="nb-empty-panel" data-bind="visible: !accountsLoading() && !accountsError() && !hasAccounts()">
+      <span class="nb-empty-glyph i-accounts" aria-hidden="true"></span>
+      <p><strong>No accounts yet</strong></p>
+      <p>Accounts opened for you at the branch will appear here once they are active.</p>
+    </div>
+
+    <ul class="nb-tiles" data-bind="visible: hasAccounts, foreach: accounts">
+      <li class="nb-tile" data-bind="css: { 'is-lead': $index() === 0 }">
+        <div class="nb-tile-top">
+          <span class="nb-tile-name" data-bind="text: $parent.accountTitle($data)"></span>
+          <oj-c-badge size="sm" variant="[[$parent.statusVariant(accountStatus)]]" label="[[$parent.label(accountStatus)]]"></oj-c-badge>
+        </div>
+        <p class="nb-tile-number" data-bind="text: $parent.mask(accountNumber)"></p>
+        <p class="nb-tile-label">Available balance</p>
+        <!-- ko with: $parent.moneyParts(availableBalance, currencyCode) -->
+        <p class="nb-figure" data-bind="attr: { 'aria-label': sign + symbol + whole + fraction }">
+          <span class="nb-figure-sym" data-bind="text: sign + symbol" aria-hidden="true"></span><span class="nb-figure-whole" data-bind="text: whole" aria-hidden="true"></span><span class="nb-figure-frac" data-bind="text: fraction" aria-hidden="true"></span>
+        </p>
+        <!-- /ko -->
+        <p class="nb-tile-sub">Current <span data-bind="text: $parent.money(currentBalance, currencyCode)"></span></p>
+        <div class="nb-tile-links">
+          <a href="#" data-bind="click: $parent.openTransactions">Transactions</a>
+          <a href="#" data-bind="click: $parent.openTransfer">Transfer</a>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <div class="nb-split">
+    <section class="nb-sheet nb-activity" aria-labelledby="activity-heading">
+      <div class="nb-sheet-head">
+        <div>
+          <h2 id="activity-heading">Recent activity</h2>
+          <p class="nb-sheet-sub" data-bind="visible: transactionAccount">Account <span data-bind="text: transactionAccount"></span></p>
+        </div>
+        <a href="#" class="nb-more" data-bind="click: openTransactions, visible: transactions().length">Full statement</a>
+      </div>
+
+      <ul class="nb-rows" data-bind="visible: transactionsLoading" aria-hidden="true">
+        <!-- ko foreach: skeletonRows -->
+        <li class="nb-row is-skeleton">
+          <oj-c-skeleton height="2.25rem" width="2.25rem" border-radius="50%"></oj-c-skeleton>
+          <oj-c-skeleton height="0.875rem" width="60%"></oj-c-skeleton>
+          <oj-c-skeleton height="0.875rem" width="5rem"></oj-c-skeleton>
+        </li>
+        <!-- /ko -->
+      </ul>
+
+      <div class="nb-panel-error" role="alert" data-bind="visible: transactionsError">
+        <span class="nb-icon i-shield" aria-hidden="true"></span>
+        <span data-bind="text: transactionsError"></span>
+      </div>
+
+      <div class="nb-empty-panel is-quiet" data-bind="visible: !transactionsLoading() && !transactionsError() && transactions().length === 0">
+        <span class="nb-empty-glyph i-transactions" aria-hidden="true"></span>
+        <p><strong>No recent transactions</strong></p>
+        <p data-bind="text: hasAccounts() ? 'Payments in and out of this account will be listed here.' : 'Activity appears once you have an account.'"></p>
+      </div>
+
+      <!-- ko foreach: activity -->
+      <h3 class="nb-day" data-bind="text: label"></h3>
+      <ul class="nb-rows" data-bind="foreach: entries">
+        <li class="nb-row" data-bind="css: { 'is-credit': entryType === 'CREDIT' }">
+          <span class="nb-row-glyph" data-bind="css: entryType === 'CREDIT' ? 'i-arrow-in' : 'i-arrow-out'" aria-hidden="true"></span>
+          <span class="nb-row-main">
+            <span class="nb-row-title" data-bind="text: $data.narration || $data.reference || 'Transaction'"></span>
+            <span class="nb-row-meta">
+              <span data-bind="text: $parents[1].timeOf(postedAt)"></span>
+              <span data-bind="visible: $data.reference && $data.narration, text: $data.reference"></span>
+              <span class="nb-row-status" data-bind="visible: $data.status && $data.status !== 'POSTED' && $data.status !== 'COMPLETED', text: $parents[1].label($data.status)"></span>
+            </span>
+          </span>
+          <span class="nb-row-amount" data-bind="text: $parents[1].signedAmount($data), attr: { 'aria-label': (entryType === 'CREDIT' ? 'Credit ' : 'Debit ') + $parents[1].money(amount, currencyCode) }"></span>
+        </li>
+      </ul>
+      <!-- /ko -->
+    </section>
+
+    <div class="nb-rail">
+      <section class="nb-sheet" aria-labelledby="cards-heading">
+        <div class="nb-sheet-head">
+          <h2 id="cards-heading">Cards</h2>
+          <a href="#" class="nb-more" data-bind="click: openCards, visible: cards().length">Manage</a>
+        </div>
+        <div class="nb-rail-skeleton" data-bind="visible: cardsLoading" aria-hidden="true">
+          <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+          <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+        </div>
+        <p class="nb-rail-error" role="alert" data-bind="visible: cardsError, text: cardsError"></p>
+        <p class="nb-rail-empty" data-bind="visible: !cardsLoading() && !cardsError() && cards().length === 0">No cards on your profile.</p>
+        <ul class="nb-cards" data-bind="foreach: cards">
+          <li class="nb-card-row">
+            <span class="nb-card-glyph" data-bind="css: $parent.cardTone($data)" aria-hidden="true">
+              <span data-bind="text: $parent.cardDigits($data)"></span>
+            </span>
+            <span class="nb-row-main">
+              <span class="nb-row-title" data-bind="text: $parent.label(cardType) + ' card'"></span>
+              <span class="nb-row-meta" data-bind="text: maskedCardNumber"></span>
+            </span>
+            <oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge>
+          </li>
+        </ul>
+      </section>
+
+      <section class="nb-sheet" aria-labelledby="loans-heading">
+        <div class="nb-sheet-head">
+          <h2 id="loans-heading">Loans</h2>
+          <a href="#" class="nb-more" data-bind="click: openLoans, visible: loans().length">Details</a>
+        </div>
+        <div class="nb-rail-skeleton" data-bind="visible: loansLoading" aria-hidden="true">
+          <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+        </div>
+        <p class="nb-rail-error" role="alert" data-bind="visible: loansError, text: loansError"></p>
+        <p class="nb-rail-empty" data-bind="visible: !loansLoading() && !loansError() && loans().length === 0">You have no loans with us.</p>
+        <ul class="nb-loans" data-bind="foreach: loans">
+          <li class="nb-loan">
+            <div class="nb-loan-top">
+              <span class="nb-row-title" data-bind="text: $parent.label(loanType) + ' loan'"></span>
+              <span class="nb-chip" data-bind="visible: $data.nextDueDate, text: 'Due ' + $parent.day($data.nextDueDate)"></span>
+            </div>
+            <p class="nb-loan-figure" data-bind="text: $parent.money(outstandingPrincipal, currencyCode)"></p>
+            <p class="nb-row-meta">Outstanding · <span data-bind="text: loanAccountNumber"></span></p>
+          </li>
+        </ul>
+      </section>
+
+      <section class="nb-sheet" aria-labelledby="notices-heading">
+        <div class="nb-sheet-head">
+          <h2 id="notices-heading">Notices</h2>
+          <a href="#" class="nb-more" data-bind="click: openNotices">View all</a>
+        </div>
+        <div class="nb-rail-skeleton" data-bind="visible: noticesLoading" aria-hidden="true">
+          <oj-c-skeleton height="2.5rem"></oj-c-skeleton>
+          <oj-c-skeleton height="2.5rem"></oj-c-skeleton>
+        </div>
+        <p class="nb-rail-error" role="alert" data-bind="visible: noticesError, text: noticesError"></p>
+        <p class="nb-rail-empty" data-bind="visible: !noticesLoading() && !noticesError() && notices().length === 0">Nothing new from the bank.</p>
+        <ul class="nb-notice-list" data-bind="foreach: notices">
+          <li data-bind="css: { 'is-unread': !$data.read }">
+            <span class="nb-row-title" data-bind="text: title"></span>
+            <span class="nb-row-meta" data-bind="text: $parent.when(createdAt)"></span>
+          </li>
+        </ul>
+      </section>
+    </div>
   </div>
 </div>
