@@ -1,75 +1,119 @@
-<div class="nb-page">
+<div class="nb-page nb-transfer">
   <header class="nb-page-head">
-    <p class="nb-kicker">Transfers</p>
+    <p class="nb-kicker">Accounts</p>
     <h1>Transfer money</h1>
-    <p class="nb-lede">Review the amount and verified recipient before requesting a one-time code.</p>
+    <p class="nb-lede">Send money to an active beneficiary. You confirm each transfer with a one-time code sent to your registered email and mobile.</p>
   </header>
 
-  <div class="nb-alert" role="alert" data-bind="visible: error">
-    <span class="nb-alert-text" data-bind="text: error"></span>
-  </div>
-  <p class="nb-success" role="status" data-bind="visible: message, text: message"></p>
-  <p class="nb-status" role="status" data-bind="visible: loading">Loading your accounts and beneficiaries…</p>
-
-  <div class="nb-empty-panel" data-bind="visible: !loading() && (!accounts().length || !beneficiaries().length)">
-    <strong>Transfer setup needed</strong>
-    <span>You need an active INR account and a verified beneficiary to transfer money.</span>
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
   </div>
 
-  <form class="member2-form nb-sheet" data-bind="visible: !loading() && accounts().length && beneficiaries().length && step() === 'form', submit: reviewTransfer">
-    <h2 class="nb-form-section">Transfer details</h2>
-    <label for="transferFrom">From account
-      <select id="transferFrom" data-bind="options: accounts, optionsText: accountLabel, optionsValue: 'accountId', value: sourceAccountId"></select>
-    </label>
-    <label for="transferTo">To beneficiary
-      <select id="transferTo" data-bind="options: beneficiaries, optionsText: beneficiaryLabel, optionsValue: 'beneficiaryId', value: beneficiaryId"></select>
-    </label>
-    <label for="transferAmount">Amount (INR)
-      <input id="transferAmount" type="number" min="0.01" step="0.0001" inputmode="decimal" required data-bind="value: amount">
-    </label>
-    <label for="transferNarration">Narration (optional)
-      <input id="transferNarration" maxlength="500" data-bind="value: narration">
-    </label>
-    <div class="nb-actions">
-      <oj-c-button button-type="submit" chroming="callToAction" label="Review transfer" disabled="[[busy]]"></oj-c-button>
-    </div>
-  </form>
+  <div class="nb-work">
+    <section class="nb-sheet nb-flow-sheet" aria-label="Transfer">
+      <ol class="nb-flow" aria-label="Transfer steps" data-bind="visible: !flow.is(3), foreach: flow.names">
+        <li data-bind="css: $parent.flow.stateOf($index()), attr: { 'aria-current': $parent.flow.is($index()) ? 'step' : null }">
+          <span class="nb-flow-no" data-bind="text: $index() + 1" aria-hidden="true"></span>
+          <span class="nb-flow-name" data-bind="text: $data"></span>
+        </li>
+      </ol>
 
-  <section class="member2-panel member2-review" data-bind="visible: step() === 'review'">
-    <h2>Review transfer</h2>
-    <dl>
-      <dt>From</dt><dd data-bind="text: selectedAccountLabel"></dd>
-      <dt>To</dt><dd data-bind="text: selectedBeneficiaryLabel"></dd>
-      <dt>Amount</dt><dd data-bind="text: formattedAmount"></dd>
-      <dt>Narration</dt><dd data-bind="text: narration() || '—'"></dd>
-    </dl>
-    <div class="member2-actions">
-      <oj-c-button chroming="outlined" label="Edit details" disabled="[[busy]]" on-oj-action="[[backToForm]]"></oj-c-button>
-      <oj-c-button chroming="callToAction" label="Send one-time code" disabled="[[busy]]" on-oj-action="[[requestOtp]]"></oj-c-button>
-    </div>
-  </section>
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(0), submit: reviewTransfer">
+        <h2 tabindex="-1">Where is the money going?</h2>
+        <div class="nb-rail-skeleton" data-bind="visible: loading" aria-hidden="true">
+          <oj-c-skeleton height="3rem"></oj-c-skeleton>
+          <oj-c-skeleton height="3rem"></oj-c-skeleton>
+        </div>
+        <div class="nb-note is-warn" data-bind="visible: !loading() && beneficiaries().length === 0">
+          <span class="nb-icon i-beneficiaries" aria-hidden="true"></span>
+          <span>You have no active beneficiaries yet. <a href="#" data-bind="click: openBeneficiaries">Add and activate one</a> before sending money.</span>
+        </div>
+        <oj-c-form-layout max-columns="1" label-edge="top" user-assistance-density="reflow" data-bind="visible: !loading()">
+          <oj-c-select-single label-hint="From" data="[[accountOptions]]" item-text="label" value="{{sourceAccountId}}" messages-custom="[[accountMessages]]"></oj-c-select-single>
+          <oj-c-select-single label-hint="To" data="[[beneficiaryOptions]]" item-text="label" value="{{beneficiaryId}}" messages-custom="[[beneficiaryMessages]]" placeholder="Choose a beneficiary"></oj-c-select-single>
+          <oj-c-input-number class="nb-amount-input" converter="[[amountConverter]]" label-hint="Amount" value="{{amount}}" input-prefix="₹" min="0" step="0" messages-custom="[[amountMessages]]"></oj-c-input-number>
+          <oj-c-input-text label-hint="Note for the beneficiary (optional)" value="{{narration}}" messages-custom="[[narrationMessages]]" length.max="500"></oj-c-input-text>
+        </oj-c-form-layout>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="Review transfer" disabled="[[loading]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Manage beneficiaries" on-oj-action="[[openBeneficiaries]]"></oj-c-button>
+        </div>
+      </form>
 
-  <form class="member2-form nb-sheet" data-bind="visible: step() === 'otp', submit: confirmTransfer">
-    <h2 class="nb-form-section">Confirm transfer</h2>
-    <p>Enter the six-digit code sent for this transfer. Do not share it with anyone.</p>
-    <label for="transferCode">One-time code
-      <input id="transferCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required data-bind="value: otpCode">
-    </label>
-    <div class="member2-actions">
-      <oj-c-button button-type="submit" chroming="callToAction" label="Confirm transfer" disabled="[[busy]]"></oj-c-button>
-      <oj-c-button chroming="outlined" label="Edit details" disabled="[[busy]]" on-oj-action="[[backToForm]]"></oj-c-button>
-    </div>
-  </form>
+      <div class="nb-flow-panel" data-bind="visible: flow.is(1)">
+        <h2 tabindex="-1">Check the transfer</h2>
+        <div class="nb-review-amount">
+          <span class="nb-review-label">You are sending</span>
+          <span class="nb-review-figure" data-bind="text: amountText"></span>
+        </div>
+        <dl class="nb-review">
+          <div data-bind="if: beneficiary"><dt>To</dt><dd data-bind="text: beneficiary().beneficiaryName + ' (' + beneficiary().nickname + ')'"></dd></div>
+          <div data-bind="if: beneficiary"><dt>Bank</dt><dd data-bind="text: beneficiary().bankName + ' · ' + beneficiary().ifscCode"></dd></div>
+          <div data-bind="if: beneficiary"><dt>Account</dt><dd class="nb-mono" data-bind="text: beneficiary().maskedAccountNumber"></dd></div>
+          <div data-bind="if: sourceAccount"><dt>From</dt><dd data-bind="text: label(sourceAccount().accountType) + ' ' + mask(sourceAccount().accountNumber)"></dd></div>
+          <div data-bind="visible: narration"><dt>Note</dt><dd data-bind="text: narration"></dd></div>
+        </dl>
+        <p class="nb-note"><span class="nb-icon i-shield" aria-hidden="true"></span><span>We will send a one-time code to your registered email and mobile. The money leaves your account only after you enter it.</span></p>
+        <div class="nb-actions">
+          <oj-c-button chroming="callToAction" label="[[busy() ? 'Sending code…' : 'Send code']]" disabled="[[busy]]" on-oj-action="[[requestOtp]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Edit details" on-oj-action="[[back]]"></oj-c-button>
+        </div>
+      </div>
 
-  <section class="member2-panel member2-review" data-bind="visible: step() === 'receipt'">
-    <h2>Transfer submitted</h2>
-    <dl>
-      <dt>Reference</dt><dd class="nb-mono" data-bind="text: receipt() && receipt().transactionReference"></dd>
-      <dt>Amount</dt><dd data-bind="text: receipt() && money(receipt().amount, receipt().currencyCode)"></dd>
-      <dt>Status</dt><dd data-bind="text: receipt() && receipt().status"></dd>
-    </dl>
-    <div class="nb-actions">
-      <oj-c-button chroming="outlined" label="Make another transfer" on-oj-action="[[startAnotherTransfer]]"></oj-c-button>
-    </div>
-  </section>
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(2), submit: confirmTransfer">
+        <h2 tabindex="-1">Enter your one-time code</h2>
+        <p class="nb-hint">Sent to your registered email and mobile. It expires in 5 minutes.</p>
+        <div class="nb-otp">
+          <oj-c-input-text class="nb-code-input" label-hint="6-digit code" value="{{otpCode}}" messages-custom="[[otpMessages]]" length.max="6" virtual-keyboard="number" autocomplete="one-time-code"></oj-c-input-text>
+        </div>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Sending…' : 'Send ' + amountText()]]" disabled="[[busy]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Resend code" disabled="[[busy]]" on-oj-action="[[requestOtp]]"></oj-c-button>
+        </div>
+      </form>
+
+      <!-- ko if: flow.is(3) && receipt() -->
+      <div class="nb-flow-panel nb-receipt" role="status">
+        <span class="nb-done-mark" data-bind="css: { 'is-clock': receiptPending }" aria-hidden="true"></span>
+        <h2 tabindex="-1" data-bind="text: receiptTitle"></h2>
+        <p class="nb-review-figure" data-bind="text: money(receipt().amount, receipt().currencyCode)"></p>
+        <dl class="nb-review">
+          <div data-bind="if: beneficiary"><dt>To</dt><dd data-bind="text: beneficiary().beneficiaryName"></dd></div>
+          <div><dt>Status</dt><dd><oj-c-badge size="sm" variant="[[statusVariant(receipt().status)]]" label="[[label(receipt().status)]]"></oj-c-badge></dd></div>
+          <div><dt>Transaction reference</dt><dd class="nb-mono" data-bind="text: receipt().transactionReference || '—'"></dd></div>
+        </dl>
+        <div class="nb-actions">
+          <oj-c-button chroming="callToAction" label="Make another transfer" on-oj-action="[[again]]"></oj-c-button>
+          <oj-c-button chroming="outlined" label="View statement" on-oj-action="[[openStatement]]"></oj-c-button>
+        </div>
+      </div>
+      <!-- /ko -->
+    </section>
+
+    <aside class="nb-sheet nb-aside" aria-labelledby="transfer-history-heading">
+      <div class="nb-sheet-head">
+        <h2 id="transfer-history-heading">Recent transfers</h2>
+      </div>
+      <div class="nb-rail-skeleton" data-bind="visible: historyLoading" aria-hidden="true">
+        <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+        <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+      </div>
+      <p class="nb-rail-error" role="alert" data-bind="visible: historyError, text: historyError"></p>
+      <p class="nb-rail-empty" data-bind="visible: !historyLoading() && !historyError() && history().length === 0">Transfers you make will be listed here.</p>
+      <ul class="nb-rows" data-bind="visible: !historyLoading(), foreach: history">
+        <li class="nb-row">
+          <span class="nb-row-glyph i-arrow-out" aria-hidden="true"></span>
+          <span class="nb-row-main">
+            <span class="nb-row-title" data-bind="text: $parent.payeeName(beneficiaryId)"></span>
+            <span class="nb-row-meta">
+              <span data-bind="text: $parent.when(createdAt)"></span>
+              <span class="nb-row-status" data-bind="visible: status !== 'COMPLETED', text: $parent.label(status)"></span>
+            </span>
+          </span>
+          <span class="nb-row-amount" data-bind="text: $parent.money(amount, currencyCode)"></span>
+        </li>
+      </ul>
+    </aside>
+  </div>
 </div>

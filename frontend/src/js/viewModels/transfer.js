@@ -3,171 +3,259 @@ define([
   '../accUtils',
   '../services/registry',
   '../services/format',
+  '../services/ui-support',
   '../services/beneficiary-service',
   '../services/fund-transfer-service',
-  '../services/member2-style',
-  'oj-c/button'
-], function (ko, accUtils, registry, format, BeneficiaryService, FundTransferService) {
-  function newIdempotencyKey() {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-    return 'transfer-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-  }
+  'oj-c/button',
+  'oj-c/input-text',
+  'oj-c/input-number',
+  'oj-c/select-single',
+  'oj-c/badge',
+  'oj-c/form-layout',
+  'oj-c/skeleton'
+], function (ko, accUtils, registry, format, ui, BeneficiaryService, FundTransferService) {
+  var STEPS = ['details', 'review', 'otp', 'receipt'];
 
   function TransferViewModel() {
     var self = this;
-    var beneficiaries = new BeneficiaryService(registry.apiClient);
+    var payees = new BeneficiaryService(registry.apiClient);
     var transfers = new FundTransferService(registry.apiClient);
-    var idempotencyKey = newIdempotencyKey();
+    var generation = 0;
+    var idempotencyKey = '';
+
+    self.flow = new ui.Flow(['Details', 'Review', 'Confirm']);
+    self.problem = new ui.Problem();
+    self.loading = ko.observable(true);
+    self.busy = ko.observable(false);
     self.accounts = ko.observableArray([]);
     self.beneficiaries = ko.observableArray([]);
-    self.sourceAccountId = ko.observable('');
-    self.beneficiaryId = ko.observable('');
-    self.amount = ko.observable('');
+    self.sourceAccountId = ko.observable(null);
+    self.beneficiaryId = ko.observable(null);
+    self.amount = ko.observable(null);
     self.narration = ko.observable('');
     self.otpCode = ko.observable('');
     self.otpChallengeId = ko.observable('');
     self.receipt = ko.observable(null);
-    self.step = ko.observable('form');
-    self.loading = ko.observable(false);
-    self.busy = ko.observable(false);
-    self.error = ko.observable('');
-    self.message = ko.observable('');
-    self.money = format.formatMoney;
-    self.accountLabel = function (account) {
-      return format.labelize(account.accountType) + ' · ' +
-        format.maskAccount(account.accountNumber) + ' · ' +
-        format.formatMoney(account.availableBalance, account.currencyCode);
-    };
-    self.beneficiaryLabel = function (beneficiary) {
-      return beneficiary.nickname + ' · ' + beneficiary.maskedAccountNumber;
-    };
-    self.selectedAccountLabel = ko.pureComputed(function () {
-      var account = self.accounts().find(function (row) {
-        return String(row.accountId) === String(self.sourceAccountId());
-      });
-      return account ? self.accountLabel(account) : '';
-    });
-    self.selectedBeneficiaryLabel = ko.pureComputed(function () {
-      var beneficiary = self.beneficiaries().find(function (row) {
-        return String(row.beneficiaryId) === String(self.beneficiaryId());
-      });
-      return beneficiary ? self.beneficiaryLabel(beneficiary) : '';
-    });
-    self.formattedAmount = ko.pureComputed(function () {
-      return self.amount() ? format.formatMoney(self.amount(), 'INR') : '—';
+    self.history = ko.observableArray([]);
+    self.historyLoading = ko.observable(true);
+    self.historyError = ko.observable('');
+    self.accountMessages = ko.observableArray([]);
+    self.beneficiaryMessages = ko.observableArray([]);
+    self.amountMessages = ko.observableArray([]);
+    self.narrationMessages = ko.observableArray([]);
+    self.otpMessages = ko.observableArray([]);
+
+    self.step = ko.pureComputed(function () {
+      return STEPS[self.flow.at()];
     });
 
-    self.refreshOptions = function () {
-      self.loading(true);
-      self.error('');
-      return Promise.all([registry.accounts.getAccounts(), beneficiaries.list()]).then(function (results) {
-        var owned = format.asList(results[0]).filter(function (account) {
-          return account.accountStatus === 'ACTIVE' && account.currencyCode === 'INR';
-        });
-        var active = results[1].filter(function (beneficiary) {
-          return beneficiary.status === 'ACTIVE';
-        });
-        self.accounts(owned);
-        self.beneficiaries(active);
-        if (!owned.some(function (account) { return String(account.accountId) === String(self.sourceAccountId()); })) {
-          self.sourceAccountId(owned.length ? owned[0].accountId : '');
-        }
-        if (!active.some(function (beneficiary) { return String(beneficiary.beneficiaryId) === String(self.beneficiaryId()); })) {
-          self.beneficiaryId(active.length ? active[0].beneficiaryId : '');
-        }
-      }).catch(function (error) {
-        self.error(error.message || 'Unable to load transfer options.');
-      }).finally(function () { self.loading(false); });
+    self.accountOptions = ko.pureComputed(function () {
+      return ui.options(self.accounts().map(ui.accountOption));
+    });
+
+    self.beneficiaryOptions = ko.pureComputed(function () {
+      return ui.options(self.beneficiaries().map(function (payee) {
+        return {
+          value: payee.beneficiaryId,
+          label: payee.nickname + ' · ' + [payee.bankName, payee.maskedAccountNumber].filter(Boolean).join(' ')
+        };
+      }));
+    });
+
+    self.sourceAccount = ko.pureComputed(function () {
+      var id = self.sourceAccountId();
+      return self.accounts().filter(function (account) { return account.accountId === id; })[0] || null;
+    });
+
+    self.beneficiary = ko.pureComputed(function () {
+      var id = self.beneficiaryId();
+      return self.beneficiaries().filter(function (payee) { return payee.beneficiaryId === id; })[0] || null;
+    });
+
+    self.amountText = ko.pureComputed(function () {
+      return format.formatMoney(ui.parseAmount(self.amount()), 'INR');
+    });
+
+    self.amountConverter = ui.amountConverter;
+    self.label = format.labelize;
+    self.money = format.formatMoney;
+    self.when = format.formatDateTime;
+    self.mask = format.maskAccount;
+    self.statusVariant = ui.statusVariant;
+
+    self.payeeName = function (beneficiaryId) {
+      var match = self.beneficiaries().filter(function (payee) { return payee.beneficiaryId === beneficiaryId; })[0];
+      return match ? match.nickname : 'Beneficiary';
     };
 
     self.reviewTransfer = function () {
-      if (self.busy()) return false;
-      var account = self.accounts().find(function (row) {
-        return String(row.accountId) === String(self.sourceAccountId());
-      });
-      var amount = Number(self.amount());
-      if (!account || !self.selectedBeneficiaryLabel()) {
-        self.error('Choose an active source account and verified beneficiary.');
-      } else if (!Number.isFinite(amount) || amount < 0.01 || !/^\d+(\.\d{1,4})?$/.test(String(self.amount()))) {
-        self.error('Enter a valid amount greater than zero, with up to four decimal places.');
-      } else if (amount > Number(account.availableBalance)) {
-        self.error('This amount exceeds the available balance.');
-      } else {
-        self.error('');
-        self.step('review');
+      var errors = {
+        account: self.sourceAccountId() ? '' : 'Choose the account to pay from.',
+        beneficiary: self.beneficiaryId() ? '' : 'Choose who to pay.',
+        amount: ui.amountError(self.amount(), 1, null, 'INR'),
+        narration: String(self.narration() || '').length > 500 ? 'Keep the note under 500 characters.' : ''
+      };
+      var account = self.sourceAccount();
+      if (!errors.amount && account && ui.parseAmount(self.amount()) > Number(account.availableBalance)) {
+        errors.amount = 'The amount is more than the available balance.';
       }
+      self.accountMessages(ui.messages(errors.account));
+      self.beneficiaryMessages(ui.messages(errors.beneficiary));
+      self.amountMessages(ui.messages(errors.amount));
+      self.narrationMessages(ui.messages(errors.narration));
+      if (errors.account || errors.beneficiary || errors.amount || errors.narration) {
+        self.problem.show('Check the highlighted fields.');
+        return false;
+      }
+      self.problem.clear();
+      idempotencyKey = ui.newKey('transfer');
+      self.flow.go(1);
       return false;
     };
 
-    self.backToForm = function () {
-      self.otpChallengeId('');
-      self.otpCode('');
-      self.step('form');
+    self.back = function () {
+      self.problem.clear();
+      self.flow.go(Math.max(0, self.flow.at() - 1));
     };
 
     self.requestOtp = function () {
-      if (self.busy()) return;
+      if (self.busy()) {
+        return;
+      }
       self.busy(true);
-      self.error('');
-      registry.otp.requestTransferChallenge(
-        Number(self.sourceAccountId()),
-        Number(self.beneficiaryId()),
-        Number(self.amount())
-      ).then(function (challenge) {
-        self.otpChallengeId(challenge.challengeId);
+      self.problem.clear();
+      registry.otp.requestTransferChallenge(self.sourceAccountId(), self.beneficiaryId(), ui.parseAmount(self.amount())).then(function (challenge) {
+        self.otpChallengeId(challenge && challenge.challengeId);
         self.otpCode('');
-        self.step('otp');
-        self.message('Enter the one-time code sent for this transfer.');
+        self.otpMessages([]);
+        self.flow.go(2);
+        accUtils.announce('A one-time code has been sent to your registered email and mobile.', 'polite');
       }).catch(function (error) {
-        self.error(error.message || 'Unable to request a transfer code.');
-      }).finally(function () { self.busy(false); });
+        self.problem.set(error, 'The code could not be sent.');
+      }).finally(function () {
+        self.busy(false);
+      });
     };
 
     self.confirmTransfer = function () {
-      if (self.busy()) return false;
-      var validation = registry.otp.validateCode(self.otpCode());
-      if (validation) {
-        self.error(validation);
+      var error = registry.otp.validateCode(self.otpCode());
+      self.otpMessages(ui.messages(error));
+      if (error || self.busy()) {
         return false;
       }
       self.busy(true);
-      self.error('');
+      self.problem.clear();
       transfers.transfer({
-        sourceAccountId: Number(self.sourceAccountId()),
-        beneficiaryId: Number(self.beneficiaryId()),
-        amount: Number(self.amount()),
-        narration: self.narration().trim(),
+        sourceAccountId: self.sourceAccountId(),
+        beneficiaryId: self.beneficiaryId(),
+        amount: ui.parseAmount(self.amount()),
+        narration: String(self.narration() || '').trim() || null,
         idempotencyKey: idempotencyKey,
         otpChallengeId: self.otpChallengeId(),
-        otpCode: self.otpCode().trim()
+        otpCode: String(self.otpCode()).trim()
       }).then(function (receipt) {
         self.receipt(receipt);
-        self.step('receipt');
-        self.message('The bank received your transfer. Keep the reference for your records.');
+        self.flow.go(3);
+        accUtils.announce('Transfer submitted.', 'polite');
+        loadHistory();
       }).catch(function (error) {
-        self.error(error.message || 'Unable to submit transfer. Check the status before trying again.');
-      }).finally(function () { self.busy(false); });
+        self.otpMessages(ui.messages(ui.fieldMessage(error, 'otpCode')));
+        self.problem.set(error, 'The transfer could not be completed.');
+      }).finally(function () {
+        self.busy(false);
+      });
       return false;
     };
 
-    self.startAnotherTransfer = function () {
-      idempotencyKey = newIdempotencyKey();
-      self.amount('');
+    self.again = function () {
+      self.receipt(null);
+      self.amount(null);
       self.narration('');
       self.otpCode('');
-      self.otpChallengeId('');
-      self.receipt(null);
-      self.step('form');
-      self.message('');
-      self.error('');
-      self.refreshOptions();
+      self.problem.clear();
+      self.flow.go(0);
+    };
+
+    self.openBeneficiaries = function () {
+      registry.go('beneficiaries');
+      return false;
+    };
+
+    self.openStatement = function () {
+      registry.go('transactions');
+    };
+
+    self.receiptTitle = ko.pureComputed(function () {
+      var status = String(self.receipt() && self.receipt().status || '').toUpperCase();
+      if (status === 'COMPLETED') {
+        return 'Money sent';
+      }
+      return status === 'FAILED' || status === 'REVERSED' ? 'Transfer not completed' : 'Transfer submitted';
+    });
+
+    self.receiptPending = ko.pureComputed(function () {
+      return String(self.receipt() && self.receipt().status || '').toUpperCase() !== 'COMPLETED';
+    });
+
+    function loadHistory() {
+      self.historyLoading(true);
+      self.historyError('');
+      Promise.resolve().then(function () {
+        return transfers.history(0, 6);
+      }).then(function (page) {
+        self.history(format.asList(page));
+      }).catch(function (error) {
+        self.historyError((error && error.message) || 'Recent transfers could not be loaded.');
+      }).finally(function () {
+        self.historyLoading(false);
+      });
+    }
+
+    self.refreshOptions = function () {
+      var ticket = ++generation;
+      var preset = ui.take('transfer.beneficiaryId');
+      self.loading(true);
+      self.problem.clear();
+      return Promise.all([registry.accounts.getAccounts(), payees.list()]).then(function (results) {
+        if (ticket !== generation) {
+          return;
+        }
+        var payable = format.asList(results[0]).filter(function (account) {
+          return account.accountStatus === 'ACTIVE' && (account.currencyCode || 'INR') === 'INR';
+        });
+        var active = format.asList(results[1]).filter(function (payee) { return payee.status === 'ACTIVE'; });
+        self.accounts(payable);
+        self.beneficiaries(active);
+        if (!self.sourceAccountId() && payable.length) {
+          self.sourceAccountId(payable[0].accountId);
+        }
+        if (preset) {
+          self.beneficiaryId(preset);
+        } else if (!self.beneficiaryId() && active.length) {
+          self.beneficiaryId(active[0].beneficiaryId);
+        }
+      }).catch(function (error) {
+        if (ticket === generation) {
+          self.problem.set(error, 'Your accounts could not be loaded.');
+        }
+      }).finally(function () {
+        if (ticket === generation) {
+          self.loading(false);
+        }
+      });
     };
 
     self.connected = function () {
-      accUtils.announce('Transfer page loaded.', 'polite');
+      accUtils.announce('Transfer money.', 'polite');
       document.title = 'Transfer | Internet Banking';
       self.refreshOptions();
+      loadHistory();
+    };
+
+    self.disconnected = function () {
+      generation += 1;
     };
   }
+
   return TransferViewModel;
 });

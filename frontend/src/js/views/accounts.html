@@ -1,31 +1,97 @@
-<div class="nb-page">
-  <header class="nb-page-head">
-    <p class="nb-kicker">Your money</p>
-    <h1>Accounts</h1>
-    <p class="nb-lede">Balances and status come directly from the bank's account records.</p>
+<div class="nb-page nb-accounts">
+  <header class="nb-page-head has-actions">
+    <p class="nb-kicker">Accounts</p>
+    <h1>Your accounts</h1>
+    <p class="nb-lede">Balances, account numbers and status for every account in your name, including foreign currency wallets.</p>
+    <div class="nb-head-actions">
+      <oj-c-button chroming="outlined" label="Open a currency wallet" on-oj-action="[[toggleWallet]]" disabled="[[loading() || availableWallets().length === 0]]">
+        <span slot="startIcon" class="nb-icon i-forex" aria-hidden="true"></span>
+      </oj-c-button>
+      <oj-c-button chroming="callToAction" label="Transfer money" on-oj-action="[[openTransfer]]">
+        <span slot="startIcon" class="nb-icon i-transfer" aria-hidden="true"></span>
+      </oj-c-button>
+    </div>
   </header>
 
-  <div class="nb-actions">
-    <oj-c-button chroming="outlined" label="Refresh balances" disabled="[[loading]]" on-oj-action="[[refreshAccounts]]"></oj-c-button>
-    <span class="nb-hint" data-bind="visible: lastUpdated">Updated <span data-bind="text: lastUpdated"></span></span>
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
+  </div>
+  <p class="nb-success" role="status" data-bind="visible: success, text: success"></p>
+
+  <section class="nb-sheet nb-form" data-bind="visible: walletOpen" aria-labelledby="wallet-heading">
+    <div class="nb-sheet-head">
+      <div>
+        <h2 id="wallet-heading">Open a foreign currency wallet</h2>
+        <p class="nb-sheet-sub">Hold money in another currency. Convert into it from an Indian rupee account on the Forex page.</p>
+      </div>
+    </div>
+    <oj-c-buttonset-single class="nb-segment" aria-label="Wallet currency" items="[[walletItems]]" value="{{walletCurrency}}"></oj-c-buttonset-single>
+    <div class="nb-actions">
+      <oj-c-button chroming="callToAction" label="[[busy() ? 'Opening…' : 'Open ' + (walletCurrency() || '') + ' wallet']]" disabled="[[busy() || !walletCurrency()]]" on-oj-action="[[openWallet]]"></oj-c-button>
+      <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[toggleWallet]]"></oj-c-button>
+    </div>
+  </section>
+
+  <dl class="nb-facts" data-bind="visible: !loading() && accounts().length">
+    <div>
+      <dt>Available in rupees</dt>
+      <dd data-bind="text: money(inrTotal(), 'INR')"></dd>
+    </div>
+    <div>
+      <dt>Active accounts</dt>
+      <dd data-bind="text: activeCount() + ' of ' + accounts().length"></dd>
+    </div>
+    <div>
+      <dt>Currency wallets</dt>
+      <dd data-bind="text: walletCount() || 'None'"></dd>
+    </div>
+    <div>
+      <dt>Statements</dt>
+      <dd>CSV, any date range</dd>
+    </div>
+  </dl>
+
+  <div class="nb-tiles" data-bind="visible: loading" aria-hidden="true">
+    <!-- ko foreach: [1, 2, 3] -->
+    <div class="nb-tile is-skeleton">
+      <oj-c-skeleton height="0.75rem" width="40%"></oj-c-skeleton>
+      <oj-c-skeleton height="2rem" width="70%"></oj-c-skeleton>
+      <oj-c-skeleton height="0.75rem" width="55%"></oj-c-skeleton>
+    </div>
+    <!-- /ko -->
+  </div>
+  <p class="nb-sr" role="status" data-bind="text: loading() ? 'Loading accounts' : ''"></p>
+
+  <div class="nb-empty-panel" data-bind="visible: !loading() && !problem.text() && accounts().length === 0">
+    <span class="nb-empty-glyph i-accounts" aria-hidden="true"></span>
+    <p><strong>No accounts yet</strong></p>
+    <p>Your savings account is opened automatically after registration. It can take a minute to appear.</p>
   </div>
 
-  <p class="nb-status" role="status" data-bind="visible: loading">Loading accounts…</p>
-  <div class="nb-alert" role="alert" data-bind="visible: error">
-    <span class="nb-alert-text" data-bind="text: error"></span>
-  </div>
-  <div class="nb-empty-panel" data-bind="visible: !loading() && !error() && accounts().length === 0">
-    <strong>No accounts available</strong>
-    <span>Accounts linked to your customer profile will appear here.</span>
-  </div>
-
-  <div class="member2-grid" data-bind="visible: !loading() && !error(), foreach: accounts">
-    <article class="member2-card">
-      <h2 data-bind="text: $parent.label(accountType) + ' account'"></h2>
-      <p class="nb-mono member2-meta" data-bind="text: $parent.mask(accountNumber)"></p>
-      <p class="member2-balance" data-bind="text: $parent.money(currentBalance, currencyCode)"></p>
-      <p class="member2-meta">Available <strong data-bind="text: $parent.money(availableBalance, currencyCode)"></strong></p>
-      <p class="member2-meta">Status <strong data-bind="text: $parent.label(accountStatus)"></strong></p>
-    </article>
-  </div>
+  <ul class="nb-tiles" data-bind="foreach: accounts">
+    <li class="nb-tile" data-bind="css: { 'is-lead': $index() === 0 }">
+      <div class="nb-tile-top">
+        <span class="nb-tile-name" data-bind="text: $parent.accountTitle($data)"></span>
+        <oj-c-badge size="sm" variant="[[$parent.statusVariant(accountStatus)]]" label="[[$parent.label(accountStatus)]]"></oj-c-badge>
+      </div>
+      <p class="nb-tile-number" data-bind="text: $parent.grouped(accountNumber)"></p>
+      <p class="nb-tile-label">Available balance</p>
+      <!-- ko with: $parent.moneyParts(availableBalance, currencyCode) -->
+      <p class="nb-figure" data-bind="attr: { 'aria-label': sign + symbol + whole + fraction }">
+        <span class="nb-figure-sym" data-bind="text: sign + symbol" aria-hidden="true"></span><span class="nb-figure-whole" data-bind="text: whole" aria-hidden="true"></span><span class="nb-figure-frac" data-bind="text: fraction" aria-hidden="true"></span>
+      </p>
+      <!-- /ko -->
+      <p class="nb-tile-sub">Current <span data-bind="text: $parent.money(currentBalance, currencyCode)"></span></p>
+      <div class="nb-tile-links">
+        <a href="#" data-bind="click: $parent.openStatement">Statement</a>
+        <!-- ko if: (currencyCode || 'INR') === 'INR' -->
+        <a href="#" data-bind="click: $parent.openTransfer">Transfer</a>
+        <!-- /ko -->
+        <!-- ko ifnot: (currencyCode || 'INR') === 'INR' -->
+        <a href="#" data-bind="click: $parent.openForex">Convert</a>
+        <!-- /ko -->
+      </div>
+    </li>
+  </ul>
 </div>

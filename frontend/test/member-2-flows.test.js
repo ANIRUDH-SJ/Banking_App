@@ -45,6 +45,24 @@ function load(name, dependencies) {
   return ViewModel;
 }
 
+function loadUiSupport() {
+  let support;
+  const source = fs.readFileSync(path.join(__dirname, '../src/js/services/ui-support.js'), 'utf8');
+  vm.runInNewContext(source, {
+    define: (names, factory) => {
+      support = factory(ko, function ArrayDataProvider(rows) { this.rows = rows; }, { IntlNumberConverter: function () {} }, format, {});
+    },
+    Number,
+    String,
+    Date,
+    Math,
+    crypto: { randomUUID: () => 'test-idempotency-key' }
+  }, { filename: 'ui-support.js' });
+  return support;
+}
+
+const ui = loadUiSupport();
+
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 test('accounts screen displays only bank-provided balances', async () => {
@@ -53,7 +71,8 @@ test('accounts screen displays only bank-provided balances', async () => {
     knockout: ko,
     '../accUtils': { announce: () => {} },
     '../services/registry': { accounts: { getAccounts: async () => rows } },
-    '../services/format': format
+    '../services/format': format,
+    '../services/ui-support': ui
   });
   const screen = new Accounts();
   assert.equal(screen.accounts().length, 0);
@@ -87,6 +106,7 @@ test('transfer receipt comes only from the server after a real OTP challenge', a
     '../accUtils': { announce: () => {} },
     '../services/registry': registry,
     '../services/format': format,
+    '../services/ui-support': ui,
     '../services/beneficiary-service': BeneficiaryService,
     '../services/fund-transfer-service': FundTransferService
   });
