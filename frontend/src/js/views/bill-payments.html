@@ -1,0 +1,148 @@
+<div class="nb-page nb-bills">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Payments</p>
+    <h1>Pay a bill</h1>
+    <p class="nb-lede">Pay a registered biller from an Indian rupee account. Every payment is confirmed with a one-time code sent to your registered email and mobile.</p>
+  </header>
+
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
+  </div>
+
+  <div class="nb-work">
+    <section class="nb-sheet nb-flow-sheet" aria-label="Bill payment">
+      <ol class="nb-flow" aria-label="Payment steps" data-bind="visible: !flow.is(4), foreach: flow.names">
+        <li data-bind="css: $parent.flow.stateOf($index()), attr: { 'aria-current': $parent.flow.is($index()) ? 'step' : null }">
+          <span class="nb-flow-no" data-bind="text: $index() + 1" aria-hidden="true"></span>
+          <span class="nb-flow-name" data-bind="text: $data"></span>
+        </li>
+      </ol>
+
+      <div class="nb-flow-panel" data-bind="visible: flow.is(0)">
+        <div class="nb-panel-head">
+          <h2 tabindex="-1">Who are you paying?</h2>
+          <oj-c-buttonset-single class="nb-segment" aria-label="Biller category" items="[[categories]]" value="{{category}}" size="sm" data-bind="visible: categories().length > 2"></oj-c-buttonset-single>
+        </div>
+        <div class="nb-choices" data-bind="visible: loading" aria-hidden="true">
+          <!-- ko foreach: [1, 2, 3] -->
+          <div class="nb-choice is-skeleton"><oj-c-skeleton height="2.5rem" width="2.5rem" border-radius="50%"></oj-c-skeleton><oj-c-skeleton height="0.875rem" width="70%"></oj-c-skeleton></div>
+          <!-- /ko -->
+        </div>
+        <div class="nb-empty-panel is-quiet" data-bind="visible: !loading() && billers().length === 0">
+          <span class="nb-empty-glyph i-billers" aria-hidden="true"></span>
+          <p><strong>No billers available</strong></p>
+          <p>The biller catalogue is empty or could not be reached.</p>
+        </div>
+        <ul class="nb-choices" data-bind="foreach: visibleBillers">
+          <li>
+            <button type="button" class="nb-choice" data-bind="click: $parent.choose, css: { 'is-selected': $parent.biller() && $parent.biller().billerId === billerId }">
+              <span class="nb-glyph" data-bind="css: $parent.glyph($data)" aria-hidden="true"></span>
+              <span class="nb-choice-main">
+                <span class="nb-choice-name" data-bind="text: name"></span>
+                <span class="nb-choice-meta" data-bind="text: $parent.label(category)"></span>
+              </span>
+              <span class="nb-icon i-chevron" aria-hidden="true"></span>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(1), submit: toReview">
+        <h2 tabindex="-1">Bill details</h2>
+        <!-- ko if: biller -->
+        <div class="nb-picked">
+          <span class="nb-glyph" data-bind="css: glyph(biller())" aria-hidden="true"></span>
+          <span class="nb-choice-main">
+            <span class="nb-choice-name" data-bind="text: biller().name"></span>
+            <span class="nb-choice-meta" data-bind="text: label(biller().category) + (limitText() ? ' · ' + limitText() : '')"></span>
+          </span>
+          <button type="button" class="nb-link-button" data-bind="click: changeBiller">Change</button>
+        </div>
+        <!-- /ko -->
+        <oj-c-form-layout max-columns="1" label-edge="top" user-assistance-density="reflow">
+          <oj-c-select-single label-hint="Pay from" data="[[accountOptions]]" item-text="label" value="{{sourceAccountId}}" messages-custom="[[accountMessages]]"></oj-c-select-single>
+          <oj-c-input-text label-hint="[[referenceLabel]]" value="{{billReference}}" messages-custom="[[referenceMessages]]" length.max="150" autocomplete="off"></oj-c-input-text>
+          <oj-c-input-number class="nb-amount-input" converter="[[amountConverter]]" label-hint="Amount" value="{{amount}}" input-prefix="₹" min="0" step="0" messages-custom="[[amountMessages]]" assistive-text="[[limitText]]"></oj-c-input-number>
+        </oj-c-form-layout>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="Review payment"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Back" on-oj-action="[[back]]"></oj-c-button>
+        </div>
+      </form>
+
+      <div class="nb-flow-panel" data-bind="visible: flow.is(2)">
+        <h2 tabindex="-1">Check the payment</h2>
+        <div class="nb-review-amount">
+          <span class="nb-review-label">You are paying</span>
+          <span class="nb-review-figure" data-bind="text: amountText"></span>
+        </div>
+        <dl class="nb-review" data-bind="if: biller">
+          <div><dt>Biller</dt><dd data-bind="text: biller().name"></dd></div>
+          <div><dt data-bind="text: referenceLabel"></dt><dd class="nb-mono" data-bind="text: billReference"></dd></div>
+          <div data-bind="if: sourceAccount"><dt>From</dt><dd data-bind="text: label(sourceAccount().accountType) + ' ' + mask(sourceAccount().accountNumber)"></dd></div>
+        </dl>
+        <p class="nb-note"><span class="nb-icon i-shield" aria-hidden="true"></span><span>We will send a one-time code to your registered email and mobile. The payment is made only after you enter it.</span></p>
+        <div class="nb-actions">
+          <oj-c-button chroming="callToAction" label="[[busy() ? 'Sending code…' : 'Send code']]" disabled="[[busy]]" on-oj-action="[[sendCode]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Edit details" on-oj-action="[[back]]"></oj-c-button>
+        </div>
+      </div>
+
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(3), submit: pay">
+        <h2 tabindex="-1">Enter your one-time code</h2>
+        <p class="nb-hint">Sent to your registered email and mobile. It expires in 5 minutes.</p>
+        <div class="nb-otp">
+          <oj-c-input-text class="nb-code-input" label-hint="6-digit code" value="{{otpCode}}" messages-custom="[[otpMessages]]" length.max="6" virtual-keyboard="number" autocomplete="one-time-code"></oj-c-input-text>
+        </div>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Paying…' : 'Pay ' + amountText()]]" disabled="[[busy]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Resend code" disabled="[[busy]]" on-oj-action="[[sendCode]]"></oj-c-button>
+        </div>
+      </form>
+
+      <!-- ko if: flow.is(4) && receipt() -->
+      <div class="nb-flow-panel nb-receipt" role="status">
+        <span class="nb-done-mark" data-bind="css: { 'is-clock': receiptPending }" aria-hidden="true"></span>
+        <h2 tabindex="-1" data-bind="text: receiptTitle"></h2>
+        <p class="nb-review-figure" data-bind="text: money(receipt().amount, receipt().currencyCode)"></p>
+        <dl class="nb-review">
+          <div><dt>Biller</dt><dd data-bind="text: biller() ? biller().name : ''"></dd></div>
+          <div><dt data-bind="text: referenceLabel"></dt><dd class="nb-mono" data-bind="text: billReference"></dd></div>
+          <div><dt>Status</dt><dd><oj-c-badge size="sm" variant="[[statusVariant(receipt().status)]]" label="[[label(receipt().status)]]"></oj-c-badge></dd></div>
+          <div><dt>Transaction reference</dt><dd class="nb-mono" data-bind="text: receipt().transactionReference || '—'"></dd></div>
+        </dl>
+        <div class="nb-actions">
+          <oj-c-button chroming="callToAction" label="Pay another bill" on-oj-action="[[again]]"></oj-c-button>
+          <oj-c-button chroming="outlined" label="View statement" on-oj-action="[[openStatement]]"></oj-c-button>
+        </div>
+      </div>
+      <!-- /ko -->
+    </section>
+
+    <aside class="nb-sheet nb-aside" aria-labelledby="bill-history-heading">
+      <div class="nb-sheet-head">
+        <h2 id="bill-history-heading">Recent bill payments</h2>
+      </div>
+      <div class="nb-rail-skeleton" data-bind="visible: historyLoading" aria-hidden="true">
+        <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+        <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+      </div>
+      <p class="nb-rail-error" role="alert" data-bind="visible: historyError, text: historyError"></p>
+      <p class="nb-rail-empty" data-bind="visible: !historyLoading() && !historyError() && history().length === 0">Bills you pay online will be listed here.</p>
+      <ul class="nb-rows" data-bind="visible: !historyLoading(), foreach: history">
+        <li class="nb-row">
+          <span class="nb-row-glyph" data-bind="css: $parent.historyGlyph(billerId)" aria-hidden="true"></span>
+          <span class="nb-row-main">
+            <span class="nb-row-title" data-bind="text: $parent.billerName(billerId)"></span>
+            <span class="nb-row-meta">
+              <span data-bind="text: $parent.when(createdAt)"></span>
+              <span class="nb-row-status" data-bind="visible: status !== 'COMPLETED', text: $parent.label(status)"></span>
+            </span>
+          </span>
+          <span class="nb-row-amount" data-bind="text: $parent.money(amount, currencyCode)"></span>
+        </li>
+      </ul>
+    </aside>
+  </div>
+</div>
