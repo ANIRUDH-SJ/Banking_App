@@ -249,6 +249,17 @@ test('formatting masks accounts and keeps the server amount', () => {
   assert.deepEqual(format.asList({ content: [{ id: 1 }] }), [{ id: 1 }]);
 });
 
+test('money parts split the figure without rounding it', () => {
+  assert.deepEqual(format.formatMoneyParts(184520.35, 'INR'), {
+    sign: '',
+    symbol: '₹',
+    whole: '1,84,520',
+    fraction: '.35'
+  });
+  assert.equal(format.formatMoneyParts(-12.5, 'INR').sign, '−');
+  assert.equal(format.formatMoneyParts('10.1250', 'USD').fraction, '.125');
+});
+
 test('authenticator setup state is memory only', () => {
   authFlow.clear();
   authFlow.setCredentials('asha', 'a-sufficiently-long-password');

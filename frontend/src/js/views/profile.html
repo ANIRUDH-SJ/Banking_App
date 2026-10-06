@@ -1,0 +1,54 @@
+<div class="nb-page nb-profile">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Customer profile</p>
+    <h1 id="profile-heading">Your details</h1>
+    <p class="nb-lede">You can change your name and mobile number here. Your customer number, date of birth and KYC status are held by the bank.</p>
+  </header>
+
+  <div class="nb-alert" role="alert" data-bind="visible: formError">
+    <span class="nb-alert-text" data-bind="text: formError"></span>
+    <span class="nb-alert-ref" data-bind="visible: reference, text: reference"></span>
+  </div>
+  <p class="nb-success" role="status" data-bind="visible: formSuccess, text: formSuccess"></p>
+
+  <dl class="nb-facts" data-bind="visible: loading" aria-hidden="true">
+    <!-- ko foreach: [1, 2, 3, 4] -->
+    <div>
+      <oj-c-skeleton height="0.75rem" width="50%"></oj-c-skeleton>
+      <oj-c-skeleton height="1.25rem" width="75%"></oj-c-skeleton>
+    </div>
+    <!-- /ko -->
+  </dl>
+  <p class="nb-sr" role="status" data-bind="text: loading() ? 'Loading profile' : ''"></p>
+
+  <dl class="nb-facts" data-bind="visible: !loading() && customerNumber()">
+    <div>
+      <dt>Customer number</dt>
+      <dd class="nb-mono" data-bind="text: customerNumber"></dd>
+    </div>
+    <div>
+      <dt>Date of birth</dt>
+      <dd data-bind="text: dateOfBirth() || '—'"></dd>
+    </div>
+    <div>
+      <dt>KYC status</dt>
+      <dd data-bind="text: kycStatus() || '—'"></dd>
+    </div>
+    <div>
+      <dt>Profile</dt>
+      <dd data-bind="text: profileStatus"></dd>
+    </div>
+  </dl>
+
+  <form class="nb-sheet nb-form nb-profile-form" novalidate data-bind="submit: save, visible: !loading() && customerNumber()" aria-labelledby="profile-edit-heading">
+    <h2 id="profile-edit-heading" class="nb-form-section">Details you can update</h2>
+    <oj-c-form-layout direction="row" max-columns="2" label-edge="top" user-assistance-density="reflow">
+      <oj-c-input-text label-hint="First name" value="{{firstName}}" messages-custom="[[firstNameMessages]]" autocomplete="given-name"></oj-c-input-text>
+      <oj-c-input-text label-hint="Last name" value="{{lastName}}" messages-custom="[[lastNameMessages]]" autocomplete="family-name"></oj-c-input-text>
+      <oj-c-input-text label-hint="Mobile number" value="{{mobileNumber}}" messages-custom="[[mobileMessages]]" autocomplete="tel" virtual-keyboard="tel"></oj-c-input-text>
+    </oj-c-form-layout>
+    <div class="nb-actions">
+      <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Saving…' : 'Save changes']]" disabled="[[busy]]"></oj-c-button>
+    </div>
+  </form>
+</div>

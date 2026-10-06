@@ -34,6 +34,42 @@
     }
   }
 
+  function formatMoneyParts(amount, currencyCode) {
+    var currency = currencyCode || 'INR';
+    var numeric = typeof amount === 'number' ? amount : Number(amount);
+    if (!isFinite(numeric)) {
+      return { sign: '', symbol: '', whole: formatMoney(amount, currency), fraction: '' };
+    }
+    var locale = currency === 'INR' ? 'en-IN' : 'en-GB';
+    try {
+      var parts = new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 4
+      }).formatToParts(numeric);
+      var result = { sign: '', symbol: '', whole: '', fraction: '' };
+      var afterDecimal = false;
+      parts.forEach(function (part) {
+        if (part.type === 'minusSign') {
+          result.sign = '−';
+        } else if (part.type === 'currency') {
+          result.symbol = part.value;
+        } else if (part.type === 'decimal') {
+          afterDecimal = true;
+          result.fraction += part.value;
+        } else if (part.type === 'integer' || part.type === 'group') {
+          result.whole += part.value;
+        } else if (part.type === 'fraction' && afterDecimal) {
+          result.fraction += part.value;
+        }
+      });
+      return result;
+    } catch (ignore) {
+      return { sign: '', symbol: '', whole: numeric.toFixed(2), fraction: ' ' + currency };
+    }
+  }
+
   function formatDate(value) {
     if (!value) {
       return '';
@@ -93,6 +129,7 @@
   return {
     asList: asList,
     formatMoney: formatMoney,
+    formatMoneyParts: formatMoneyParts,
     formatDate: formatDate,
     formatDateTime: formatDateTime,
     formatTime: formatTime,
