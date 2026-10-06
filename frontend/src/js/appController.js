@@ -29,7 +29,7 @@ define([
       { id: 'overview', label: 'Overview', paths: ['dashboard'] },
       { id: 'accounts', label: 'Accounts', paths: ['accounts', 'transactions', 'beneficiaries', 'transfer'] },
       { id: 'payments', label: 'Payments', paths: ['billers', 'bill-payments'] },
-      { id: 'products', label: 'Cards & loans', paths: ['cards', 'loans'] },
+      { id: 'products', label: 'Products', paths: ['cards', 'loans', 'deposits', 'forex'] },
       { id: 'profile', label: 'Profile', paths: ['profile', 'notifications'] }
     ];
     this.navGroups = ko.pureComputed(function () {

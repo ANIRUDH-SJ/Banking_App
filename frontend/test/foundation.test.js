@@ -7,6 +7,8 @@ const SessionService = require('../src/js/services/session-service');
 const ApiClientService = require('../src/js/services/api-client-service');
 const AuthService = require('../src/js/services/auth-service');
 const OtpService = require('../src/js/services/otp-service');
+const DepositService = require('../src/js/services/deposit-service');
+const ForexService = require('../src/js/services/forex-service');
 const routeGuard = require('../src/js/services/route-guard-service');
 const format = require('../src/js/services/format');
 const authFlow = require('../src/js/services/auth-flow-state');
@@ -218,6 +220,39 @@ test('otp service requests payment challenges and checks the code', async () => 
   assert.equal(otp.validateCode('12'), 'Enter the 6-digit code.');
 });
 
+test('deposit service uses quote, open, and customer deposit endpoints', async () => {
+  const calls = [];
+  const client = {
+    get(path) { calls.push({ method: 'get', path: path }); return Promise.resolve([]); },
+    post(path, body) { calls.push({ method: 'post', path: path, body: body }); return Promise.resolve({}); }
+  };
+  const deposits = new DepositService(client);
+  await deposits.list();
+  await deposits.quote({ sourceAccountId: 1, kind: 'FD', amount: 1000, termMonths: 12 });
+  await deposits.open('quote/1', 'deposit-key');
+  await deposits.collectInstallment('deposit/1');
+  assert.deepEqual(calls.map((call) => call.path), [
+    '/api/v1/deposits', '/api/v1/deposits/quotes', '/api/v1/deposits', '/api/v1/deposits/deposit%2F1/installments'
+  ]);
+  assert.equal(calls[2].body.idempotencyKey, 'deposit-key');
+});
+
+test('forex service keeps quote and conversion confirmation separate', async () => {
+  const calls = [];
+  const client = {
+    get(path) { calls.push({ method: 'get', path: path }); return Promise.resolve([]); },
+    post(path, body) { calls.push({ method: 'post', path: path, body: body }); return Promise.resolve({}); }
+  };
+  const forex = new ForexService(client);
+  await forex.list();
+  await forex.quote({ sourceAccountId: 1, destinationAccountId: 2, sourceAmount: 50 });
+  await forex.convert({ quoteId: 'quote-1', otpChallengeId: 'challenge-1', otpCode: '123456', idempotencyKey: 'forex-key' });
+  assert.deepEqual(calls.map((call) => call.path), [
+    '/api/v1/forex/conversions', '/api/v1/forex/quotes', '/api/v1/forex/conversions'
+  ]);
+  assert.equal(calls[2].body.otpCode, '123456');
+});
+
 test('route guard sends customers and administrators to their own desks', () => {
   const now = 5_000;
   const customer = { accessToken: 't', expiresAt: 9_000, roles: ['CUSTOMER'] };
@@ -232,7 +267,7 @@ test('route guard sends customers and administrators to their own desks', () => 
   assert.equal(routeGuard.evaluate('accounts', { accessToken: 't', expiresAt: 1000, roles: ['CUSTOMER'] }, now).path, 'login');
   assert.deepEqual(routeGuard.navFor(customer).customer.map((item) => item.path), [
     'dashboard', 'accounts', 'transactions', 'beneficiaries', 'transfer',
-    'billers', 'bill-payments', 'cards', 'loans', 'profile', 'notifications'
+    'billers', 'bill-payments', 'cards', 'loans', 'deposits', 'forex', 'profile', 'notifications'
   ]);
   assert.equal(routeGuard.navFor(customer).admin.length, 0);
   assert.equal(routeGuard.navFor(admin).customer.length, 0);
@@ -240,6 +275,8 @@ test('route guard sends customers and administrators to their own desks', () => 
   assert.ok(paths.includes('transfer'));
   assert.ok(paths.includes('password-recovery'));
   assert.ok(paths.includes('admin-audit'));
+  assert.ok(paths.includes('deposits'));
+  assert.ok(paths.includes('forex'));
 });
 
 test('formatting masks accounts and keeps the server amount', () => {
