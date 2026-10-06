@@ -7,5 +7,5 @@ import jakarta.validation.constraints.*;
 public record EventEnvelope(
         @NotBlank @Size(max = 36) String eventId,
         @NotBlank @Size(max = 80) String source,
-        @NotBlank @Pattern(regexp = "AUDIT|NOTIFICATION") String type,
+        @NotBlank @Pattern(regexp = "AUDIT|NOTIFICATION|CUSTOMER_REGISTERED") String type,
         @NotNull JsonNode payload) {}
