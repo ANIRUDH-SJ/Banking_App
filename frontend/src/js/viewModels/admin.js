@@ -1,77 +1,144 @@
-define(['knockout', 'ojs/ojarraydataprovider', '../services/AdminService', '../services/member3-style', '../accUtils', 'ojs/ojinputtext', 'ojs/ojprogress-circle'],
-  function (ko, ArrayDataProvider, AdminService, member3Style, accUtils) {
-    'use strict';
+define([
+  'knockout',
+  '../accUtils',
+  '../services/AdminService',
+  '../services/format',
+  '../services/ui-support',
+  'oj-c/button',
+  'oj-c/buttonset-single',
+  'oj-c/input-text',
+  'oj-c/badge',
+  'oj-c/skeleton'
+], function (ko, accUtils, AdminService, format, ui) {
+  'use strict';
 
-    function AdminViewModel() {
-      this.users = ko.observableArray([]);
-      this.accounts = ko.observableArray([]);
-      this.transactions = ko.observableArray([]);
-      this.auditEvents = ko.observableArray([]);
-      this.usersProvider = new ArrayDataProvider(this.users, { keyAttributes: 'userId' });
-      this.accountsProvider = new ArrayDataProvider(this.accounts, { keyAttributes: 'accountId' });
-      this.transactionsProvider = new ArrayDataProvider(this.transactions, { keyAttributes: 'transactionId' });
-      this.auditProvider = new ArrayDataProvider(this.auditEvents, { keyAttributes: 'auditEventId' });
+  var VIEWS = {
+    users: { label: 'Users', hint: 'Username, email or customer name', sub: 'Sign-in status, roles and the linked customer profile.' },
+    accounts: { label: 'Accounts', hint: 'Account number', sub: 'Balances, status and the customers linked to each account.' },
+    transactions: { label: 'Transactions', hint: 'Transaction reference', sub: 'The latest money movement across the bank.' },
+    audit: { label: 'Audit', hint: 'Event type, for example LOGIN', sub: 'Security and operational events with their outcome.' }
+  };
 
-      this.userTotal = ko.observable(0);
-      this.accountTotal = ko.observable(0);
-      this.transactionTotal = ko.observable(0);
-      this.auditTotal = ko.observable(0);
-      this.userQuery = ko.observable('');
-      this.accountQuery = ko.observable('');
-      this.transactionQuery = ko.observable('');
-      this.auditQuery = ko.observable('');
-      this.isLoading = ko.observable(false);
-      this.errorMessage = ko.observable('');
+  function AdminViewModel() {
+    var self = this;
 
-      this.dateTime = (value) => value ? new Date(value).toLocaleString() : '—';
-      this.joinValues = (values) => Array.isArray(values) && values.length ? values.join(', ') : '—';
-      this.money = (value, currency) => new Intl.NumberFormat('en-IN', {
-        style: 'currency', currency: currency || 'INR'
-      }).format(Number(value || 0));
+    self.problem = new ui.Problem();
+    self.isLoading = ko.observable(false);
+    self.searching = ko.observable(false);
+    self.view = ko.observable('users');
+    self.viewItems = Object.keys(VIEWS).map(function (key) {
+      return { value: key, label: VIEWS[key].label };
+    });
 
-      this.reportError = (error) => {
-        this.errorMessage(error.status === 403
-          ? 'Administrator access is required to open this dashboard.'
-          : (error.message || 'Unable to load administrator data.'));
-      };
+    self.users = ko.observableArray([]);
+    self.accounts = ko.observableArray([]);
+    self.transactions = ko.observableArray([]);
+    self.auditEvents = ko.observableArray([]);
+    self.userTotal = ko.observable(0);
+    self.accountTotal = ko.observable(0);
+    self.transactionTotal = ko.observable(0);
+    self.auditTotal = ko.observable(0);
+    self.userQuery = ko.observable('');
+    self.accountQuery = ko.observable('');
+    self.transactionQuery = ko.observable('');
+    self.auditQuery = ko.observable('');
 
-      this.loadUsers = async () => {
-        try {
-          const page = await AdminService.listUsers({ query: this.userQuery(), page: 0, size: 10 });
-          this.users(page.content || []); this.userTotal(page.totalElements || 0);
-        } catch (error) { this.reportError(error); }
-      };
-      this.loadAccounts = async () => {
-        try {
-          const page = await AdminService.listAccounts({ query: this.accountQuery(), page: 0, size: 10 });
-          this.accounts(page.content || []); this.accountTotal(page.totalElements || 0);
-        } catch (error) { this.reportError(error); }
-      };
-      this.loadTransactions = async () => {
-        try {
-          const page = await AdminService.listTransactions({ reference: this.transactionQuery(), page: 0, size: 10 });
-          this.transactions(page.content || []); this.transactionTotal(page.totalElements || 0);
-        } catch (error) { this.reportError(error); }
-      };
-      this.loadAudit = async () => {
-        try {
-          const page = await AdminService.listAuditEvents({ eventType: this.auditQuery(), page: 0, size: 10 });
-          this.auditEvents(page.content || []); this.auditTotal(page.totalElements || 0);
-        } catch (error) { this.reportError(error); }
-      };
+    var queries = { users: self.userQuery, accounts: self.accountQuery, transactions: self.transactionQuery, audit: self.auditQuery };
+    var rows = { users: self.users, accounts: self.accounts, transactions: self.transactions, audit: self.auditEvents };
 
-      this.refresh = async () => {
-        this.isLoading(true); this.errorMessage('');
-        try {
-          await Promise.all([this.loadUsers(), this.loadAccounts(), this.loadTransactions(), this.loadAudit()]);
-        } finally { this.isLoading(false); }
-      };
+    self.current = ko.pureComputed(function () {
+      return VIEWS[self.view()];
+    });
+    self.query = ko.pureComputed({
+      read: function () { return queries[self.view()](); },
+      write: function (value) { queries[self.view()](value || ''); }
+    });
+    self.empty = ko.pureComputed(function () {
+      return !self.isLoading() && !self.searching() && rows[self.view()]().length === 0;
+    });
 
-      this.connected = () => {
-        document.title = 'Administration';
-        accUtils.announce('Administration page loaded.', 'polite');
-        this.refresh();
-      };
+    self.label = format.labelize;
+    self.money = format.formatMoney;
+    self.when = function (value) {
+      return value ? format.formatDateTime(value) : '—';
+    };
+    self.joinValues = function (values) {
+      return Array.isArray(values) && values.length ? values.join(', ') : '—';
+    };
+    self.customerName = function (user) {
+      var customer = user && user.customer;
+      return customer ? [customer.firstName, customer.lastName].filter(Boolean).join(' ') : '—';
+    };
+    self.statusVariant = ui.statusVariant;
+    self.outcomeVariant = function (outcome) {
+      var value = String(outcome || '').toUpperCase();
+      if (value === 'SUCCESS') {
+        return 'successSubtle';
+      }
+      return value === 'FAILURE' || value === 'DENIED' ? 'dangerSubtle' : 'neutralSubtle';
+    };
+
+    function reportError(error) {
+      if (error && error.status === 403) {
+        self.problem.show('Administrator access is required to open this console.');
+        return;
+      }
+      self.problem.set(error, 'Administrator data could not be loaded.');
     }
-    return AdminViewModel;
-  });
+
+    function load(fetch, target, total) {
+      return fetch().then(function (page) {
+        target(format.asList(page));
+        total((page && page.totalElements) || format.asList(page).length);
+      }).catch(reportError);
+    }
+
+    self.loadUsers = function () {
+      return load(function () { return AdminService.listUsers({ query: self.userQuery(), page: 0, size: 10 }); }, self.users, self.userTotal);
+    };
+    self.loadAccounts = function () {
+      return load(function () { return AdminService.listAccounts({ query: self.accountQuery(), page: 0, size: 10 }); }, self.accounts, self.accountTotal);
+    };
+    self.loadTransactions = function () {
+      return load(function () { return AdminService.listTransactions({ reference: self.transactionQuery(), page: 0, size: 10 }); }, self.transactions, self.transactionTotal);
+    };
+    self.loadAudit = function () {
+      return load(function () { return AdminService.listAuditEvents({ eventType: self.auditQuery(), page: 0, size: 10 }); }, self.auditEvents, self.auditTotal);
+    };
+
+    var loaders = { users: self.loadUsers, accounts: self.loadAccounts, transactions: self.loadTransactions, audit: self.loadAudit };
+
+    self.search = function () {
+      if (self.searching()) {
+        return false;
+      }
+      self.searching(true);
+      self.problem.clear();
+      loaders[self.view()]().finally(function () {
+        self.searching(false);
+      });
+      return false;
+    };
+
+    self.clearSearch = function () {
+      self.query('');
+      self.search();
+    };
+
+    self.refresh = function () {
+      self.isLoading(true);
+      self.problem.clear();
+      return Promise.all([self.loadUsers(), self.loadAccounts(), self.loadTransactions(), self.loadAudit()]).finally(function () {
+        self.isLoading(false);
+      });
+    };
+
+    self.connected = function () {
+      document.title = 'Administration | Internet Banking';
+      accUtils.announce('Administration console.', 'polite');
+      self.refresh();
+    };
+  }
+
+  return AdminViewModel;
+});

@@ -11,7 +11,7 @@ This workstream owns the customer-facing accounts and transfer experience:
 
 ## Dependencies owned by Member 1
 
-These screens use PR #60's shared shell, navigation, route guards, API client, session, formatting, and OTP helper. The branch deliberately does not change `appController.js` or `app.css`; its `member2.css` inherits the shared bank tokens. Merge PR #60 first.
+These screens use PR #60's shared shell, navigation, route guards, API client, session, formatting, and OTP helper. They are styled by the shared `nb-` classes in `app.css` and the step, review and receipt helpers in `services/ui-support.js`; there is no per-feature stylesheet.
 
 ## Frontend services
 
