@@ -1,0 +1,49 @@
+<div class="nb-page nb-register">
+  <section data-bind="visible: !registered()" aria-labelledby="register-heading">
+    <header class="nb-page-head">
+      <p class="nb-kicker">New customer</p>
+      <h1 id="register-heading">Register for Internet Banking</h1>
+      <p class="nb-lede">It takes a few minutes. You will set up Microsoft Authenticator the first time you sign in.</p>
+    </header>
+    <div class="nb-alert" role="alert" data-bind="visible: formError">
+      <span class="nb-alert-text" data-bind="text: formError"></span>
+      <span class="nb-alert-ref" data-bind="visible: reference, text: reference"></span>
+    </div>
+    <form class="nb-form" novalidate data-bind="submit: register" aria-labelledby="register-heading">
+      <fieldset class="nb-fieldset">
+        <legend><span class="nb-legend-no">1</span>About you</legend>
+        <oj-c-form-layout direction="row" max-columns="2" label-edge="top" user-assistance-density="reflow">
+          <oj-c-input-text label-hint="First name" value="{{firstName}}" messages-custom="[[firstNameMessages]]" autocomplete="given-name"></oj-c-input-text>
+          <oj-c-input-text label-hint="Last name" value="{{lastName}}" messages-custom="[[lastNameMessages]]" autocomplete="family-name"></oj-c-input-text>
+          <oj-c-input-date-mask label-hint="Date of birth" value="{{dateOfBirth}}" messages-custom="[[dobMessages]]"></oj-c-input-date-mask>
+          <oj-c-input-text label-hint="Mobile number" value="{{mobileNumber}}" messages-custom="[[mobileMessages]]" autocomplete="tel" virtual-keyboard="tel" help-hints.definition="A leading plus, spaces and hyphens are allowed."></oj-c-input-text>
+        </oj-c-form-layout>
+      </fieldset>
+      <fieldset class="nb-fieldset">
+        <legend><span class="nb-legend-no">2</span>Sign-in details</legend>
+        <oj-c-form-layout direction="row" max-columns="2" label-edge="top" user-assistance-density="reflow">
+          <oj-c-input-text label-hint="User ID" value="{{username}}" messages-custom="[[usernameMessages]]" autocomplete="username"></oj-c-input-text>
+          <oj-c-input-text label-hint="Email" value="{{email}}" messages-custom="[[emailMessages]]" autocomplete="email" virtual-keyboard="email"></oj-c-input-text>
+          <oj-c-input-password label-hint="Password" mask-icon="visible" value="{{password}}" messages-custom="[[passwordMessages]]" autocomplete="new-password"></oj-c-input-password>
+          <oj-c-input-password label-hint="Confirm password" mask-icon="visible" value="{{confirmPassword}}" messages-custom="[[confirmMessages]]" autocomplete="new-password"></oj-c-input-password>
+        </oj-c-form-layout>
+        <p class="nb-hint">Use 12 to 128 characters. A short phrase is easier to remember than a complex word.</p>
+      </fieldset>
+      <div class="nb-actions">
+        <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Creating access…' : 'Create access']]" disabled="[[busy]]"></oj-c-button>
+      </div>
+    </form>
+  </section>
+
+  <section class="nb-done" data-bind="visible: registered" aria-labelledby="registered-heading">
+    <span class="nb-done-mark" aria-hidden="true"></span>
+    <p class="nb-kicker">Registration complete</p>
+    <h1 id="registered-heading">Welcome to Internet Banking</h1>
+    <p class="nb-lede">Your customer number is below. Keep it with your records.</p>
+    <p class="nb-customer-number" data-bind="text: customerNumber"></p>
+    <p class="nb-lede">Next, sign in with the user ID you chose. You will set up Microsoft Authenticator straight after.</p>
+    <div class="nb-actions">
+      <oj-c-button chroming="callToAction" label="Sign in" on-oj-action="[[goToSignIn]]"></oj-c-button>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,46 @@
+<div class="nb-page nb-setup">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Step 2 of 2 · First sign-in</p>
+    <h1 id="totp-setup-heading">Set up Microsoft Authenticator</h1>
+    <p class="nb-lede">You will use this app for a code every time you sign in.</p>
+  </header>
+  <p class="nb-status" role="status" data-bind="visible: loading">
+    <oj-c-progress-circle size="sm" value="-1" aria-hidden="true"></oj-c-progress-circle>
+    <span>Preparing your setup code…</span>
+  </p>
+  <div class="nb-alert" role="alert" data-bind="visible: formError">
+    <span class="nb-alert-text" data-bind="text: formError"></span>
+    <span class="nb-alert-ref" data-bind="visible: reference, text: reference"></span>
+  </div>
+  <div class="nb-setup-grid" data-bind="visible: !loading()">
+    <ol class="nb-howto">
+      <li>
+        <strong>Open Microsoft Authenticator</strong>
+        <span>Choose Add account, then Other account.</span>
+      </li>
+      <li>
+        <strong>Scan this code</strong>
+        <span>The issuer should read <b data-bind="text: issuer"></b>.</span>
+        <div class="nb-qr" data-bind="visible: qrCodeDataUri">
+          <img data-bind="attr: { src: qrCodeDataUri, alt: 'QR code for Microsoft Authenticator, issuer ' + issuer() }" width="176" height="176">
+          <p class="nb-qr-account">Account <span data-bind="text: accountName"></span></p>
+        </div>
+        <div data-bind="visible: manualEntryKey">
+          <button type="button" class="nb-link-button" data-bind="click: toggleKey, text: showKey() ? 'Hide setup key' : 'Can’t scan? Enter a setup key'"></button>
+          <p class="nb-secret" data-bind="visible: showKey, text: manualEntryKey" aria-live="polite"></p>
+        </div>
+      </li>
+      <li>
+        <strong>Enter the code it shows</strong>
+        <form class="nb-form" novalidate data-bind="submit: confirm" aria-labelledby="totp-setup-heading">
+          <oj-c-form-layout direction="column" label-edge="top" user-assistance-density="reflow">
+            <oj-c-input-text class="nb-code-input" label-hint="Six-digit code" value="{{code}}" messages-custom="[[codeMessages]]" autocomplete="one-time-code" virtual-keyboard="number"></oj-c-input-text>
+          </oj-c-form-layout>
+          <div class="nb-actions">
+            <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Confirming…' : 'Confirm and sign in']]" disabled="[[busy]]"></oj-c-button>
+          </div>
+        </form>
+      </li>
+    </ol>
+  </div>
+</div>
