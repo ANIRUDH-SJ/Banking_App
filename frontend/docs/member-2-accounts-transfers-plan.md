@@ -1,33 +1,33 @@
 # Member 2: Accounts and Transfers
 
-## Draft scope
+## Scope and current state
 
 This workstream owns the customer-facing accounts and transfer experience:
 
-- account list, account details, balances, and account status;
-- transaction history, filters, pagination, and statement CSV export;
+- account list, balances, and account status;
+- transaction history, date/search filters, and statement CSV export;
 - beneficiary list, creation, activation, and removal;
 - transfer form, review, OTP confirmation, receipt, and transfer status.
 
 ## Dependencies owned by Member 1
 
-This work will use the shared application shell, navigation, route guards, API client, session handling, authentication state, validation messages, and OTP helper once they are available. It will not implement duplicate versions of those shared features.
+These screens use PR #60's shared shell, navigation, route guards, API client, session, formatting, and OTP helper. The branch deliberately does not change `appController.js` or `app.css`; its `member2.css` inherits the shared bank tokens. Merge PR #60 first.
 
-## Planned frontend services
+## Frontend services
 
-- `AccountService`
-- `TransactionService`
+- `registry.accounts` and `registry.transactions` from PR #60
 - `BeneficiaryService`
 - `FundTransferService`
 
-## Planned delivery order
+## Implemented here
 
-1. Account list and account-detail screens.
-2. Transaction history and statement export.
-3. Beneficiary management.
-4. Transfer form and review.
-5. OTP confirmation, receipt, error, and status states.
-6. Responsive, accessibility, and API-error tests.
+1. Live account balances and statuses; no sample account data.
+2. The first 50 statement entries with date/search filters and full CSV export.
+3. Beneficiary creation, OTP activation, and disablement through the backend.
+4. Transfer review, backend OTP challenge, idempotent submission, and server receipt.
+5. Shared theme, loading/empty/error states, and focused flow tests.
+
+This remains a draft. Account detail, statement pagination, transfer history, browser-level responsive/accessibility checks, and live-backend end-to-end testing remain for the workspace owner.
 
 ## Backend endpoints to integrate
 
@@ -43,4 +43,4 @@ This work will use the shared application shell, navigation, route guards, API c
 - `POST /api/v1/transfers`
 - `GET /api/v1/transfers`
 
-Route names and shared-service import paths will be finalised with Member 1 before implementation begins.
+Routes and imports follow PR #60's published foundation contract.
