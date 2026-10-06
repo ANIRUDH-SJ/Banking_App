@@ -14,6 +14,11 @@ const modules = {
   'notification-service': 'services',
   'audit-reporting-service': 'services',
 };
+// Local runs have no SMTP or SMS provider by default, so the development
+// providers print OTPs and alerts to the console. Values in .local win.
+const localDefaults = {
+  'notification-service': { NOTIFICATION_LOG_MESSAGE_CONTENT: 'true' },
+};
 const name = process.argv[2];
 if (!Object.hasOwn(modules, name)) throw new Error(`Choose one of: ${Object.keys(modules).join(', ')}`);
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -36,7 +41,7 @@ const java = javaHome
   ? join(javaHome, 'bin', process.platform === 'win32' ? 'java.exe' : 'java')
   : 'java';
 const child = spawn(java, ['-Xms64m', '-Xmx256m', '-jar', jar], {
-  cwd: root, env: { ...process.env, ...config }, stdio: 'inherit',
+  cwd: root, env: { ...localDefaults[name], ...process.env, ...config }, stdio: 'inherit',
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
 child.on('error', error => { console.error(`Could not start Java: ${error.message}`); process.exitCode = 1; });
