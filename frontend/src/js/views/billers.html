@@ -1,0 +1,390 @@
+<div class="nb-page billers-page">
+
+  <!-- Biller catalogue -->
+  <div data-bind="visible: screen() === 'catalogue'">
+    <div class="billers-heading">
+      <div class="nb-page-head">
+        <p class="nb-kicker billers-eyebrow">Payments</p>
+        <h1>Biller catalogue</h1>
+        <p class="nb-lede billers-intro">
+          Choose a biller to see the accepted payment range before you pay.
+        </p>
+      </div>
+
+      <div class="billers-heading-actions">
+        <oj-button
+          chroming="outlined"
+          on-oj-action="[[showHistory]]">
+          Payment history
+        </oj-button>
+
+        <oj-button
+          on-oj-action="[[refresh]]"
+          disabled="[[isLoading]]"
+          chroming="outlined">
+          Refresh
+        </oj-button>
+      </div>
+    </div>
+
+    <div class="billers-toolbar">
+      <oj-input-text
+        value="{{searchText}}"
+        placeholder="Search billers or categories"
+        clear-icon="conditional"
+        aria-label="Search billers">
+      </oj-input-text>
+
+      <oj-select-single
+        data="[[categoryProvider]]"
+        value="{{selectedCategory}}"
+        aria-label="Filter by category"
+        placeholder="All categories">
+      </oj-select-single>
+
+      <span class="billers-count" aria-live="polite">
+        <oj-bind-text value="[[resultCountText]]"></oj-bind-text>
+      </span>
+    </div>
+
+    <div
+      class="billers-status"
+      data-bind="visible: isLoading"
+      role="status"
+      aria-live="polite">
+      <oj-progress-circle size="sm" value="-1"></oj-progress-circle>
+      <span>Loading billers…</span>
+    </div>
+
+    <div
+      class="billers-message billers-error"
+      data-bind="visible: errorMessage"
+      role="alert">
+      <span data-bind="text: errorMessage"></span>
+      <oj-button on-oj-action="[[refresh]]" chroming="borderless">
+        Try again
+      </oj-button>
+    </div>
+
+    <div
+      class="billers-message"
+      data-bind="visible: !isLoading() && !errorMessage() && filteredBillers().length === 0">
+      <h2>No billers found</h2>
+      <p>Try another search or category.</p>
+    </div>
+
+    <div
+      class="billers-grid"
+      data-bind="visible: !isLoading() && !errorMessage() && filteredBillers().length > 0">
+
+      <oj-bind-for-each data="[[billersProvider]]">
+        <template>
+          <article class="biller-card">
+            <div class="biller-card-top">
+              <span class="biller-mark" aria-hidden="true">
+                <oj-bind-text
+                  value="[[getInitials($current.data.name)]]">
+                </oj-bind-text>
+              </span>
+
+              <span class="biller-category">
+                <oj-bind-text value="[[$current.data.category]]"></oj-bind-text>
+              </span>
+            </div>
+
+            <h2>
+              <oj-bind-text value="[[$current.data.name]]"></oj-bind-text>
+            </h2>
+
+            <p class="biller-reference">
+              Payment reference:
+              <strong>
+                <oj-bind-text
+                  value="[[$current.data.referenceLabel]]">
+                </oj-bind-text>
+              </strong>
+            </p>
+
+            <div class="biller-range">
+              <span>Allowed amount</span>
+              <strong>
+                <oj-bind-text
+                  value="[[formatAmount($current.data.minAmount)]]">
+                </oj-bind-text>
+                –
+                <oj-bind-text
+                  value="[[formatAmount($current.data.maxAmount)]]">
+                </oj-bind-text>
+              </strong>
+            </div>
+
+            <oj-button
+              class="biller-pay-button"
+              chroming="callToAction"
+              disabled="[[isLoading]]"
+              on-oj-action="[[() => startPayment($current.data)]]">
+              Pay bill
+            </oj-button>
+          </article>
+        </template>
+      </oj-bind-for-each>
+    </div>
+  </div>
+
+  <!-- Bill payment history -->
+  <div
+    class="payment-panel"
+    data-bind="visible: screen() === 'history'">
+
+    <oj-button chroming="borderless" on-oj-action="[[backToCatalogue]]">
+      ← Back to billers
+    </oj-button>
+
+    <h1>Bill payment history</h1>
+
+    <div
+      class="billers-status"
+      data-bind="visible: historyLoading"
+      role="status"
+      aria-live="polite">
+      <oj-progress-circle size="sm" value="-1"></oj-progress-circle>
+      <span>Loading payment history…</span>
+    </div>
+
+    <div
+      class="payment-error"
+      data-bind="visible: historyError"
+      role="alert">
+      <oj-bind-text value="[[historyError]]"></oj-bind-text>
+    </div>
+
+    <div
+      class="billers-message"
+      data-bind="visible: !historyLoading() && !historyError() && history().length === 0">
+      <h2>No bill payments yet</h2>
+      <p>Your bill payments will appear here.</p>
+    </div>
+
+    <div
+      class="history-list"
+      data-bind="visible: !historyLoading() && !historyError() && history().length > 0">
+
+      <oj-bind-for-each data="[[historyProvider]]">
+        <template>
+          <article class="history-card">
+            <div class="history-main">
+              <strong>
+                <oj-bind-text
+                  value="[[$current.data.transactionReference]]">
+                </oj-bind-text>
+              </strong>
+
+              <span class="history-status">
+                <oj-bind-text value="[[$current.data.status]]"></oj-bind-text>
+              </span>
+            </div>
+
+            <div class="history-meta">
+              Transaction ID:
+              <oj-bind-text value="[[$current.data.transactionId]]"></oj-bind-text>
+            </div>
+
+            <div class="history-amount">
+              <oj-bind-text
+                value="[[formatReceiptAmount($current.data.amount, $current.data.currencyCode)]]">
+              </oj-bind-text>
+            </div>
+          </article>
+        </template>
+      </oj-bind-for-each>
+    </div>
+  </div>
+
+  <!-- Payment details form -->
+  <div
+    class="payment-panel"
+    data-bind="visible: screen() === 'form'">
+
+    <oj-button chroming="borderless" on-oj-action="[[backToCatalogue]]">
+      ← Back to billers
+    </oj-button>
+
+    <h1>Pay a bill</h1>
+
+    <p>
+      Biller:
+      <strong>
+        <oj-bind-text
+          value="[[selectedBiller() && selectedBiller().name]]">
+        </oj-bind-text>
+      </strong>
+    </p>
+
+    <p class="payment-error" role="alert">
+      <oj-bind-text value="[[paymentError]]"></oj-bind-text>
+    </p>
+
+    <label for="sourceAccount">Pay from</label>
+    <select
+      id="sourceAccount"
+      data-bind="
+        options: accounts,
+        optionsText: 'label',
+        optionsValue: 'accountId',
+        value: sourceAccountId">
+    </select>
+
+    <label for="billReference">
+      <oj-bind-text
+        value="[[selectedBiller() && selectedBiller().referenceLabel]]">
+      </oj-bind-text>
+    </label>
+
+    <input
+      id="billReference"
+      type="text"
+      maxlength="150"
+      autocomplete="off"
+      data-bind="value: billReference, valueUpdate: 'input'">
+
+    <label for="billAmount">Amount (INR)</label>
+    <input
+      id="billAmount"
+      type="number"
+      min="0.01"
+      step="0.01"
+      data-bind="value: amount, valueUpdate: 'input'">
+
+    <p class="biller-amount-hint">
+      Allowed amount:
+      <oj-bind-text
+        value="[[selectedBiller() && formatAmount(selectedBiller().minAmount)]]">
+      </oj-bind-text>
+      –
+      <oj-bind-text
+        value="[[selectedBiller() && formatAmount(selectedBiller().maxAmount)]]">
+      </oj-bind-text>
+    </p>
+
+    <oj-button
+      chroming="callToAction"
+      disabled="[[isLoading]]"
+      on-oj-action="[[reviewPayment]]">
+      Review payment
+    </oj-button>
+  </div>
+
+  <!-- Payment review -->
+  <div
+    class="payment-panel"
+    data-bind="visible: screen() === 'review'">
+
+    <h1>Review bill payment</h1>
+
+    <p class="payment-error" role="alert">
+      <oj-bind-text value="[[paymentError]]"></oj-bind-text>
+    </p>
+
+    <dl class="payment-review">
+      <dt>Biller</dt>
+      <dd>
+        <oj-bind-text
+          value="[[selectedBiller() && selectedBiller().name]]">
+        </oj-bind-text>
+      </dd>
+
+      <dt>Reference</dt>
+      <dd><oj-bind-text value="[[billReference]]"></oj-bind-text></dd>
+
+      <dt>Amount</dt>
+      <dd><oj-bind-text value="[[formatAmount(amount())]]"></oj-bind-text></dd>
+    </dl>
+
+    <oj-button chroming="borderless" on-oj-action="[[backToForm]]">
+      Edit
+    </oj-button>
+
+    <oj-button
+      chroming="callToAction"
+      disabled="[[isLoading]]"
+      on-oj-action="[[requestPaymentOtp]]">
+      Send OTP
+    </oj-button>
+  </div>
+
+  <!-- OTP confirmation -->
+  <div
+    class="payment-panel"
+    data-bind="visible: screen() === 'otp'">
+
+    <h1>Confirm payment</h1>
+    <p>Enter the 6-digit bill payment OTP sent to your registered contact.</p>
+
+    <p class="payment-error" role="alert">
+      <oj-bind-text value="[[paymentError]]"></oj-bind-text>
+    </p>
+
+    <label for="otpCode">OTP</label>
+    <input
+      id="otpCode"
+      type="text"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      maxlength="6"
+      pattern="[0-9]{6}"
+      data-bind="value: otpCode, valueUpdate: 'input'">
+
+    <oj-button chroming="borderless" on-oj-action="[[backToReview]]">
+      Back
+    </oj-button>
+
+    <oj-button
+      chroming="callToAction"
+      disabled="[[isLoading]]"
+      on-oj-action="[[submitPayment]]">
+      Confirm payment
+    </oj-button>
+  </div>
+
+  <!-- Payment receipt -->
+  <div
+    class="payment-panel"
+    data-bind="visible: screen() === 'receipt'">
+
+    <h1>Payment submitted</h1>
+
+    <dl class="payment-review">
+      <dt>Status</dt>
+      <dd>
+        <oj-bind-text value="[[receipt() && receipt().status]]"></oj-bind-text>
+      </dd>
+
+      <dt>Reference</dt>
+      <dd>
+        <oj-bind-text
+          value="[[receipt() && receipt().transactionReference]]">
+        </oj-bind-text>
+      </dd>
+
+      <dt>Amount</dt>
+      <dd>
+        <oj-bind-text
+          value="[[receipt() && formatReceiptAmount(receipt().amount, receipt().currencyCode)]]">
+        </oj-bind-text>
+      </dd>
+    </dl>
+
+    <oj-button
+      chroming="borderless"
+      on-oj-action="[[showHistory]]">
+      View payment history
+    </oj-button>
+
+    <oj-button
+      chroming="callToAction"
+      on-oj-action="[[backToCatalogue]]">
+      Back to billers
+    </oj-button>
+  </div>
+
+</div>

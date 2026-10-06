@@ -1,0 +1,70 @@
+<div class="nb-page feature-page">
+  <div data-bind="visible: screen() === 'list'">
+    <div class="feature-heading">
+      <div class="nb-page-head"><p class="nb-kicker feature-eyebrow">Borrowing</p><h1>My loans</h1><p class="nb-lede">View balances, due dates, and repayment history.</p></div>
+      <oj-button chroming="outlined" disabled="[[isLoading]]" on-oj-action="[[refresh]]">Refresh</oj-button>
+    </div>
+    <p class="feature-error" data-bind="visible: errorMessage" role="alert"><oj-bind-text value="[[errorMessage]]"></oj-bind-text></p>
+    <div class="feature-loading" data-bind="visible: isLoading" role="status"><oj-progress-circle size="sm" value="-1"></oj-progress-circle> Loading loans…</div>
+    <div class="feature-empty" data-bind="visible: !isLoading() && !errorMessage() && loans().length === 0"><h2>No loans found</h2></div>
+    <div class="loan-grid" data-bind="visible: !isLoading() && !errorMessage() && loans().length > 0">
+      <oj-bind-for-each data="[[loansProvider]]"><template>
+        <article class="loan-card">
+          <div class="loan-card-heading"><span class="loan-status"><oj-bind-text value="[[$current.data.loanType]]"></oj-bind-text></span><span class="loan-status"><oj-bind-text value="[[$current.data.status]]"></oj-bind-text></span></div>
+          <h2><oj-bind-text value="[[$current.data.loanAccountNumber]]"></oj-bind-text></h2>
+          <div class="loan-details">
+            <div><span>Original principal</span><strong><oj-bind-text value="[[money($current.data.principalAmount, $current.data.currencyCode)]]"></oj-bind-text></strong></div>
+            <div><span>Outstanding</span><strong><oj-bind-text value="[[money($current.data.outstandingPrincipal, $current.data.currencyCode)]]"></oj-bind-text></strong></div>
+            <div><span>Interest rate</span><strong><oj-bind-text value="[[$current.data.interestRate + '%']] "></oj-bind-text></strong></div>
+            <div><span>Monthly EMI</span><strong><oj-bind-text value="[[money($current.data.emiAmount, $current.data.currencyCode)]]"></oj-bind-text></strong></div>
+            <div><span>Next due</span><strong><oj-bind-text value="[[date($current.data.nextDueDate)]]"></oj-bind-text></strong></div>
+            <div><span>Maturity</span><strong><oj-bind-text value="[[date($current.data.maturityDate)]]"></oj-bind-text></strong></div>
+          </div>
+          <div class="loan-actions">
+            <oj-button chroming="outlined" on-oj-action="[[() => showHistory($current.data)]]">Repayment history</oj-button>
+            <oj-button chroming="callToAction" disabled="[[!isActiveLoan($current.data.status)]]" on-oj-action="[[() => openRepayment($current.data)]]">Make repayment</oj-button>
+          </div>
+        </article>
+      </template></oj-bind-for-each>
+    </div>
+  </div>
+
+  <div class="loan-panel" data-bind="visible: screen() === 'repay'">
+    <oj-button chroming="borderless" on-oj-action="[[backToLoans]]">← Back to loans</oj-button>
+    <h1>Make a repayment</h1>
+    <p>Outstanding: <strong><oj-bind-text value="[[selectedLoan() && money(selectedLoan().outstandingPrincipal, selectedLoan().currencyCode)]]"></oj-bind-text></strong></p>
+    <p class="feature-error" data-bind="visible: paymentError" role="alert"><oj-bind-text value="[[paymentError]]"></oj-bind-text></p>
+    <div class="loan-form">
+      <label for="loanAccount">Pay from</label>
+      <select id="loanAccount" data-bind="options: accounts, optionsText: function(a){return a.accountType + ' • ' + a.accountNumber + ' — ' + a.currencyCode + ' ' + a.availableBalance;}, optionsValue: 'accountId', value: sourceAccountId"></select>
+      <label for="repaymentAmount">Repayment amount</label>
+      <input id="repaymentAmount" type="number" min="0.0001" step="0.0001" data-bind="value: amount, valueUpdate: 'input'">
+      <oj-button chroming="callToAction" disabled="[[isLoading]]" on-oj-action="[[submitRepayment]]">Submit repayment</oj-button>
+    </div>
+  </div>
+
+  <div class="loan-panel" data-bind="visible: screen() === 'history'">
+    <oj-button chroming="borderless" on-oj-action="[[backToLoans]]">← Back to loans</oj-button>
+    <h1>Repayment history</h1>
+    <p class="feature-error" data-bind="visible: errorMessage" role="alert"><oj-bind-text value="[[errorMessage]]"></oj-bind-text></p>
+    <div class="feature-loading" data-bind="visible: isLoading" role="status">Loading repayments…</div>
+    <div class="feature-empty" data-bind="visible: !isLoading() && !errorMessage() && payments().length === 0">No repayments recorded.</div>
+    <oj-bind-for-each data="[[paymentsProvider]]"><template>
+      <article class="history-card"><div><strong><oj-bind-text value="[[$current.data.transactionReference]]"></oj-bind-text></strong><span class="history-meta"><oj-bind-text value="[[$current.data.status]]"></oj-bind-text> · <oj-bind-text value="[[date($current.data.paidAt)]]"></oj-bind-text></span></div><strong><oj-bind-text value="[[money($current.data.amount, $current.data.currencyCode)]]"></oj-bind-text></strong></article>
+    </template></oj-bind-for-each>
+    <div class="loan-actions">
+      <oj-button chroming="outlined" disabled="[[isLoading || paymentPage() === 0]]" on-oj-action="[[() => changeHistoryPage(paymentPage() - 1)]]">Previous</oj-button>
+      <span>Page <oj-bind-text value="[[paymentPage() + 1]]"></oj-bind-text> of <oj-bind-text value="[[displayPaymentPageCount()]]"></oj-bind-text></span>
+      <oj-button chroming="outlined" disabled="[[isLoading || paymentPage() + 1 >= paymentPageCount()]]" on-oj-action="[[() => changeHistoryPage(paymentPage() + 1)]]">Next</oj-button>
+    </div>
+  </div>
+
+  <div class="loan-panel" data-bind="visible: screen() === 'receipt'">
+    <h1>Repayment submitted</h1>
+    <p>Status: <strong><oj-bind-text value="[[receipt() && receipt().status]]"></oj-bind-text></strong></p>
+    <p>Reference: <oj-bind-text value="[[receipt() && receipt().transactionReference]]"></oj-bind-text></p>
+    <p>Amount: <oj-bind-text value="[[receipt() && money(receipt().amount, receipt().currencyCode)]]"></oj-bind-text></p>
+    <p>Outstanding after: <oj-bind-text value="[[receipt() && money(receipt().outstandingAfter, receipt().currencyCode)]]"></oj-bind-text></p>
+    <oj-button chroming="callToAction" on-oj-action="[[backToLoans]]">Back to loans</oj-button>
+  </div>
+</div>
