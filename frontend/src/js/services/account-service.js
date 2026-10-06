@@ -8,6 +8,10 @@ define([], function () {
       return apiClient.get('/api/v1/accounts');
     };
 
+    this.openForeignCurrency = function (currencyCode) {
+      return apiClient.post('/api/v1/accounts/foreign-currency', { currencyCode: currencyCode });
+    };
+
     this.getAccountById = function (accountId) {
       return apiClient.get('/api/v1/accounts/' + encodeURIComponent(accountId));
     };
@@ -16,8 +20,8 @@ define([], function () {
       return apiClient.get('/api/v1/accounts/' + encodeURIComponent(accountId) + '/transactions');
     };
 
-    this.downloadStatement = function (accountId) {
-      return apiClient.get('/api/v1/accounts/' + encodeURIComponent(accountId) + '/statement.csv');
+    this.downloadStatement = function (accountId, query) {
+      return apiClient.get('/api/v1/accounts/' + encodeURIComponent(accountId) + '/statement.csv' + (query || ''));
     };
 
     this.getStatement = function (accountId, query) {
