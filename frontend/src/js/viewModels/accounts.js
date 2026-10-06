@@ -1,52 +1,46 @@
 define([
   'knockout',
   '../accUtils',
-  'ojs/ojbutton'
-], function (ko, accUtils) {
+  '../services/registry',
+  '../services/format',
+  '../services/member2-style',
+  'oj-c/button'
+], function (ko, accUtils, registry, format) {
   function AccountsViewModel() {
     var self = this;
-
-    self.accountStatus = ko.observable('Sample account data is displayed.');
-    self.lastUpdated = ko.observable(self.formatDateTime(new Date()));
-
-    self.accounts = ko.observableArray([
-      {
-        accountName: 'Savings Account',
-        accountNumber: '•••• 1001',
-        balance: '₹ 25,000.00',
-        status: 'ACTIVE'
-      },
-      {
-        accountName: 'Current Account',
-        accountNumber: '•••• 2001',
-        balance: '₹ 10,500.00',
-        status: 'ACTIVE'
-      }
-    ]);
+    var requestId = 0;
+    self.accounts = ko.observableArray([]);
+    self.loading = ko.observable(false);
+    self.error = ko.observable('');
+    self.lastUpdated = ko.observable('');
+    self.money = format.formatMoney;
+    self.mask = format.maskAccount;
+    self.label = format.labelize;
 
     self.refreshAccounts = function () {
-      self.accountStatus(
-        'Account summary refreshed. Backend data will be connected through the shared API client.'
-      );
-      self.lastUpdated(self.formatDateTime(new Date()));
+      var current = ++requestId;
+      self.loading(true);
+      self.error('');
+      registry.accounts.getAccounts().then(function (rows) {
+        if (current !== requestId) return;
+        self.accounts(format.asList(rows));
+        self.lastUpdated(format.formatDateTime(new Date()));
+      }).catch(function (error) {
+        if (current !== requestId) return;
+        self.error(error.message || 'Unable to load accounts.');
+        self.accounts([]);
+      }).finally(function () {
+        if (current === requestId) self.loading(false);
+      });
     };
 
     self.connected = function () {
-      accUtils.announce('Accounts page loaded.', 'assertive');
-      document.title = 'My Accounts';
+      accUtils.announce('Accounts page loaded.', 'polite');
+      document.title = 'Accounts | Internet Banking';
+      self.refreshAccounts();
     };
-
-    self.disconnected = function () {};
-
-    self.transitionCompleted = function () {};
+    self.disconnected = function () { requestId += 1; };
   }
-
-  AccountsViewModel.prototype.formatDateTime = function (date) {
-    return new Intl.DateTimeFormat('en-IN', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(date);
-  };
 
   return AccountsViewModel;
 });

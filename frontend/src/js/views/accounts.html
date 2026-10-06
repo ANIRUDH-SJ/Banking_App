@@ -1,38 +1,31 @@
-<div class="oj-hybrid-padding">
-  <div class="oj-flex oj-sm-align-items-center oj-sm-justify-content-space-between">
-    <div>
-      <h1>My Accounts</h1>
-      <p class="oj-typography-body-md">
-        Review account balances and account status in one place.
-      </p>
-    </div>
+<div class="nb-page">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Your money</p>
+    <h1>Accounts</h1>
+    <p class="nb-lede">Balances and status come directly from the bank's account records.</p>
+  </header>
 
-    <oj-button id="refreshAccountsButton" on-oj-action="[[refreshAccounts]]">
-      Refresh
-    </oj-button>
+  <div class="nb-actions">
+    <oj-c-button chroming="outlined" label="Refresh balances" disabled="[[loading]]" on-oj-action="[[refreshAccounts]]"></oj-c-button>
+    <span class="nb-hint" data-bind="visible: lastUpdated">Updated <span data-bind="text: lastUpdated"></span></span>
   </div>
 
-  <p class="oj-typography-body-sm" aria-live="polite">
-    <span data-bind="text: accountStatus"></span>
-    <span> Last updated: </span>
-    <span data-bind="text: lastUpdated"></span>
-  </p>
+  <p class="nb-status" role="status" data-bind="visible: loading">Loading accounts…</p>
+  <div class="nb-alert" role="alert" data-bind="visible: error">
+    <span class="nb-alert-text" data-bind="text: error"></span>
+  </div>
+  <div class="nb-empty-panel" data-bind="visible: !loading() && !error() && accounts().length === 0">
+    <strong>No accounts available</strong>
+    <span>Accounts linked to your customer profile will appear here.</span>
+  </div>
 
-  <p class="oj-typography-body-md" data-bind="visible: accounts().length === 0">
-    No accounts are available for this customer.
-  </p>
-
-  <div class="oj-flex oj-sm-flex-wrap-wrap oj-sm-margin-6x-top" data-bind="foreach: accounts">
-    <div class="oj-flex-item oj-sm-12 oj-md-6 oj-lg-4 oj-sm-padding-2x">
-      <section class="member2-card">
-        <h2 class="oj-typography-heading-sm" data-bind="text: accountName"></h2>
-        <p class="oj-typography-body-sm" data-bind="text: accountNumber"></p>
-
-        <p class="oj-typography-body-lg" data-bind="text: balance"></p>
-        <p class="oj-typography-body-sm">
-          Available balance · <span data-bind="text: status"></span>
-        </p>
-      </section>
-    </div>
+  <div class="member2-grid" data-bind="visible: !loading() && !error(), foreach: accounts">
+    <article class="member2-card">
+      <h2 data-bind="text: $parent.label(accountType) + ' account'"></h2>
+      <p class="nb-mono member2-meta" data-bind="text: $parent.mask(accountNumber)"></p>
+      <p class="member2-balance" data-bind="text: $parent.money(currentBalance, currencyCode)"></p>
+      <p class="member2-meta">Available <strong data-bind="text: $parent.money(availableBalance, currencyCode)"></strong></p>
+      <p class="member2-meta">Status <strong data-bind="text: $parent.label(accountStatus)"></strong></p>
+    </article>
   </div>
 </div>

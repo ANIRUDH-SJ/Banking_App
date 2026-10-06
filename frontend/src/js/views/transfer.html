@@ -1,50 +1,75 @@
-<div class="oj-hybrid-padding">
-  <h1>Transfer Money</h1>
-  <p class="oj-typography-body-md">Review every detail before confirming with a one-time password.</p>
+<div class="nb-page">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Transfers</p>
+    <h1>Transfer money</h1>
+    <p class="nb-lede">Review the amount and verified recipient before requesting a one-time code.</p>
+  </header>
 
-  <p class="oj-typography-body-sm" aria-live="polite" data-bind="text: message"></p>
+  <div class="nb-alert" role="alert" data-bind="visible: error">
+    <span class="nb-alert-text" data-bind="text: error"></span>
+  </div>
+  <p class="nb-success" role="status" data-bind="visible: message, text: message"></p>
+  <p class="nb-status" role="status" data-bind="visible: loading">Loading your accounts and beneficiaries…</p>
 
-  <form class="member2-form oj-sm-margin-4x-top" data-bind="visible: step() === 'form', submit: reviewTransfer">
-    <h2 class="oj-typography-heading-sm">Transfer details</h2>
-    <label>From account
-      <select class="oj-form-control" data-bind="value: sourceAccountId">
-        <!-- ko foreach: accounts --><option data-bind="value: accountId, text: label"></option><!-- /ko -->
-      </select>
+  <div class="nb-empty-panel" data-bind="visible: !loading() && (!accounts().length || !beneficiaries().length)">
+    <strong>Transfer setup needed</strong>
+    <span>You need an active INR account and a verified beneficiary to transfer money.</span>
+  </div>
+
+  <form class="member2-form nb-sheet" data-bind="visible: !loading() && accounts().length && beneficiaries().length && step() === 'form', submit: reviewTransfer">
+    <h2 class="nb-form-section">Transfer details</h2>
+    <label for="transferFrom">From account
+      <select id="transferFrom" data-bind="options: accounts, optionsText: accountLabel, optionsValue: 'accountId', value: sourceAccountId"></select>
     </label>
-    <label>To beneficiary
-      <select class="oj-form-control" data-bind="value: beneficiaryId">
-        <!-- ko foreach: beneficiaries --><option data-bind="value: beneficiaryId, text: label"></option><!-- /ko -->
-      </select>
+    <label for="transferTo">To beneficiary
+      <select id="transferTo" data-bind="options: beneficiaries, optionsText: beneficiaryLabel, optionsValue: 'beneficiaryId', value: beneficiaryId"></select>
     </label>
-    <label>Amount (INR)<input class="oj-form-control" type="number" min="0.01" step="0.01" inputmode="decimal" data-bind="value: amount" /></label>
-    <label>Narration (optional)<input class="oj-form-control" maxlength="500" data-bind="value: narration" /></label>
-    <oj-button type="submit">Review transfer</oj-button>
+    <label for="transferAmount">Amount (INR)
+      <input id="transferAmount" type="number" min="0.01" step="0.0001" inputmode="decimal" required data-bind="value: amount">
+    </label>
+    <label for="transferNarration">Narration (optional)
+      <input id="transferNarration" maxlength="500" data-bind="value: narration">
+    </label>
+    <div class="nb-actions">
+      <oj-c-button button-type="submit" chroming="callToAction" label="Review transfer" disabled="[[busy]]"></oj-c-button>
+    </div>
   </form>
 
-  <section class="member2-review oj-sm-margin-4x-top" data-bind="visible: step() === 'review'">
-    <h2 class="oj-typography-heading-sm">Review transfer</h2>
+  <section class="member2-panel member2-review" data-bind="visible: step() === 'review'">
+    <h2>Review transfer</h2>
     <dl>
       <dt>From</dt><dd data-bind="text: selectedAccountLabel"></dd>
       <dt>To</dt><dd data-bind="text: selectedBeneficiaryLabel"></dd>
       <dt>Amount</dt><dd data-bind="text: formattedAmount"></dd>
-      <dt>Narration</dt><dd data-bind="text: narration"></dd>
+      <dt>Narration</dt><dd data-bind="text: narration() || '—'"></dd>
     </dl>
-    <oj-button on-oj-action="[[backToForm]]">Back</oj-button>
-    <oj-button on-oj-action="[[requestOtp]]">Request OTP</oj-button>
+    <div class="member2-actions">
+      <oj-c-button chroming="outlined" label="Edit details" disabled="[[busy]]" on-oj-action="[[backToForm]]"></oj-c-button>
+      <oj-c-button chroming="callToAction" label="Send one-time code" disabled="[[busy]]" on-oj-action="[[requestOtp]]"></oj-c-button>
+    </div>
   </section>
 
-  <form class="member2-form oj-sm-margin-4x-top" data-bind="visible: step() === 'otp', submit: confirmTransfer">
-    <h2 class="oj-typography-heading-sm">Confirm transfer</h2>
-    <p>Enter the six-digit OTP supplied through the shared OTP flow.</p>
-    <label>OTP<input class="oj-form-control" inputmode="numeric" maxlength="6" data-bind="value: otpCode" /></label>
-    <oj-button type="submit">Confirm transfer</oj-button>
+  <form class="member2-form nb-sheet" data-bind="visible: step() === 'otp', submit: confirmTransfer">
+    <h2 class="nb-form-section">Confirm transfer</h2>
+    <p>Enter the six-digit code sent for this transfer. Do not share it with anyone.</p>
+    <label for="transferCode">One-time code
+      <input id="transferCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required data-bind="value: otpCode">
+    </label>
+    <div class="member2-actions">
+      <oj-c-button button-type="submit" chroming="callToAction" label="Confirm transfer" disabled="[[busy]]"></oj-c-button>
+      <oj-c-button chroming="outlined" label="Edit details" disabled="[[busy]]" on-oj-action="[[backToForm]]"></oj-c-button>
+    </div>
   </form>
 
-  <section class="member2-review oj-sm-margin-4x-top" data-bind="visible: step() === 'receipt'">
-    <h2 class="oj-typography-heading-sm">Transfer completed</h2>
-    <p><strong>Reference:</strong> <span data-bind="text: receiptReference"></span></p>
-    <p><strong>Amount:</strong> <span data-bind="text: formattedAmount"></span></p>
-    <p><strong>Status:</strong> COMPLETED</p>
-    <oj-button on-oj-action="[[startAnotherTransfer]]">Make another transfer</oj-button>
+  <section class="member2-panel member2-review" data-bind="visible: step() === 'receipt'">
+    <h2>Transfer submitted</h2>
+    <dl>
+      <dt>Reference</dt><dd class="nb-mono" data-bind="text: receipt() && receipt().transactionReference"></dd>
+      <dt>Amount</dt><dd data-bind="text: receipt() && money(receipt().amount, receipt().currencyCode)"></dd>
+      <dt>Status</dt><dd data-bind="text: receipt() && receipt().status"></dd>
+    </dl>
+    <div class="nb-actions">
+      <oj-c-button chroming="outlined" label="Make another transfer" on-oj-action="[[startAnotherTransfer]]"></oj-c-button>
+    </div>
   </section>
 </div>

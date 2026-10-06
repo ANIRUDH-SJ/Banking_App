@@ -1,52 +1,54 @@
-<div class="oj-hybrid-padding">
-  <h1>Transaction History</h1>
-  <p class="oj-typography-body-md">Filter activity and prepare a statement export.</p>
+<div class="nb-page">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Account activity</p>
+    <h1>Transactions</h1>
+    <p class="nb-lede">Review posted entries, filter by date, and download a full account statement.</p>
+  </header>
 
-  <form class="oj-flex oj-sm-flex-wrap-wrap oj-sm-margin-4x-top" data-bind="submit: applyFilters">
-    <label class="oj-flex-item oj-sm-12 oj-md-3 oj-sm-padding-2x">
-      Account
-      <select class="oj-form-control" data-bind="value: selectedAccountId">
-        <!-- ko foreach: accountOptions -->
-        <option data-bind="value: id, text: label"></option>
-        <!-- /ko -->
-      </select>
-    </label>
-    <label class="oj-flex-item oj-sm-12 oj-md-3 oj-sm-padding-2x">
-      Search narration or reference
-      <input class="oj-form-control" type="search" data-bind="value: searchText" />
-    </label>
-    <label class="oj-flex-item oj-sm-12 oj-md-2 oj-sm-padding-2x">
-      From
-      <input class="oj-form-control" type="date" data-bind="value: fromDate" />
-    </label>
-    <label class="oj-flex-item oj-sm-12 oj-md-2 oj-sm-padding-2x">
-      To
-      <input class="oj-form-control" type="date" data-bind="value: toDate" />
-    </label>
-    <div class="oj-flex-item oj-sm-12 oj-md-2 oj-sm-padding-2x member2-form-actions">
-      <oj-button type="submit">Apply filters</oj-button>
-      <oj-button on-oj-action="[[exportStatement]]">Export CSV</oj-button>
+  <form class="member2-form nb-sheet" data-bind="submit: applyFilters">
+    <div class="member2-toolbar">
+      <label for="transactionsAccount">Account
+        <select id="transactionsAccount" data-bind="options: accounts, optionsText: accountLabel, optionsValue: 'accountId', value: selectedAccountId"></select>
+      </label>
+      <label for="transactionsSearch">Search visible entries
+        <input id="transactionsSearch" type="search" data-bind="value: searchText, valueUpdate: 'input'">
+      </label>
+      <label for="transactionsFrom">From
+        <input id="transactionsFrom" type="date" data-bind="value: fromDate">
+      </label>
+      <label for="transactionsTo">To
+        <input id="transactionsTo" type="date" data-bind="value: toDate">
+      </label>
+    </div>
+    <div class="member2-actions">
+      <oj-c-button button-type="submit" chroming="callToAction" label="Apply filters" disabled="[[loading]]"></oj-c-button>
+      <oj-c-button chroming="outlined" label="Export CSV" disabled="[[exporting]]" on-oj-action="[[exportStatement]]"></oj-c-button>
     </div>
   </form>
 
-  <p class="oj-typography-body-sm" aria-live="polite" data-bind="text: message"></p>
+  <p class="nb-status" role="status" data-bind="visible: loading">Loading transactions…</p>
+  <div class="nb-alert" role="alert" data-bind="visible: error">
+    <span class="nb-alert-text" data-bind="text: error"></span>
+  </div>
+  <p class="nb-hint" role="status" data-bind="visible: message, text: message"></p>
+  <div class="nb-empty-panel" data-bind="visible: !loading() && !error() && filteredTransactions().length === 0">
+    <strong>No matching transactions</strong>
+    <span>Try another date range or search term.</span>
+  </div>
 
-  <div class="oj-sm-margin-4x-top" data-bind="if: filteredTransactions().length">
-    <table class="oj-table member2-table">
-      <thead>
-        <tr><th>Date</th><th>Reference</th><th>Narration</th><th>Type</th><th class="member2-align-right">Amount</th><th>Status</th></tr>
-      </thead>
+  <div class="member2-table-wrap" data-bind="visible: !loading() && !error() && filteredTransactions().length > 0">
+    <table class="member2-table">
+      <thead><tr><th>Date</th><th>Reference</th><th>Narration</th><th>Type</th><th class="member2-align-right">Amount</th><th>Status</th></tr></thead>
       <tbody data-bind="foreach: filteredTransactions">
         <tr>
-          <td data-bind="text: postedAt"></td>
-          <td data-bind="text: reference"></td>
-          <td data-bind="text: narration"></td>
+          <td data-bind="text: $parent.dateTime(postedAt)"></td>
+          <td class="nb-mono" data-bind="text: reference"></td>
+          <td data-bind="text: narration || '—'"></td>
           <td data-bind="text: type"></td>
-          <td class="member2-align-right" data-bind="text: amount"></td>
+          <td class="member2-align-right" data-bind="text: $parent.money(amount, currencyCode)"></td>
           <td data-bind="text: status"></td>
         </tr>
       </tbody>
     </table>
   </div>
-  <p class="oj-typography-body-md" data-bind="ifnot: filteredTransactions().length">No transactions match these filters.</p>
 </div>
