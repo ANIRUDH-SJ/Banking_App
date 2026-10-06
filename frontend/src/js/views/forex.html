@@ -1,11 +1,119 @@
-<div class="nb-page nb-product-page">
-  <header class="nb-hero nb-product-hero"><div class="nb-hero-text"><p class="nb-eyebrow">Foreign exchange</p><h1 class="nb-hero-title">Move money between your currencies</h1><p class="nb-hero-copy">See an exact rate first, then confirm your conversion with a one-time code.</p></div></header>
-  <p class="nb-alert" role="alert" data-bind="visible: error"><span data-bind="text: error"></span></p><p class="nb-product-message" role="status" data-bind="visible: message, text: message"></p>
-  <section class="nb-sheet nb-product-form" data-bind="visible: step() === 'form'"><div class="nb-sheet-head"><div><h2>Get an exchange quote</h2><p class="nb-sheet-sub">Quotes use the bank's configured rate and expire shortly after they are issued.</p></div></div>
-    <form class="nb-form nb-product-grid" data-bind="submit: requestQuote"><label>From<select class="nb-control" required data-bind="options: sourceAccounts, optionsText: accountLabel, optionsValue: 'accountId', value: sourceAccountId, optionsCaption: 'Choose an account'"></select></label><label>To<select class="nb-control" required data-bind="options: destinationAccounts, optionsText: accountLabel, optionsValue: 'accountId', value: destinationAccountId, optionsCaption: 'Choose another currency account'"></select></label><label>Amount<input class="nb-control" type="number" inputmode="decimal" min="0.01" step="0.01" required data-bind="value: amount" /></label><div class="nb-form-actions"><oj-c-button chroming="callToAction" type="submit" label="Get exchange quote"></oj-c-button></div></form>
-  </section>
-  <section class="nb-sheet nb-product-review" data-bind="visible: step() === 'review', with: quote"><div class="nb-sheet-head"><div><p class="nb-eyebrow">Exchange quote</p><h2><span data-bind="text: sourceCurrency"></span> to <span data-bind="text: destinationCurrency"></span></h2><p class="nb-sheet-sub">Confirm before the rate expires.</p></div><oj-c-badge size="sm" variant="warningSubtle" label="Rate held"></oj-c-badge></div><dl class="nb-summary-list"><dt>You send</dt><dd data-bind="text: $parent.money(sourceAmount, sourceCurrency)"></dd><dt>You receive</dt><dd data-bind="text: $parent.money(destinationAmount, destinationCurrency)"></dd><dt>Exchange rate</dt><dd data-bind="text: $parent.quoteRate"></dd><dt>Quote expires</dt><dd data-bind="text: $parent.date(expiresAt)"></dd></dl><p class="nb-disclosure">This is a demonstration rate supplied by the bank. No conversion happens until you enter the one-time code.</p><div class="nb-form-actions"><oj-c-button chroming="outlined" label="Change details" on-oj-action="[[$parent.backToForm]]"></oj-c-button><oj-c-button chroming="callToAction" label="Send one-time code" on-oj-action="[[$parent.requestOtp]]"></oj-c-button></div></section>
-  <section class="nb-sheet nb-product-review" data-bind="visible: step() === 'otp'"><div class="nb-sheet-head"><div><p class="nb-eyebrow">Secure confirmation</p><h2>Enter your one-time code</h2><p class="nb-sheet-sub">For your protection, conversions need a six-digit code.</p></div></div><form class="nb-form" data-bind="submit: confirm"><label>One-time code<input class="nb-control" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required data-bind="value: otpCode" /></label><div class="nb-form-actions"><oj-c-button chroming="callToAction" type="submit" label="Confirm conversion"></oj-c-button></div></form></section>
-  <section class="nb-sheet nb-product-review" data-bind="visible: step() === 'receipt', with: receipt"><div class="nb-sheet-head"><div><p class="nb-eyebrow">Conversion complete</p><h2>Funds have been exchanged</h2><p class="nb-sheet-sub">Both accounts have been updated.</p></div><oj-c-badge size="sm" variant="successSubtle" label="Completed"></oj-c-badge></div><dl class="nb-summary-list"><dt>Debited</dt><dd data-bind="text: $parent.money(sourceAmount, sourceCurrency)"></dd><dt>Credited</dt><dd data-bind="text: $parent.money(destinationAmount, destinationCurrency)"></dd><dt>Debit reference</dt><dd data-bind="text: debitReference"></dd><dt>Credit reference</dt><dd data-bind="text: creditReference"></dd></dl><div class="nb-form-actions"><oj-c-button chroming="callToAction" label="Make another conversion" on-oj-action="[[$parent.startAgain]]"></oj-c-button></div></section>
-  <section class="nb-sheet" aria-labelledby="forex-history"><div class="nb-sheet-head"><div><h2 id="forex-history">Conversion history</h2><p class="nb-sheet-sub">Your most recent currency exchanges.</p></div></div><div class="nb-empty-panel" data-bind="visible: !loading() && history().length === 0"><p><strong>No conversions yet.</strong></p><p>Completed exchanges will appear here.</p></div><ul class="nb-product-list" data-bind="foreach: history"><li><div><strong><span data-bind="text: sourceCurrency"></span> → <span data-bind="text: destinationCurrency"></span></strong><span data-bind="text: $parent.label(status)"></span></div><div><strong data-bind="text: $parent.money(destinationAmount, destinationCurrency)"></strong><span data-bind="text: creditReference"></span></div></li></ul></section>
+<div class="nb-page nb-forexdesk">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Products</p>
+    <h1>Foreign exchange</h1>
+    <p class="nb-lede">Move money between your rupee account and your US dollar, euro or pound wallets. You see the exact rate before you confirm, and each rate is held for two minutes.</p>
+  </header>
+
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
+  </div>
+
+  <div class="nb-work">
+    <section class="nb-sheet nb-flow-sheet" aria-label="Currency conversion">
+      <ol class="nb-flow" aria-label="Conversion steps" data-bind="visible: !flow.is(3), foreach: flow.names">
+        <li data-bind="css: $parent.flow.stateOf($index()), attr: { 'aria-current': $parent.flow.is($index()) ? 'step' : null }">
+          <span class="nb-flow-no" data-bind="text: $index() + 1" aria-hidden="true"></span>
+          <span class="nb-flow-name" data-bind="text: $data"></span>
+        </li>
+      </ol>
+
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(0), submit: getRate">
+        <h2 tabindex="-1">What are you converting?</h2>
+        <div class="nb-note is-warn" data-bind="visible: !loading() && !hasWallet()">
+          <span class="nb-icon i-forex" aria-hidden="true"></span>
+          <span>You need a foreign currency wallet to convert into. <a href="#" data-bind="click: openAccounts">Open a USD, EUR or GBP wallet</a> from Accounts.</span>
+        </div>
+        <div class="nb-swap">
+          <oj-c-select-single label-hint="From" data="[[sourceOptions]]" item-text="label" value="{{sourceAccountId}}" messages-custom="[[sourceMessages]]"></oj-c-select-single>
+          <span class="nb-icon i-forex" aria-hidden="true"></span>
+          <oj-c-select-single label-hint="To" data="[[destinationOptions]]" item-text="label" value="{{destinationAccountId}}" messages-custom="[[destinationMessages]]" placeholder="Choose an account"></oj-c-select-single>
+        </div>
+        <oj-c-form-layout max-columns="1" label-edge="top" user-assistance-density="reflow">
+          <oj-c-input-number class="nb-amount-input" converter="[[amountConverter]]" label-hint="[[source() ? 'Amount in ' + source().currencyCode : 'Amount']]" value="{{amount}}" input-prefix="[[prefix]]" min="0" step="0" messages-custom="[[amountMessages]]"></oj-c-input-number>
+        </oj-c-form-layout>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Fetching rate…' : 'Get rate']]" disabled="[[busy() || loading() || !hasWallet()]]"></oj-c-button>
+        </div>
+      </form>
+
+      <!-- ko if: flow.is(1) && quote() -->
+      <div class="nb-flow-panel">
+        <h2 tabindex="-1">Your rate</h2>
+        <p class="nb-rate"><b data-bind="text: rateLine"></b><span data-bind="text: inverseLine"></span></p>
+        <dl class="nb-quote">
+          <div><dt>You convert</dt><dd data-bind="text: money(quote().sourceAmount, quote().sourceCurrency)"></dd></div>
+          <div><dt>You receive</dt><dd data-bind="text: money(quote().destinationAmount, quote().destinationCurrency)"></dd></div>
+          <div><dt>Rate held for</dt><dd data-bind="text: expired() ? 'Expired' : countdown()"></dd></div>
+          <p class="nb-quote-foot" data-bind="text: 'Rate source: ' + label(quote().rateSource || 'bank') + '. No separate fee is charged.'"></p>
+        </dl>
+        <p class="nb-note"><span class="nb-icon i-shield" aria-hidden="true"></span><span>We will send a one-time code to your registered email and mobile. The conversion happens only after you enter it.</span></p>
+        <div class="nb-actions">
+          <!-- ko ifnot: expired -->
+          <oj-c-button chroming="callToAction" label="[[busy() ? 'Sending code…' : 'Send code']]" disabled="[[busy]]" on-oj-action="[[sendCode]]"></oj-c-button>
+          <!-- /ko -->
+          <!-- ko if: expired -->
+          <oj-c-button chroming="callToAction" label="Get a new rate" disabled="[[busy]]" on-oj-action="[[getRate]]"></oj-c-button>
+          <!-- /ko -->
+          <oj-c-button chroming="borderless" label="Change amount" on-oj-action="[[back]]"></oj-c-button>
+        </div>
+      </div>
+      <!-- /ko -->
+
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(2), submit: convert">
+        <h2 tabindex="-1">Enter your one-time code</h2>
+        <p class="nb-hint" data-bind="text: expired() ? 'The rate has expired. Go back and get a new rate.' : 'Sent to your registered email and mobile. The rate is held for another ' + countdown() + '.'"></p>
+        <div class="nb-otp">
+          <oj-c-input-text class="nb-code-input" label-hint="6-digit code" value="{{otpCode}}" messages-custom="[[otpMessages]]" length.max="6" virtual-keyboard="number" autocomplete="one-time-code"></oj-c-input-text>
+        </div>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Converting…' : 'Convert']]" disabled="[[busy() || expired()]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Start again" on-oj-action="[[back]]"></oj-c-button>
+        </div>
+      </form>
+
+      <!-- ko if: flow.is(3) && receipt() -->
+      <div class="nb-flow-panel nb-receipt" role="status">
+        <span class="nb-done-mark" aria-hidden="true"></span>
+        <h2 tabindex="-1">Conversion complete</h2>
+        <p class="nb-review-figure" data-bind="text: money(receipt().destinationAmount, receipt().destinationCurrency)"></p>
+        <dl class="nb-review">
+          <div><dt>Converted</dt><dd data-bind="text: money(receipt().sourceAmount, receipt().sourceCurrency)"></dd></div>
+          <div><dt>Rate</dt><dd data-bind="text: rateLine"></dd></div>
+          <div><dt>Status</dt><dd><oj-c-badge size="sm" variant="[[statusVariant(receipt().status)]]" label="[[label(receipt().status)]]"></oj-c-badge></dd></div>
+          <div><dt>Debit reference</dt><dd class="nb-mono" data-bind="text: receipt().debitReference || '—'"></dd></div>
+        </dl>
+        <div class="nb-actions">
+          <oj-c-button chroming="callToAction" label="Convert again" on-oj-action="[[again]]"></oj-c-button>
+          <oj-c-button chroming="outlined" label="View accounts" on-oj-action="[[openAccounts]]"></oj-c-button>
+        </div>
+      </div>
+      <!-- /ko -->
+    </section>
+
+    <aside class="nb-sheet nb-aside" aria-labelledby="fx-history-heading">
+      <div class="nb-sheet-head">
+        <h2 id="fx-history-heading">Recent conversions</h2>
+      </div>
+      <div class="nb-rail-skeleton" data-bind="visible: historyLoading" aria-hidden="true">
+        <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+      </div>
+      <p class="nb-rail-error" role="alert" data-bind="visible: historyError, text: historyError"></p>
+      <p class="nb-rail-empty" data-bind="visible: !historyLoading() && !historyError() && history().length === 0">Conversions you make will be listed here.</p>
+      <ul class="nb-rows" data-bind="visible: !historyLoading(), foreach: history">
+        <li class="nb-row">
+          <span class="nb-row-glyph i-forex" aria-hidden="true"></span>
+          <span class="nb-row-main">
+            <span class="nb-row-title" data-bind="text: sourceCurrency + ' to ' + destinationCurrency"></span>
+            <span class="nb-row-meta">
+              <span data-bind="text: $parent.money(sourceAmount, sourceCurrency)"></span>
+              <span data-bind="visible: $data.createdAt, text: $parent.when($data.createdAt)"></span>
+            </span>
+          </span>
+          <span class="nb-row-amount" data-bind="text: $parent.money(destinationAmount, destinationCurrency)"></span>
+        </li>
+      </ul>
+    </aside>
+  </div>
 </div>

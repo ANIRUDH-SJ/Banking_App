@@ -1,120 +1,69 @@
-<div class="nb-page cards-page">
-  <div class="cards-heading">
-    <div class="nb-page-head">
-      <p class="nb-kicker cards-eyebrow">Card services</p>
-      <h1>My cards</h1>
-      <p class="nb-lede cards-intro">
-        View your cards and manage their available status controls.
-      </p>
-    </div>
+<div class="nb-page nb-cardsdesk">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Products</p>
+    <h1>Cards</h1>
+    <p class="nb-lede">Debit and credit cards linked to your accounts. Block a card at once if it is lost, and unblock it when it turns up.</p>
+  </header>
 
-    <oj-button
-      chroming="outlined"
-      disabled="[[isLoading]]"
-      on-oj-action="[[refresh]]">
-      Refresh
-    </oj-button>
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
+  </div>
+  <p class="nb-success" role="status" data-bind="visible: success, text: success"></p>
+
+  <div class="nb-paycards" data-bind="visible: loading" aria-hidden="true">
+    <!-- ko foreach: [1, 2] -->
+    <div class="nb-sheet nb-paycard-sheet"><oj-c-skeleton height="12rem" border-radius="12px"></oj-c-skeleton><oj-c-skeleton height="0.875rem" width="60%"></oj-c-skeleton></div>
+    <!-- /ko -->
   </div>
 
-  <div
-    class="cards-message cards-loading"
-    data-bind="visible: isLoading"
-    role="status"
-    aria-live="polite">
-    <oj-progress-circle size="sm" value="-1"></oj-progress-circle>
-    <span>Loading cards…</span>
+  <div class="nb-empty-panel" data-bind="visible: !loading() && !problem.text() && cards().length === 0">
+    <span class="nb-empty-glyph i-cards" aria-hidden="true"></span>
+    <p><strong>No cards on your profile</strong></p>
+    <p>Cards issued against your accounts will appear here.</p>
   </div>
 
-  <div
-    class="cards-message cards-error"
-    data-bind="visible: errorMessage"
-    role="alert">
-    <span data-bind="text: errorMessage"></span>
-    <oj-button chroming="borderless" on-oj-action="[[refresh]]">
-      Try again
-    </oj-button>
-  </div>
-
-  <div
-    class="cards-message"
-    data-bind="visible: !isLoading() && !errorMessage() && cards().length === 0">
-    <h2>No cards found</h2>
-    <p>Cards linked to your account will appear here.</p>
-  </div>
-
-  <div
-    class="cards-grid"
-    data-bind="visible: !isLoading() && !errorMessage() && cards().length > 0">
-
-    <oj-bind-for-each data="[[cardsProvider]]">
-      <template>
-        <article class="bank-card">
-          <div class="bank-card-top">
-            <span class="bank-card-network">
-              <oj-bind-text value="[[$current.data.cardNetwork]]"></oj-bind-text>
-            </span>
-            <span class="bank-card-status"
-                  data-bind="css: statusClass($current.data.status)">
-              <oj-bind-text value="[[$current.data.status]]"></oj-bind-text>
-            </span>
+  <ul class="nb-paycards" data-bind="foreach: cards">
+    <li class="nb-sheet nb-paycard-sheet">
+      <div class="nb-paycard" data-bind="css: { 'is-credit': cardType === 'CREDIT', 'is-off': status !== 'ACTIVE' }" aria-hidden="true">
+        <div class="nb-paycard-top">
+          <span data-bind="text: $parent.label(cardType) + ' card'"></span>
+          <span class="nb-paycard-network" data-bind="text: $parent.network($data)"></span>
+        </div>
+        <span class="nb-paycard-chip"></span>
+        <div>
+          <p class="nb-paycard-number" data-bind="text: maskedCardNumber"></p>
+          <div class="nb-paycard-foot">
+            <span>Valid thru <b data-bind="text: $parent.expiry($data)"></b></span>
+            <span>Internet Banking</span>
           </div>
+        </div>
+      </div>
 
-          <p class="bank-card-type">
-            <oj-bind-text value="[[$current.data.cardType]]"></oj-bind-text>
-          </p>
+      <div class="nb-product-head">
+        <div>
+          <p class="nb-choice-name" data-bind="text: $parent.label(cardType) + ' card ' + maskedCardNumber.slice(-4)"></p>
+          <p class="nb-choice-meta" data-bind="text: $parent.network($data) + ' · linked to ' + $parent.linked($data)"></p>
+        </div>
+        <oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge>
+      </div>
 
-          <p class="bank-card-number" aria-label="Masked card number">
-            <oj-bind-text value="[[$current.data.maskedCardNumber]]"></oj-bind-text>
-          </p>
-
-          <div class="bank-card-details">
-            <span>
-              Expires
-              <strong>
-                <oj-bind-text
-                  value="[[formatExpiry($current.data.expiryMonth, $current.data.expiryYear)]]">
-                </oj-bind-text>
-              </strong>
-            </span>
-            <span>
-              Account
-              <strong>
-                <oj-bind-text value="[[$current.data.accountId]]"></oj-bind-text>
-              </strong>
-            </span>
-          </div>
-
-          <div class="bank-card-actions">
-            <oj-button
-              chroming="callToAction"
-              disabled="[[pendingCardId() === $current.data.cardId]]"
-              on-oj-action="[[() => changeStatus($current.data, 'ACTIVATE')]]"
-              data-bind="visible: hasStatus($current.data.status, 'INACTIVE')">
-              Activate
-            </oj-button>
-
-            <oj-button
-              chroming="outlined"
-              disabled="[[pendingCardId() === $current.data.cardId]]"
-              on-oj-action="[[() => changeStatus($current.data, 'BLOCK')]]"
-              data-bind="visible: hasStatus($current.data.status, 'ACTIVE')">
-              Block card
-            </oj-button>
-
-            <oj-button
-              chroming="outlined"
-              disabled="[[pendingCardId() === $current.data.cardId]]"
-              on-oj-action="[[() => changeStatus($current.data, 'UNBLOCK')]]"
-              data-bind="visible: hasStatus($current.data.status, 'BLOCKED')">
-              Unblock
-            </oj-button>
-          </div>
-        </article>
-      </template>
-    </oj-bind-for-each>
-  </div>
-
-  <p class="cards-page-error" data-bind="visible: actionError" role="alert">
-    <oj-bind-text value="[[actionError]]"></oj-bind-text>
-  </p>
+      <!-- ko with: { card: $data, plan: $parent.actionFor($data) } -->
+      <!-- ko if: plan && $parents[1].confirming() !== card.cardId -->
+      <div class="nb-actions">
+        <oj-c-button chroming="[[plan.chroming === 'danger' ? 'outlined' : plan.chroming]]" label="[[plan.label]]" on-oj-action="[[function () { $parents[1].ask(card); }]]"></oj-c-button>
+      </div>
+      <!-- /ko -->
+      <!-- ko if: plan && $parents[1].confirming() === card.cardId -->
+      <div class="nb-inline-panel" data-bind="css: { 'is-danger': plan.action === 'BLOCK' }" role="alertdialog" aria-label="Confirm card change">
+        <p data-bind="text: plan.confirm"></p>
+        <div class="nb-actions">
+          <oj-c-button chroming="[[plan.chroming]]" label="[[plan.label]]" disabled="[[$parents[1].busy]]" on-oj-action="[[function () { $parents[1].apply(card); }]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[$parents[1].cancel]]"></oj-c-button>
+        </div>
+      </div>
+      <!-- /ko -->
+      <!-- /ko -->
+    </li>
+  </ul>
 </div>
