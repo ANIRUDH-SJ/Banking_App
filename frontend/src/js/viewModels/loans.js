@@ -1,5 +1,5 @@
-define(['knockout', 'ojs/ojarraydataprovider', '../services/LoanService', '../accUtils'],
-  function (ko, ArrayDataProvider, LoanService, accUtils) {
+define(['knockout', 'ojs/ojarraydataprovider', '../services/LoanService', '../services/member3-style', '../accUtils', 'ojs/ojprogress-circle'],
+  function (ko, ArrayDataProvider, LoanService, member3Style, accUtils) {
     'use strict';
 
     function LoansViewModel() {
@@ -92,12 +92,7 @@ define(['knockout', 'ojs/ojarraydataprovider', '../services/LoanService', '../ac
 
       this.backToLoans = () => { this.errorMessage(''); this.paymentError(''); this.screen('list'); };
       this.connected = () => {
-        this.authenticatedHandler = this.authenticatedHandler || (() => this.refresh());
-        window.addEventListener('netbanking:authenticated', this.authenticatedHandler);
         document.title = 'Loans'; accUtils.announce('Loans page loaded.', 'polite'); this.refresh();
-      };
-      this.disconnected = () => {
-        if (this.authenticatedHandler) window.removeEventListener('netbanking:authenticated', this.authenticatedHandler);
       };
     }
     return LoansViewModel;

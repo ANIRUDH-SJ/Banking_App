@@ -1,7 +1,7 @@
-<div class="oj-hybrid-padding feature-page">
+<div class="nb-page feature-page">
   <div data-bind="visible: screen() === 'list'">
     <div class="feature-heading">
-      <div><p class="feature-eyebrow">BORROWING</p><h1>My loans</h1><p>View balances, due dates, and repayment history.</p></div>
+      <div class="nb-page-head"><p class="nb-kicker feature-eyebrow">Borrowing</p><h1>My loans</h1><p class="nb-lede">View balances, due dates, and repayment history.</p></div>
       <oj-button chroming="outlined" disabled="[[isLoading]]" on-oj-action="[[refresh]]">Refresh</oj-button>
     </div>
     <p class="feature-error" data-bind="visible: errorMessage" role="alert"><oj-bind-text value="[[errorMessage]]"></oj-bind-text></p>

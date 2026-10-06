@@ -1,5 +1,5 @@
-define(['knockout', 'ojs/ojarraydataprovider', '../services/AdminService', '../accUtils'],
-  function (ko, ArrayDataProvider, AdminService, accUtils) {
+define(['knockout', 'ojs/ojarraydataprovider', '../services/AdminService', '../services/member3-style', '../accUtils', 'ojs/ojinputtext', 'ojs/ojprogress-circle'],
+  function (ko, ArrayDataProvider, AdminService, member3Style, accUtils) {
     'use strict';
 
     function AdminViewModel() {
@@ -68,15 +68,9 @@ define(['knockout', 'ojs/ojarraydataprovider', '../services/AdminService', '../a
       };
 
       this.connected = () => {
-        this.authenticatedHandler = this.authenticatedHandler || (() => this.refresh());
-        window.addEventListener('netbanking:authenticated', this.authenticatedHandler);
         document.title = 'Administration';
         accUtils.announce('Administration page loaded.', 'polite');
         this.refresh();
-      };
-
-      this.disconnected = () => {
-        if (this.authenticatedHandler) window.removeEventListener('netbanking:authenticated', this.authenticatedHandler);
       };
     }
     return AdminViewModel;

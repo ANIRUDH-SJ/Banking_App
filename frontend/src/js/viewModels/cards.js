@@ -1,6 +1,6 @@
 define(
-  ['knockout', 'ojs/ojarraydataprovider', '../services/CardService', '../accUtils'],
-  function (ko, ArrayDataProvider, CardService, accUtils) {
+  ['knockout', 'ojs/ojarraydataprovider', '../services/CardService', '../services/member3-style', '../accUtils', 'ojs/ojprogress-circle'],
+  function (ko, ArrayDataProvider, CardService, member3Style, accUtils) {
     'use strict';
 
     function CardsViewModel() {
@@ -65,15 +65,9 @@ define(
       };
 
       this.connected = () => {
-        this.authenticatedHandler = this.authenticatedHandler || (() => this.refresh());
-        window.addEventListener('netbanking:authenticated', this.authenticatedHandler);
         document.title = 'My cards';
         accUtils.announce('Cards page loaded.', 'polite');
         this.refresh();
-      };
-
-      this.disconnected = () => {
-        if (this.authenticatedHandler) window.removeEventListener('netbanking:authenticated', this.authenticatedHandler);
       };
     }
 

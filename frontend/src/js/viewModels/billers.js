@@ -4,9 +4,13 @@ define(
     'ojs/ojarraydataprovider',
     '../services/BillerService',
     '../services/BillPaymentService',
-    '../accUtils'
+    '../services/member3-style',
+    '../accUtils',
+    'ojs/ojinputtext',
+    'ojs/ojselectsingle',
+    'ojs/ojprogress-circle'
   ],
-  function (ko, ArrayDataProvider, BillerService, BillPaymentService, accUtils) {
+  function (ko, ArrayDataProvider, BillerService, BillPaymentService, member3Style, accUtils) {
     'use strict';
 
     function BillersViewModel() {
@@ -319,15 +323,9 @@ define(
       };
 
       this.connected = () => {
-        this.authenticatedHandler = this.authenticatedHandler || (() => this.refresh());
-        window.addEventListener('netbanking:authenticated', this.authenticatedHandler);
         accUtils.announce('Biller catalogue page loaded.', 'polite');
         document.title = 'Biller catalogue';
         this.refresh();
-      };
-
-      this.disconnected = () => {
-        if (this.authenticatedHandler) window.removeEventListener('netbanking:authenticated', this.authenticatedHandler);
       };
     }
 
