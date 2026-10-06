@@ -11,4 +11,4 @@ public record BillPaymentRequest(
         @NotNull @DecimalMin(value = "0.01") @Digits(integer = 15, fraction = 4) BigDecimal amount,
         @NotBlank @Size(max = 100) String idempotencyKey,
         @NotBlank String otpChallengeId,
-        @Pattern(regexp = "^[0-9]{6}$") String otpCode) {}
+        @NotBlank @Pattern(regexp = "^[0-9]{6}$") String otpCode) {}

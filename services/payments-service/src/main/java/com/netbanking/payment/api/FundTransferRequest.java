@@ -11,4 +11,4 @@ public record FundTransferRequest(
         @Size(max = 500) String narration,
         @NotBlank @Size(max = 100) String idempotencyKey,
         @NotBlank String otpChallengeId,
-        @Pattern(regexp = "^[0-9]{6}$") String otpCode) {}
+        @NotBlank @Pattern(regexp = "^[0-9]{6}$") String otpCode) {}
