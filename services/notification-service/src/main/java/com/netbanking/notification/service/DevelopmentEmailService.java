@@ -19,6 +19,7 @@ public class DevelopmentEmailService implements EmailService {
     public DevelopmentEmailService(
             @Value("${app.notifications.log-message-content:false}") boolean logContent) {
         this.logContent = logContent;
+        log.warn("Email provider is log-only; messages are not sent to an inbox.");
     }
 
     @Override

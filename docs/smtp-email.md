@@ -6,6 +6,8 @@ The notification service supports two email providers:
 - `smtp` sends plain-text messages through Spring Mail and the configured SMTP server.
 
 The durable notification dispatcher treats a Spring Mail exception as a failed delivery. Its normal retry policy then schedules another attempt; the SMTP adapter does not hide provider errors.
+Selecting `smtp` with authentication enabled but without a username or password now prevents the
+notification service from starting, rather than making every delivery fail later.
 
 ## Enable SMTP
 
@@ -44,6 +46,11 @@ export SMTP_STARTTLS_REQUIRED=false
 ```
 
 Use the default `log` provider when no SMTP server is running. Never commit SMTP credentials or place them in a shared service configuration file.
+For local runs, put SMTP values in the ignored `.local/notification-service.json` file or supply
+them as environment variables. Values in that local JSON file override environment variables.
+The sender address must be authorized by the SMTP provider; a successful startup alone does not
+prove inbox delivery. Send a test password-reset challenge and check the notification-service
+delivery logs and the destination inbox (including spam) after configuring real credentials.
 
 ## Health and Eureka
 
