@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
 
 const { ApiError, parseApiError, fieldMessage } = require('../src/js/services/api-error');
 const ValidationService = require('../src/js/services/validation-service');
@@ -189,6 +192,52 @@ test('auth service uses the public identity endpoints', async () => {
   assert.equal(calls[0].options.auth, false);
   assert.equal(calls[2].body.credentials.usernameOrEmail, 'asha');
   assert.equal(calls[2].body.code, '654321');
+});
+
+test('password recovery can request another code after leaving the page', async () => {
+  const observable = (initial) => {
+    let value = initial;
+    return function (next) {
+      if (arguments.length) value = next;
+      return value;
+    };
+  };
+  const ko = { observable, observableArray: observable };
+  let requests = 0;
+  const registry = {
+    validation: new ValidationService(),
+    auth: {
+      requestPasswordReset() {
+        requests += 1;
+        return Promise.resolve({ challengeId: 'challenge-' + requests });
+      }
+    },
+    go() {}
+  };
+  let ViewModel;
+  const source = fs.readFileSync(path.join(__dirname, '../src/js/viewModels/password-recovery.js'), 'utf8');
+  vm.runInNewContext(source, {
+    define(dependencies, factory) {
+      ViewModel = factory(ko, { announce() {} }, registry);
+    }
+  });
+  const recovery = new ViewModel();
+  recovery.username('asha@example.com');
+
+  recovery.requestCode();
+  await new Promise(setImmediate);
+  assert.equal(recovery.step(), 'confirm');
+  recovery.code('123456');
+  recovery.disconnected();
+  assert.equal(recovery.step(), 'request');
+  assert.equal(recovery.code(), '');
+
+  recovery.requestCode();
+  await new Promise(setImmediate);
+  assert.equal(requests, 2);
+  assert.equal(recovery.step(), 'confirm');
+  recovery.requestAnotherCode();
+  assert.equal(recovery.step(), 'request');
 });
 
 test('otp service requests payment challenges and checks the code', async () => {

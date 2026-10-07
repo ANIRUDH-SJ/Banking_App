@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
@@ -37,6 +38,15 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     ApiErrorResponse unauthorized(RuntimeException exception, HttpServletRequest request) {
         return response(request, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", exception.getMessage());
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    ResponseEntity<ApiErrorResponse> accountLocked(
+            AccountLockedException exception, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header("Retry-After", Long.toString(exception.retryAfterSeconds()))
+                .cacheControl(CacheControl.noStore())
+                .body(response(request, HttpStatus.UNAUTHORIZED, "ACCOUNT_LOCKED", exception.getMessage()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

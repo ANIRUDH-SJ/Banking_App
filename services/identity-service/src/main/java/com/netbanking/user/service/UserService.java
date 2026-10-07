@@ -2,6 +2,7 @@ package com.netbanking.user.service;
 
 import com.netbanking.audit.IdentityAuditService;
 import com.netbanking.common.exception.ResourceNotFoundException;
+import com.netbanking.common.exception.AccountLockedException;
 import com.netbanking.common.exception.UnauthorizedException;
 import com.netbanking.events.NotificationPublisher;
 import com.netbanking.user.domain.AppUser;
@@ -55,7 +56,10 @@ public class UserService {
 
     public void requireEligibleForLogin(AppUser user) {
         Instant now = Instant.now();
-        if (user.isLockedAt(now)) throw new UnauthorizedException("Account is temporarily locked.");
+        if (user.isLockedAt(now)) {
+            long remainingMillis = Duration.between(now, user.getLockedUntil()).toMillis();
+            throw new AccountLockedException(Math.max(1, (remainingMillis + 999) / 1000));
+        }
         if (user.getAccountStatus() == UserStatus.LOCKED) user.unlock();
         if (user.getAccountStatus() != UserStatus.ACTIVE)
             throw new UnauthorizedException("Account is not active.");
@@ -67,7 +71,11 @@ public class UserService {
                 userRepository
                         .findByIdForUpdate(userId)
                         .orElseThrow(() -> new ResourceNotFoundException("User was not found."));
-        user.recordFailedLogin(maxFailedAttempts, Instant.now().plus(lockDuration));
+        Instant now = Instant.now();
+        if (user.getAccountStatus() == UserStatus.LOCKED && !user.isLockedAt(now)) {
+            user.unlock();
+        }
+        user.recordFailedLogin(maxFailedAttempts, now.plus(lockDuration));
         boolean locked = user.getAccountStatus() == UserStatus.LOCKED;
         audit.denied(
                 userId,
