@@ -8,11 +8,16 @@ const node = process.execPath;
 const runner = fileURLToPath(new URL('./run-service.mjs', import.meta.url));
 const children = [];
 let stopping = false;
+const kafkaEnabled = process.argv.includes('--kafka') || process.env.EVENT_TRANSPORT === 'kafka';
 
 function startService(name) {
   const child = spawn(node, [runner, name], {
     cwd: root,
-    env: { ...process.env, BANKING_JARS_BUILT: '1' },
+    env: {
+      ...process.env,
+      BANKING_JARS_BUILT: '1',
+      EVENT_TRANSPORT: kafkaEnabled ? 'kafka' : (process.env.EVENT_TRANSPORT || 'http'),
+    },
     stdio: ['inherit', 'pipe', 'pipe'],
     windowsHide: true,
   });
@@ -28,12 +33,12 @@ function startService(name) {
   });
 }
 
-function waitForPort(port, name, timeoutMs = 60000) {
+function waitForPort(port, name, timeoutMs = 60000, host = '127.0.0.1') {
   const startedAt = Date.now();
 
   return new Promise((resolve, reject) => {
     const tryConnection = () => {
-      const socket = createConnection({ host: '127.0.0.1', port });
+      const socket = createConnection({ host, port });
       socket.once('connect', () => {
         socket.end();
         console.log(`${name} is listening on port ${port}.`);
@@ -54,6 +59,22 @@ function waitForPort(port, name, timeoutMs = 60000) {
 
 async function main() {
   console.log('Starting local banking backend services...');
+  if (kafkaEnabled) {
+    const bootstrap = (process.env.KAFKA_BOOTSTRAP_SERVERS || '127.0.0.1:9092').split(',')[0].trim();
+    const match = /^(?:\[([^\]]+)\]|([^:]+)):(\d+)$/.exec(bootstrap);
+    if (!match) throw new Error(`Invalid Kafka bootstrap server: ${bootstrap}`);
+    const host = match[1] || match[2];
+    const port = Number(match[3]);
+    if (port < 1 || port > 65535) throw new Error(`Invalid Kafka bootstrap port: ${bootstrap}`);
+    console.log(`Kafka event transport is enabled; checking ${bootstrap}...`);
+    try {
+      await waitForPort(port, 'Kafka', 5000, host);
+    } catch {
+      throw new Error(`Kafka is not reachable at ${bootstrap}. Start the broker or update KAFKA_BOOTSTRAP_SERVERS.`);
+    }
+  } else {
+    console.log('Event transport: HTTP. Pass --kafka when a Kafka broker is available.');
+  }
   console.log('Building fresh service JARs from this checkout first...');
   await buildFreshJars(root);
   startService('service-registry');
