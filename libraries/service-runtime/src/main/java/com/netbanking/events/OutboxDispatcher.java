@@ -1,8 +1,5 @@
 package com.netbanking.events;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.netbanking.discovery.ServiceHttpClient;
-
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,13 +13,11 @@ import java.time.Instant;
 @ConditionalOnProperty(name = "app.events.enabled", havingValue = "true")
 public class OutboxDispatcher {
     private final JdbcTemplate jdbc;
-    private final ObjectMapper json;
-    private final ServiceHttpClient client;
+    private final EventTransport transport;
 
-    public OutboxDispatcher(JdbcTemplate jdbc, ObjectMapper json, ServiceHttpClient client) {
+    public OutboxDispatcher(JdbcTemplate jdbc, EventTransport transport) {
         this.jdbc = jdbc;
-        this.json = json;
-        this.client = client;
+        this.transport = transport;
     }
 
     @Scheduled(fixedDelayString = "${app.events.interval-ms:5000}")
@@ -40,11 +35,7 @@ public class OutboxDispatcher {
                                         rs.getInt(4)));
         for (var row : rows) {
             try {
-                client.post(
-                        row.destination(),
-                        "/internal/events",
-                        json.readValue(row.envelope(), EventEnvelope.class),
-                        Void.class);
+                transport.send(row.destination(), row.envelope());
                 jdbc.update(
                         "UPDATE event_outbox SET delivered_at = CURRENT_TIMESTAMP WHERE event_id ="
                                 + " ?",
@@ -58,7 +49,12 @@ public class OutboxDispatcher {
                                         .plusSeconds(Math.min(300, 5L * (row.attempts() + 1)))),
                         row.id());
                 LoggerFactory.getLogger(getClass())
-                        .warn("Event {} remains queued for {}", row.id(), row.destination());
+                        .warn(
+                                "Event {} remains queued for {} after attempt {}: {}",
+                                row.id(),
+                                row.destination(),
+                                row.attempts() + 1,
+                                failure.toString());
             }
         }
     }
