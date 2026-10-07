@@ -7,10 +7,11 @@ ordinary onboarding account is INR.
 
 The payments service accepts **operator-configured demonstration rates only**. There is no live
 market-data feed, external FX settlement, spread, fee, or regulatory suitability check. Do not use
-these rates for real money. Set, for example, `FOREX_DEMO_RATES=INR/USD=0.01176471,USD/INR=85.00000000`
-in the payments-service environment. Each direction is configured independently; an inverse rate
-is never inferred. With no configured pair, quoting that pair fails instead of silently inventing
-a rate. A quote snapshots its rate and expires after 120 seconds by default.
+these rates for real money. Local runs default to both directions of INR against USD, EUR and
+GBP (for example `USD/INR=85.00000000`), so a new wallet can be quoted straight away. Set
+`FOREX_DEMO_RATES` in the payments-service environment to replace the whole list. Each direction
+is configured independently; an inverse rate is never inferred. A pair that is not in the list
+fails instead of silently inventing a rate. A quote snapshots its rate and expires after 120 seconds by default.
 
 All routes require a customer access token at the API gateway:
 

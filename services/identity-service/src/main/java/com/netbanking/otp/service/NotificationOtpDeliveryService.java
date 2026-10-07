@@ -6,13 +6,16 @@ import com.netbanking.discovery.OtpDeliveryClient;
 import com.netbanking.otp.domain.OtpPurpose;
 import com.netbanking.user.repository.AppUserRepository;
 
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
 @Service
-@Profile("!local")
+@ConditionalOnProperty(
+        name = "app.security.otp.delivery",
+        havingValue = "notification",
+        matchIfMissing = true)
 public class NotificationOtpDeliveryService implements OtpDeliveryService {
     private final AppUserRepository users;
     private final CustomerRepository customers;

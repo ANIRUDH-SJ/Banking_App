@@ -35,8 +35,8 @@ Each business service owns its entities, repositories, Flyway migrations and pri
 | api-gateway | 8080 | — | Explicit public API routes |
 | identity-service | 8081 | `NB_IDENTITY` | Users, roles, customer profiles, OTP and Microsoft Authenticator |
 | accounts-ledger-service | 8082 | `NB_ACCOUNTS` | Accounts, balances, transactions and statements |
-| payments-service | 8083 | `NB_PAYMENTS` | Beneficiaries, billers, transfers and bill payments |
-| products-service | 8084 | `NB_PRODUCTS` | Cards, loans and repayments |
+| payments-service | 8083 | `NB_PAYMENTS` | Beneficiaries, billers, transfers, bill payments and forex |
+| products-service | 8084 | `NB_PRODUCTS` | Cards, loans, repayments and fixed and recurring deposits |
 | notification-service | 8085 | `NB_NOTIFICATIONS` | In-app notifications and delivery records |
 | audit-reporting-service | 8086 | `NB_AUDIT` | Audit events and administrator audit search |
 
@@ -76,6 +76,7 @@ fresh build; the all-services launcher builds only once for its child services.
 - [Loan information and payments](docs/loan-api.md)
 - [Beneficiaries, transfers and bill payments](docs/payment-api.md)
 - [Demonstration forex conversions](docs/forex-api.md)
+- [Fixed and recurring deposits](docs/deposits.md)
 - [Transaction history and statements](docs/transaction-statement-api.md)
 - [Gateway authentication rate limits](docs/gateway-rate-limits.md)
 - [SMTP email delivery](docs/smtp-email.md)

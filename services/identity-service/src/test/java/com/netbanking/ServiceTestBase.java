@@ -45,5 +45,6 @@ public abstract class ServiceTestBase {
         p.add("spring.flyway.enabled", () -> false);
         p.add("eureka.client.enabled", () -> false);
         p.add("app.scheduling.enabled", () -> false);
+        p.add("app.security.otp.delivery", () -> "log");
     }
 }

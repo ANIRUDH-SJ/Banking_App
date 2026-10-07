@@ -58,7 +58,12 @@ public class OutboxDispatcher {
                                         .plusSeconds(Math.min(300, 5L * (row.attempts() + 1)))),
                         row.id());
                 LoggerFactory.getLogger(getClass())
-                        .warn("Event {} remains queued for {}", row.id(), row.destination());
+                        .warn(
+                                "Event {} remains queued for {} after attempt {}: {}",
+                                row.id(),
+                                row.destination(),
+                                row.attempts() + 1,
+                                failure.toString());
             }
         }
     }
