@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 class PaymentServiceTest {
     final LedgerClient ledger = mock(LedgerClient.class);
     final OtpClient otp = mock(OtpClient.class);
+    final CardPinClient cardPins = mock(CardPinClient.class);
     final PaymentWorkflowStore store = mock(PaymentWorkflowStore.class);
     final BillerPaymentAdapter billerPayments = mock(BillerPaymentAdapter.class);
     final PaymentAuditService audit = mock(PaymentAuditService.class);
@@ -29,13 +30,14 @@ class PaymentServiceTest {
                     mock(BillerService.class),
                     ledger,
                     otp,
+                    cardPins,
                     store,
                     billerPayments,
                     audit,
                     new BigDecimal("100000"));
     final FundTransferRequest request =
             new FundTransferRequest(
-                    10L, 20L, new BigDecimal("100"), "Rent", "request-key", "challenge", "123456");
+                    10L, 20L, new BigDecimal("100"), "Rent", "request-key", "challenge", "123456", null);
     final LedgerCommand command =
             new LedgerCommand(
                     "operation-key",
@@ -170,5 +172,36 @@ class PaymentServiceTest {
                 .reverse(
                         new LedgerReversalCommand(
                                 "bill-operation:reversal", 7L, 101L, "Reference closed"));
+    }
+
+    @Test
+    void aDebitCardPinAuthorizesInsteadOfAnOtp() {
+        var pin = new CardPinAuthorization(5L, "key-id", "sealed-pin");
+        var byPin = new FundTransferRequest(
+                10L, 20L, new BigDecimal("100"), "Rent", "request-key", null, null, pin);
+        when(store.find(7L, "TRANSFER", "request-key")).thenReturn(operation("AWAITING_OTP", fingerprint()));
+        when(store.get("operation-key")).thenReturn(operation("AUTHORIZED", fingerprint()));
+
+        service.transfer(7L, byPin);
+
+        var ordered = inOrder(cardPins, store, ledger);
+        ordered.verify(cardPins).verify(
+                new CardPinClient.Verification(7L, 5L, 10L, "key-id", "sealed-pin", "FUND_TRANSFER"));
+        ordered.verify(store).authorized("operation-key");
+        ordered.verify(ledger).post(command);
+        verifyNoInteractions(otp);
+    }
+
+    @Test
+    void exactlyOneAuthorizationMethodIsAccepted() {
+        var pin = new CardPinAuthorization(5L, "key-id", "sealed-pin");
+        var both = new FundTransferRequest(
+                10L, 20L, new BigDecimal("100"), "Rent", "request-key", "challenge", "123456", pin);
+        var neither = new FundTransferRequest(
+                10L, 20L, new BigDecimal("100"), "Rent", "request-key", null, null, null);
+
+        assertThatThrownBy(() -> service.transfer(7L, both)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.transfer(7L, neither)).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(store, ledger, otp, cardPins);
     }
 }

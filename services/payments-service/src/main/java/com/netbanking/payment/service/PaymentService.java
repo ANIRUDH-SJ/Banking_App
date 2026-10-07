@@ -5,6 +5,7 @@ import com.netbanking.biller.provider.*;
 import com.netbanking.biller.service.BillerService;
 import com.netbanking.common.exception.ConflictException;
 import com.netbanking.contracts.*;
+import com.netbanking.discovery.CardPinClient;
 import com.netbanking.discovery.LedgerClient;
 import com.netbanking.discovery.OtpClient;
 import com.netbanking.payment.api.*;
@@ -23,6 +24,7 @@ public class PaymentService {
     private final BillerService billers;
     private final LedgerClient ledger;
     private final OtpClient otp;
+    private final CardPinClient cardPins;
     private final PaymentWorkflowStore store;
     private final BillerPaymentAdapter billerPayments;
     private final BigDecimal limit;
@@ -33,6 +35,7 @@ public class PaymentService {
             BillerService billers,
             LedgerClient ledger,
             OtpClient otp,
+            CardPinClient cardPins,
             PaymentWorkflowStore store,
             BillerPaymentAdapter billerPayments,
             PaymentAuditService audit,
@@ -41,6 +44,7 @@ public class PaymentService {
         this.billers = billers;
         this.ledger = ledger;
         this.otp = otp;
+        this.cardPins = cardPins;
         this.store = store;
         this.billerPayments = billerPayments;
         this.audit = audit;
@@ -91,6 +95,7 @@ public class PaymentService {
     }
 
     private PaymentReceiptResponse transferRequest(Long userId, FundTransferRequest r) {
+        requireOneAuthorization(r.otpChallengeId(), r.otpCode(), r.cardPin());
         String fingerprint =
                 PaymentIntent.transferFingerprint(
                         userId, r.sourceAccountId(), r.beneficiaryId(), r.amount(), r.narration());
@@ -129,7 +134,12 @@ public class PaymentService {
                                     PaymentIntent.normalize(r.narration())));
         }
         return authorizeAndComplete(
-                operation, fingerprint, r.otpChallengeId(), r.otpCode(), "FUND_TRANSFER");
+                operation,
+                fingerprint,
+                r.otpChallengeId(),
+                r.otpCode(),
+                r.cardPin(),
+                "FUND_TRANSFER");
     }
 
     public PaymentReceiptResponse payBill(Long userId, BillPaymentRequest r) {
@@ -142,6 +152,7 @@ public class PaymentService {
     }
 
     private PaymentReceiptResponse payBillRequest(Long userId, BillPaymentRequest r) {
+        requireOneAuthorization(r.otpChallengeId(), r.otpCode(), r.cardPin());
         String fingerprint =
                 PaymentIntent.billPaymentFingerprint(
                         userId, r.sourceAccountId(), r.billerId(), r.amount(), r.billReference());
@@ -182,7 +193,12 @@ public class PaymentService {
                                     null));
         }
         return authorizeAndComplete(
-                operation, fingerprint, r.otpChallengeId(), r.otpCode(), "BILL_PAYMENT");
+                operation,
+                fingerprint,
+                r.otpChallengeId(),
+                r.otpCode(),
+                r.cardPin(),
+                "BILL_PAYMENT");
     }
 
     private PaymentWorkflowStore.Operation create(
@@ -206,6 +222,7 @@ public class PaymentService {
             String fingerprint,
             String challenge,
             String code,
+            CardPinAuthorization pin,
             String purpose) {
         if (!operation.fingerprint().equals(fingerprint))
             throw new ConflictException("Idempotency key was used for different payment details.");
@@ -216,13 +233,24 @@ public class PaymentService {
             throw new ConflictException(
                     "Payment failed. Use a new request key after correcting the request.");
         if ("AWAITING_OTP".equals(operation.state())) {
-            otp.authorize(
-                    operation.key(),
-                    operation.command().userId(),
-                    challenge,
-                    code,
-                    purpose,
-                    operation.digest());
+            if (pin != null) {
+                cardPins.verify(
+                        new CardPinClient.Verification(
+                                operation.command().userId(),
+                                pin.cardId(),
+                                operation.command().sourceAccountId(),
+                                pin.pinKeyId(),
+                                pin.encryptedPin(),
+                                purpose));
+            } else {
+                otp.authorize(
+                        operation.key(),
+                        operation.command().userId(),
+                        challenge,
+                        code,
+                        purpose,
+                        operation.digest());
+            }
             store.authorized(operation.key());
         }
         return settle(store.get(operation.key()));
@@ -266,6 +294,14 @@ public class PaymentService {
             return store.reversed(operation.key(), receipt, reversal, provider);
         }
         return store.complete(operation.key(), receipt);
+    }
+
+    private static void requireOneAuthorization(
+            String challenge, String code, CardPinAuthorization pin) {
+        boolean hasOtp = challenge != null && !challenge.isBlank() && code != null && !code.isBlank();
+        if (hasOtp == (pin != null))
+            throw new IllegalArgumentException(
+                    "Authorize with either a one-time code or the debit card PIN.");
     }
 
     private AccountSnapshot eligibleAccount(Long userId, Long accountId) {

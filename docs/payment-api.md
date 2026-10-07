@@ -16,6 +16,15 @@ follow-up hardening scripts.
 | `POST /api/v1/bill-payments/otp-challenges` | Sends a bill-payment OTP for an owned source account. |
 | `POST /api/v1/bill-payments` | Performs an OTP-authorized bill payment. |
 
+Transfers and bill payments can be authorized with the PIN of the active debit card linked to the paying
+account instead of an OTP: send `cardPin` (`cardId`, `pinKeyId`, `encryptedPin`) and omit
+`otpChallengeId`/`otpCode`. Exactly one method is accepted. See [card PINs](card-api.md#pins). A wrong OTP
+or PIN returns `422` with a field error (`otpCode` or `pin`); a locked PIN returns `423`. Neither returns
+`401`, which clients treat as an expired session.
+
+`PATCH /api/v1/beneficiaries/{id}` with `{"nickname":"Mom"}` renames an owned beneficiary without changing its
+account, IFSC or activation. Payment history rows include `beneficiaryNickname` and `billerName`.
+
 Transfer and bill-payment requests require a client-supplied idempotency key. Repeating a terminal
 request with the same user and key returns the original receipt. Payment debits lock the source
 account, then create and complete a transaction lifecycle record and its debit ledger entry in the
