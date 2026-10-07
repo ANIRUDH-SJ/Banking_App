@@ -43,7 +43,7 @@ class ForexServiceTest {
     @Test
     void rejectsUnsupportedOrSameCurrencyPair() {
         when(ledger.account(7L, 1L)).thenReturn(account(1L, "INR"));
-        when(ledger.account(7L, 2L)).thenReturn(account(2L, "EUR"));
+        when(ledger.account(7L, 2L)).thenReturn(account(2L, "CHF"));
         assertThatThrownBy(() -> service.quote(7L,
                 new CreateForexQuoteRequest(1L, 2L, new BigDecimal("100"))))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -92,5 +92,27 @@ class ForexServiceTest {
                 new BigDecimal("850"), new BigDecimal("10"), new BigDecimal("0.01176471"),
                 "DEMO_CONFIGURED", LocalDateTime.now(ZoneOffset.UTC).plusMinutes(2).atOffset(ZoneOffset.UTC)),
                 7L, LocalDateTime.now(ZoneOffset.UTC));
+    }
+
+    @Test
+    void previewsAnyPairAndRoundsToTheDestinationMinorUnit() {
+        var preview = service.preview("usd", "JPY", new BigDecimal("100"));
+
+        assertThat(preview.fromCurrency()).isEqualTo("USD");
+        assertThat(preview.exchangeRate()).isEqualByComparingTo("149.12280702");
+        assertThat(preview.convertedAmount()).isEqualByComparingTo("14912");
+        assertThat(preview.convertedAmount().scale()).isZero();
+        assertThat(preview.inverseRate()).isEqualByComparingTo("0.00670588");
+        assertThat(service.preview("GBP", "INR", new BigDecimal("2.5")).convertedAmount()).isEqualByComparingTo("270.00");
+        assertThat(service.rates().currencies()).hasSize(8);
+        verifyNoInteractions(store, ledger, otp);
+    }
+
+    @Test
+    void previewRejectsUnsupportedCurrenciesAndAmounts() {
+        assertThatThrownBy(() -> service.preview("USD", "CHF", BigDecimal.ONE))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.preview("USD", "INR", BigDecimal.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
