@@ -1,5 +1,7 @@
 package com.netbanking.discovery;
 
+import com.netbanking.common.exception.VerificationFailedException;
+
 import jakarta.validation.constraints.*;
 
 import org.springframework.stereotype.Service;
@@ -27,11 +29,21 @@ public class OtpClient {
             String code,
             String purpose,
             String digest) {
-        client.post(
-                "identity-service",
-                "/internal/otp/authorizations",
-                new Authorization(operationId, userId, challengeId, code, purpose, digest),
-                Void.class);
+        try {
+            client.post(
+                    "identity-service",
+                    "/internal/otp/authorizations",
+                    new Authorization(operationId, userId, challengeId, code, purpose, digest),
+                    Void.class);
+        } catch (DownstreamRejectedException rejected) {
+            if (rejected.getStatusCode().value() == 401) {
+                throw new VerificationFailedException(
+                        "OTP_INVALID",
+                        "otpCode",
+                        "The one-time code is incorrect or has expired. Check it or request a new code.");
+            }
+            throw rejected;
+        }
     }
 
     public record Challenge(String challengeId) {}
