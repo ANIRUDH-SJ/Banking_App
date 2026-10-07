@@ -1,10 +1,7 @@
 package com.netbanking.notification.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.netbanking.discovery.NotificationRecipientDirectory;
-import com.netbanking.events.*;
-import com.netbanking.events.NotificationPublisher.Notice;
-import com.netbanking.notification.service.NotificationService;
+import com.netbanking.events.EventEnvelope;
+import com.netbanking.notification.service.NotificationEventHandler;
 
 import jakarta.validation.Valid;
 
@@ -16,36 +13,16 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize(
         "hasAnyAuthority('SERVICE_payments-service','SERVICE_products-service','SERVICE_identity-service','SERVICE_accounts-ledger-service')")
 public class NotificationEventReceiver {
-    private final EventInbox inbox;
-    private final ObjectMapper json;
-    private final NotificationService service;
-    private final NotificationRecipientDirectory recipients;
+    private final NotificationEventHandler handler;
 
-    public NotificationEventReceiver(
-            EventInbox inbox,
-            ObjectMapper json,
-            NotificationService service,
-            NotificationRecipientDirectory recipients) {
-        this.inbox = inbox;
-        this.json = json;
-        this.service = service;
-        this.recipients = recipients;
+    public NotificationEventReceiver(NotificationEventHandler handler) {
+        this.handler = handler;
     }
 
     @PostMapping("/internal/events")
     public void accept(@Valid @RequestBody EventEnvelope event, Authentication caller) {
         if (!caller.getName().equals(event.source()) || !"NOTIFICATION".equals(event.type()))
             throw new SecurityException("Invalid notification event source or type.");
-        inbox.accept(
-                event,
-                payload -> {
-                    var p = json.convertValue(payload, Notice.class);
-                    service.create(
-                            p.userId(),
-                            p.type(),
-                            p.title(),
-                            p.message(),
-                            recipients.requireForUser(p.userId()));
-                });
+        handler.accept(event);
     }
 }

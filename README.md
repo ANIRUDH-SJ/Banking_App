@@ -81,5 +81,6 @@ fresh build; the all-services launcher builds only once for its child services.
 - [Gateway authentication rate limits](docs/gateway-rate-limits.md)
 - [SMTP email delivery](docs/smtp-email.md)
 - [Login audit trail](docs/login-audit.md)
+- [Kafka event transport](docs/kafka-events.md)
 
 The Oracle JET application includes the customer-access shell: registration, sign-in, Microsoft Authenticator, session expiry, profile, home, and notices. The shared API client, session, and one-time-code contract is in [frontend/docs/member-1-foundation-contract.md](frontend/docs/member-1-foundation-contract.md). Account, payment, and administration screens plug into those routes. A production SMS provider, real settlement integrations, and production deployment infrastructure require separate work.
