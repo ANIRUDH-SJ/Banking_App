@@ -18,7 +18,7 @@ import java.util.Set;
 
 @Service
 public class ForeignCurrencyAccountService {
-    private static final Set<String> SUPPORTED = Set.of("USD", "EUR", "GBP");
+    private static final Set<String> SUPPORTED = Set.of("USD", "EUR", "GBP", "JPY", "AUD", "CAD", "SGD");
     private final CustomerDirectory customers;
     private final BankAccountRepository accounts;
     private final AccountHolderRepository holders;
@@ -40,7 +40,7 @@ public class ForeignCurrencyAccountService {
     @Transactional
     public AccountSummaryResponse open(Long userId, String currencyCode) {
         if (!SUPPORTED.contains(currencyCode))
-            throw new IllegalArgumentException("Supported foreign currencies are USD, EUR, and GBP.");
+            throw new IllegalArgumentException("Supported foreign currencies are USD, EUR, GBP, JPY, AUD, CAD and SGD.");
         Long customerId = customers.requireCustomerIdForUser(userId);
         if (customerId <= 0 || customerId > 999_999_999_999_999L)
             throw new IllegalArgumentException("Customer identifier is outside the account-number range.");
