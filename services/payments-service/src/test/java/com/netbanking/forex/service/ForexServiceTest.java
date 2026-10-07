@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 class ForexServiceTest {
     final ForexStore store = mock(ForexStore.class);
@@ -35,6 +36,7 @@ class ForexServiceTest {
         assertThat(quote.rateSource()).isEqualTo("DEMO_CONFIGURED");
         assertThat(quote.exchangeRate()).isEqualByComparingTo("0.01176471");
         assertThat(quote.destinationAmount()).isEqualByComparingTo("10.0000");
+        assertThat(quote.expiresAt().getOffset()).isEqualTo(ZoneOffset.UTC);
         verify(store).saveQuote(any());
     }
 
@@ -88,6 +90,7 @@ class ForexServiceTest {
     private static ForexStore.Quote quote() {
         return new ForexStore.Quote(new ForexQuoteResponse("quote-1", 1L, 2L, "INR", "USD",
                 new BigDecimal("850"), new BigDecimal("10"), new BigDecimal("0.01176471"),
-                "DEMO_CONFIGURED", LocalDateTime.now().plusMinutes(2)), 7L, LocalDateTime.now());
+                "DEMO_CONFIGURED", LocalDateTime.now(ZoneOffset.UTC).plusMinutes(2).atOffset(ZoneOffset.UTC)),
+                7L, LocalDateTime.now(ZoneOffset.UTC));
     }
 }

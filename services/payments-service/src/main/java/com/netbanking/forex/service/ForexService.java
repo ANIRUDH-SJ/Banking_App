@@ -16,6 +16,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Set;
 import java.util.UUID;
 
@@ -55,7 +57,7 @@ public class ForexService {
         var response = new ForexQuoteResponse(UUID.randomUUID().toString(),
                 source.accountId(), destination.accountId(), source.currencyCode(),
                 destination.currencyCode(), amount, converted, rate,
-                "DEMO_CONFIGURED", now.plusSeconds(quoteSeconds));
+                "DEMO_CONFIGURED", now.plusSeconds(quoteSeconds).atOffset(ZoneOffset.UTC));
         return store.saveQuote(new ForexStore.Quote(response, userId, now)).response();
     }
 
@@ -87,7 +89,7 @@ public class ForexService {
         if ("FAILED".equals(operation.state()))
             throw new ConflictException("Conversion failed. Request a new quote and key.");
         if ("AWAITING_OTP".equals(operation.state())) {
-            if (!LocalDateTime.now(clock).isBefore(operation.quote().response().expiresAt()))
+            if (!OffsetDateTime.now(clock).isBefore(operation.quote().response().expiresAt()))
                 throw new ConflictException("Forex quote has expired.");
             otp.authorize(operation.operationId(), userId, request.otpChallengeId(),
                     request.otpCode(), "FOREX_CONVERSION", digest(operation.quote()));
@@ -124,7 +126,7 @@ public class ForexService {
 
     private ForexStore.Quote currentQuote(Long userId, String quoteId) {
         var quote = store.quote(userId, quoteId);
-        if (!LocalDateTime.now(clock).isBefore(quote.response().expiresAt()))
+        if (!OffsetDateTime.now(clock).isBefore(quote.response().expiresAt()))
             throw new ConflictException("Forex quote has expired.");
         return quote;
     }

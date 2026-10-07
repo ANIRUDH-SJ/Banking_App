@@ -68,7 +68,7 @@ public class DepositService {
                 quoteId, userId, request.sourceAccountId(), request.kind(), amount,
                 request.termMonths(), rate, estimate, Timestamp.valueOf(expiry));
         return new DepositQuoteResponse(quoteId, request.kind(), amount,
-                request.termMonths(), rate, estimate, expiry);
+                request.termMonths(), rate, estimate, expiry.atOffset(ZoneOffset.UTC));
     }
 
     public DepositResponse open(Long userId, OpenDepositRequest request) {

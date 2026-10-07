@@ -3,6 +3,7 @@ package com.netbanking.forex.service;
 import static org.assertj.core.api.Assertions.*;
 
 import com.netbanking.ServiceTestBase;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netbanking.contracts.ForexLedgerReceipt;
 import com.netbanking.forex.api.ForexQuoteResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,10 +13,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 class ForexStoreIntegrationTest extends ServiceTestBase {
     @Autowired JdbcTemplate jdbc;
     @Autowired ForexStore store;
+    @Autowired ObjectMapper json;
 
     @BeforeEach
     void tables() {
@@ -36,12 +39,16 @@ class ForexStoreIntegrationTest extends ServiceTestBase {
 
     @Test
     void reservesQuoteOnceAndCompletesWithTwoLedgerReferences() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         var quote = store.saveQuote(new ForexStore.Quote(new ForexQuoteResponse("quote-1", 10L, 20L,
                 "INR", "USD", new BigDecimal("850"), new BigDecimal("10"),
-                new BigDecimal("0.01176471"), "DEMO_CONFIGURED", now.plusMinutes(2)), 7L, now));
+                new BigDecimal("0.01176471"), "DEMO_CONFIGURED", now.plusMinutes(2).atOffset(ZoneOffset.UTC)), 7L, now));
         assertThat(store.quote(7L, "quote-1").response().exchangeRate())
                 .isEqualByComparingTo("0.01176471");
+        assertThat(store.quote(7L, "quote-1").response().expiresAt().getOffset())
+                .isEqualTo(ZoneOffset.UTC);
+        assertThat(json.valueToTree(store.quote(7L, "quote-1").response())
+                .get("expiresAt").asText()).endsWith("Z");
         assertThatThrownBy(() -> store.quote(8L, "quote-1"))
                 .isInstanceOf(com.netbanking.common.exception.ResourceNotFoundException.class);
 

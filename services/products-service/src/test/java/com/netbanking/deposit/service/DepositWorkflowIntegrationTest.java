@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.netbanking.ServiceTestBase;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netbanking.contracts.AccountSnapshot;
 import com.netbanking.contracts.DepositLedgerCommand;
 import com.netbanking.contracts.LedgerReceipt;
@@ -25,12 +26,14 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 class DepositWorkflowIntegrationTest extends ServiceTestBase {
     @Autowired DataSource dataSource;
     @Autowired JdbcTemplate jdbc;
     @Autowired DepositService deposits;
+    @Autowired ObjectMapper json;
     @MockitoBean LedgerClient accounts;
     @MockitoBean DepositLedgerClient ledger;
 
@@ -56,6 +59,8 @@ class DepositWorkflowIntegrationTest extends ServiceTestBase {
 
         var quote = deposits.quote(7L, new DepositQuoteRequest(9L, "RD",
                 new BigDecimal("1000"), 6));
+        assertThat(quote.expiresAt().getOffset()).isEqualTo(ZoneOffset.UTC);
+        assertThat(json.valueToTree(quote).get("expiresAt").asText()).endsWith("Z");
         assertThatThrownBy(() -> deposits.open(7L, new OpenDepositRequest(quote.quoteId(), "rd-key")))
                 .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
         assertThat(jdbc.queryForObject("SELECT status FROM deposit_contract WHERE quote_id = ?",

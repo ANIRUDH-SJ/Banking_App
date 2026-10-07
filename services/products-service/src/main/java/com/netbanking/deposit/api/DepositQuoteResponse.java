@@ -1,8 +1,8 @@
 package com.netbanking.deposit.api;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public record DepositQuoteResponse(String quoteId, String kind, BigDecimal amount,
         int termMonths, BigDecimal annualRatePercent, BigDecimal estimatedMaturity,
-        LocalDateTime expiresAt) {}
+        OffsetDateTime expiresAt) {}
