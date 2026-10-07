@@ -54,6 +54,10 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private static String clientKey(HttpServletRequest request) {
         String remoteAddress = request.getRemoteAddr();
-        return remoteAddress == null || remoteAddress.isBlank() ? "unknown" : remoteAddress;
+        String client = remoteAddress == null || remoteAddress.isBlank() ? "unknown" : remoteAddress;
+        String operation = request.getRequestURI().startsWith("/api/v1/auth/password-reset/")
+                ? "password-reset"
+                : "authentication";
+        return client + ":" + operation;
     }
 }

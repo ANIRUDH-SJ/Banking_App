@@ -41,3 +41,15 @@ password and clears a temporary login lock after success.
 Invalid, expired, previously consumed, wrong-purpose, or synthetic challenges return `401 Unauthorized`.
 Failed OTP attempts count toward the existing maximum-attempt policy. Password values and OTP codes must
 never be logged or returned in an error response.
+
+## Local delivery and locked accounts
+
+The default email provider is `log`, which does **not** send email to an inbox. When using the local
+launcher, look for the development OTP in the notification-service console. Configure the `smtp`
+provider as described in [SMTP email delivery](smtp-email.md) to receive a real message.
+
+A temporary sign-in lock does not block password recovery. A successful reset clears the lock;
+otherwise, it expires after the configured lock period. While the lock is active, sign-in returns
+`ACCOUNT_LOCKED` and a `Retry-After` header indicating how long to wait. Password-reset requests
+have a separate gateway rate-limit bucket from sign-in attempts, so a burst of failed sign-ins
+does not prevent requesting a reset code.
