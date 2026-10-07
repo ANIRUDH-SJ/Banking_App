@@ -2,9 +2,16 @@ package com.netbanking.notification.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
 
 @Service
 @ConditionalOnProperty(name = "app.notifications.email.provider", havingValue = "smtp")
@@ -38,5 +45,25 @@ public class SmtpEmailService implements EmailService {
         message.setSubject(subject);
         message.setText(body);
         mailSender.send(message);
+    }
+
+    @Override
+    public void send(String recipient, String subject, String body, Attachment attachment) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper =
+                    new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            helper.setFrom(senderAddress);
+            helper.setTo(recipient);
+            helper.setSubject(subject);
+            helper.setText(body, false);
+            helper.addAttachment(
+                    attachment.filename(),
+                    new ByteArrayResource(attachment.content()),
+                    attachment.contentType());
+            mailSender.send(message);
+        } catch (MessagingException failure) {
+            throw new IllegalStateException("The email could not be composed.", failure);
+        }
     }
 }
