@@ -62,7 +62,7 @@
         <!-- /ko -->
         <oj-c-form-layout max-columns="1" label-edge="top" user-assistance-density="reflow">
           <oj-c-select-single label-hint="Pay from" data="[[accountOptions]]" item-text="label" value="{{sourceAccountId}}" messages-custom="[[accountMessages]]"></oj-c-select-single>
-          <oj-c-input-text label-hint="[[referenceLabel]]" value="{{billReference}}" messages-custom="[[referenceMessages]]" length.max="150" autocomplete="off"></oj-c-input-text>
+          <oj-c-input-text label-hint="[[referenceLabel]]" value="{{billReference}}" messages-custom="[[referenceMessages]]" assistive-text="[[referenceHint]]" length.max="150" autocomplete="off"></oj-c-input-text>
           <oj-c-input-number class="nb-amount-input" converter="[[amountConverter]]" label-hint="Amount" value="{{amount}}" input-prefix="₹" min="0" step="0" messages-custom="[[amountMessages]]" assistive-text="[[limitText]]"></oj-c-input-number>
         </oj-c-form-layout>
         <div class="nb-actions">

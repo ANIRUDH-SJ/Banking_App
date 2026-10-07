@@ -8,6 +8,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 class BillerReferenceValidationTest {
     @Test
+    void acceptsFiveDigitDemoElectricityReferences() {
+        Biller biller = new Biller();
+        ReflectionTestUtils.setField(biller, "referencePattern", "^[0-9]{5,20}$");
+
+        assertThatCode(() -> biller.validateReference("56789")).doesNotThrowAnyException();
+        assertThatThrownBy(() -> biller.validateReference("5678"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void appliesTheConfiguredBillerPattern() {
         Biller biller = new Biller();
         ReflectionTestUtils.setField(biller, "referencePattern", "^[0-9]{10}$");

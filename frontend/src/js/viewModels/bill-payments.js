@@ -76,6 +76,10 @@ define([
       return (self.biller() && self.biller().referenceLabel) || 'Bill reference';
     });
 
+    self.referenceHint = ko.pureComputed(function () {
+      return (self.biller() && self.biller().referenceHint) || '';
+    });
+
     self.limitText = ko.pureComputed(function () {
       return limitText(self.biller());
     });
@@ -124,9 +128,15 @@ define([
 
     self.toReview = function () {
       var biller = self.biller();
+      var reference = String(self.billReference() || '').trim();
+      var pattern = biller && biller.referencePattern;
+      var referenceError = reference ? '' : 'Enter the ' + self.referenceLabel().toLowerCase() + '.';
+      if (!referenceError && pattern && !(new RegExp(pattern)).test(reference)) {
+        referenceError = biller.referenceHint || 'Check the ' + self.referenceLabel().toLowerCase() + ' format.';
+      }
       var errors = {
         account: self.sourceAccountId() ? '' : 'Choose the account to pay from.',
-        reference: String(self.billReference() || '').trim() ? '' : 'Enter the ' + self.referenceLabel().toLowerCase() + '.',
+        reference: referenceError,
         amount: ui.amountError(self.amount(), biller && biller.minAmount, biller && biller.maxAmount, 'INR')
       };
       var account = self.sourceAccount();

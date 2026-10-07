@@ -8,5 +8,7 @@ public record BillerResponse(
         String name,
         String category,
         String referenceLabel,
+        String referencePattern,
+        String referenceHint,
         BigDecimal minAmount,
         BigDecimal maxAmount) {}

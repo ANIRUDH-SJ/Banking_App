@@ -46,6 +46,8 @@ public class BillerService {
                 b.getBillerName(),
                 b.getCategory(),
                 b.getReferenceLabel(),
+                b.getReferencePattern(),
+                b.getReferenceHint(),
                 b.getMinAmount(),
                 b.getMaxAmount());
     }
