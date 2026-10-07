@@ -2,7 +2,9 @@
 
 The API gateway limits `POST /api/v1/auth/**` requests before forwarding them to the identity
 service. By default, one client address may make 10 authentication requests in a fixed 60-second
-window. Other API routes and CORS preflight requests are not counted.
+window. Password-reset requests use a separate 10-request bucket per client address and window,
+so exhausted sign-in attempts do not prevent account recovery. Other API routes and CORS preflight
+requests are not counted.
 
 When the limit is exceeded, the gateway returns `429 Too Many Requests` with:
 

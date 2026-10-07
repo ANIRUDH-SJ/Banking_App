@@ -73,6 +73,23 @@ class AuthRateLimitFilterTest {
         assertThat(chain.getRequest()).isSameAs(request);
     }
 
+    @Test
+    void exhaustedSignInLimitDoesNotBlockPasswordRecovery() throws Exception {
+        AuthRateLimitFilter filter = filter(1);
+        filter.doFilter(request("203.0.113.8", null), response(), new MockFilterChain());
+
+        MockHttpServletRequest recovery = request("203.0.113.8", null);
+        recovery.setRequestURI("/api/v1/auth/password-reset/challenges");
+        MockHttpServletResponse recoveryResponse = response();
+        filter.doFilter(recovery, recoveryResponse, new MockFilterChain());
+
+        assertThat(recoveryResponse.getStatus()).isEqualTo(200);
+
+        MockHttpServletResponse repeatedRecoveryResponse = response();
+        filter.doFilter(recovery, repeatedRecoveryResponse, new MockFilterChain());
+        assertThat(repeatedRecoveryResponse.getStatus()).isEqualTo(429);
+    }
+
     private static AuthRateLimitFilter filter(int maxRequests) {
         AuthRateLimiter limiter =
                 new AuthRateLimiter(maxRequests, Duration.ofMinutes(1), Clock.systemUTC());

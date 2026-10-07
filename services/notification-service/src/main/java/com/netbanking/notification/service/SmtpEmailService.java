@@ -14,9 +14,17 @@ public class SmtpEmailService implements EmailService {
 
     public SmtpEmailService(
             JavaMailSender mailSender,
-            @Value("${app.notifications.email.from}") String senderAddress) {
+            @Value("${app.notifications.email.from}") String senderAddress,
+            @Value("${spring.mail.properties.mail.smtp.auth:true}") boolean authenticationRequired,
+            @Value("${spring.mail.username:}") String username,
+            @Value("${spring.mail.password:}") String password) {
         if (senderAddress == null || senderAddress.isBlank()) {
             throw new IllegalArgumentException("An SMTP sender address is required.");
+        }
+        if (authenticationRequired
+                && (username == null || username.isBlank() || password == null || password.isBlank())) {
+            throw new IllegalArgumentException(
+                    "SMTP authentication requires a username and password.");
         }
         this.mailSender = mailSender;
         this.senderAddress = senderAddress.strip();

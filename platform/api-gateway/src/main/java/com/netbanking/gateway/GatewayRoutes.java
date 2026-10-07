@@ -18,6 +18,7 @@ public class GatewayRoutes {
                     Map.entry("transfers", "payments-service"),
                     Map.entry("payments", "payments-service"),
                     Map.entry("bill-payments", "payments-service"),
+                    Map.entry("payments", "payments-service"),
                     Map.entry("forex", "payments-service"),
                     Map.entry("cards", "products-service"),
                     Map.entry("loans", "products-service"),

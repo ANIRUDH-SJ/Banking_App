@@ -106,16 +106,24 @@ define([
       registry.go('login');
     };
 
+    self.requestAnotherCode = function () {
+      challengeId = '';
+      self.code('');
+      self.password('');
+      self.confirmPassword('');
+      self.formError('');
+      self.reference('');
+      self.step('request');
+      return false;
+    };
+
     self.connected = function () {
       accUtils.announce('Reset your Internet Banking password.', 'polite');
       document.title = 'Reset password | Internet Banking';
     };
 
     self.disconnected = function () {
-      self.password('');
-      self.confirmPassword('');
-      self.code('');
-      challengeId = '';
+      self.requestAnotherCode();
     };
   }
 
