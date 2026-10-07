@@ -116,6 +116,13 @@ public class Beneficiary {
         beneficiaryStatus = "DISABLED";
     }
 
+    /** Changes only the customer's label; account number, IFSC and status stay as verified. */
+    public void rename(String nickname) {
+        if ("DISABLED".equals(beneficiaryStatus))
+            throw new IllegalStateException("A removed beneficiary cannot be renamed.");
+        this.nickname = nickname;
+    }
+
     @PrePersist
     void initializeCreatedAt() {
         if (createdAt == null) createdAt = Instant.now();

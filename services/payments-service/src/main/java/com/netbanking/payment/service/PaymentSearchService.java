@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +19,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
@@ -54,16 +57,16 @@ public class PaymentSearchService {
                                 + " OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
                         this::map,
                         pageArguments.toArray());
-        return new PageImpl<>(content, PageRequest.of(page, size), total == null ? 0 : total);
+        return new PageImpl<>(named(content), PageRequest.of(page, size), total == null ? 0 : total);
     }
 
     public PaymentHistoryResponse get(Long userId, Long paymentId) {
-        return jdbc
-                .query(
-                        SELECT + " WHERE user_id = ? AND payment_id = ?",
-                        this::map,
-                        userId,
-                        paymentId)
+        return named(
+                        jdbc.query(
+                                SELECT + " WHERE user_id = ? AND payment_id = ?",
+                                this::map,
+                                userId,
+                                paymentId))
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Payment was not found."));
@@ -116,10 +119,44 @@ public class PaymentSearchService {
                     details.billerId(),
                     details.billReference(),
                     details.narration(),
-                    row.getTimestamp("created_at").toInstant());
+                    row.getTimestamp("created_at").toInstant(),
+                    null,
+                    null);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Stored payment details are invalid.", exception);
         }
+    }
+
+    /** Adds the customer's current beneficiary nickname and the biller name to each row. */
+    private List<PaymentHistoryResponse> named(List<PaymentHistoryResponse> rows) {
+        Map<Long, String> nicknames =
+                names(
+                        "SELECT beneficiary_id, nickname FROM beneficiary WHERE beneficiary_id IN ",
+                        rows.stream().map(PaymentHistoryResponse::beneficiaryId).toList());
+        Map<Long, String> billers =
+                names(
+                        "SELECT biller_id, biller_name FROM biller WHERE biller_id IN ",
+                        rows.stream().map(PaymentHistoryResponse::billerId).toList());
+        if (nicknames.isEmpty() && billers.isEmpty()) return rows;
+        return rows.stream()
+                .map(
+                        row ->
+                                row.named(
+                                        nicknames.get(row.beneficiaryId()),
+                                        billers.get(row.billerId())))
+                .toList();
+    }
+
+    private Map<Long, String> names(String select, List<Long> ids) {
+        List<Long> distinct = ids.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        Map<Long, String> names = new HashMap<>();
+        if (distinct.isEmpty()) return names;
+        String placeholders = String.join(",", java.util.Collections.nCopies(distinct.size(), "?"));
+        jdbc.query(
+                select + "(" + placeholders + ")",
+                (RowCallbackHandler) row -> names.put(row.getLong(1), row.getString(2)),
+                distinct.toArray());
+        return names;
     }
 
     private static void validatePage(int page, int size) {

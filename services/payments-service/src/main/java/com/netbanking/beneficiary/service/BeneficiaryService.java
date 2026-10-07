@@ -117,6 +117,23 @@ public class BeneficiaryService {
         return toResponse(beneficiary);
     }
 
+    public BeneficiaryResponse rename(Long userId, Long beneficiaryId, String requested) {
+        Beneficiary beneficiary = owned(userId, beneficiaryId);
+        String nickname = requested.strip().replaceAll("\\s+", " ");
+        if (nickname.isEmpty()) throw new IllegalArgumentException("Enter a nickname.");
+        if (repository.existsByCustomerIdAndNicknameIgnoreCaseAndBeneficiaryIdNot(
+                beneficiary.getCustomerId(), nickname, beneficiaryId))
+            throw new ConflictException("Another beneficiary already uses this nickname.");
+        beneficiary.rename(nickname);
+        audit.record(
+                userId,
+                "BENEFICIARY_RENAMED",
+                "BENEFICIARY",
+                String.valueOf(beneficiaryId),
+                "SUCCESS");
+        return toResponse(beneficiary);
+    }
+
     public void disable(Long userId, Long beneficiaryId) {
         owned(userId, beneficiaryId).disable();
         audit.record(

@@ -16,4 +16,14 @@ public record PaymentHistoryResponse(
         Long billerId,
         String billReference,
         String narration,
-        Instant createdAt) {}
+        Instant createdAt,
+        String beneficiaryNickname,
+        String billerName) {
+
+    public PaymentHistoryResponse named(String beneficiaryNickname, String billerName) {
+        return new PaymentHistoryResponse(
+                paymentId, kind, status, transactionId, transactionReference, amount, currencyCode,
+                sourceAccountId, beneficiaryId, billerId, billReference, narration, createdAt,
+                beneficiaryNickname, billerName);
+    }
+}

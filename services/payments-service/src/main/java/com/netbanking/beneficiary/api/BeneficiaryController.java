@@ -43,6 +43,13 @@ public class BeneficiaryController {
         return service.activate(SecurityContextHelper.currentUserId(), beneficiaryId, request);
     }
 
+    @PatchMapping("/{beneficiaryId}")
+    public BeneficiaryResponse rename(
+            @PathVariable Long beneficiaryId,
+            @Valid @RequestBody RenameBeneficiaryRequest request) {
+        return service.rename(SecurityContextHelper.currentUserId(), beneficiaryId, request.nickname());
+    }
+
     @DeleteMapping("/{beneficiaryId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void disable(@PathVariable Long beneficiaryId) {
