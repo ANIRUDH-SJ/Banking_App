@@ -33,6 +33,20 @@ public class InternalLedgerController {
                 a.availableBalance());
     }
 
+    @GetMapping("/accounts/owners/{userId}")
+    public java.util.List<AccountSnapshot> accounts(@PathVariable Long userId) {
+        return accounts.getAccountsForUser(userId).stream()
+                .map(
+                        a ->
+                                new AccountSnapshot(
+                                        a.accountId(),
+                                        a.accountNumber(),
+                                        a.currencyCode().trim(),
+                                        a.accountStatus(),
+                                        a.availableBalance()))
+                .toList();
+    }
+
     @PostMapping("/ledger/operations")
     public LedgerReceipt post(@Valid @RequestBody LedgerCommand command, Authentication caller) {
         return ledger.post(caller.getName(), command);
