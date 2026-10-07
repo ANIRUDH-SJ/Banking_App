@@ -77,6 +77,27 @@ public class NotificationService {
 
     @Transactional
     public void markRead(Long userId, Long notificationId) {
+        owned(userId, notificationId).markRead();
+    }
+
+    @Transactional
+    public int markAllRead(Long userId) {
+        var unread = repository.findByUserIdAndIsRead(userId, "N");
+        unread.forEach(Notification::markRead);
+        return unread.size();
+    }
+
+    @Transactional(readOnly = true)
+    public Notification get(Long userId, Long notificationId) {
+        return owned(userId, notificationId);
+    }
+
+    @Transactional(readOnly = true)
+    public long unreadCount(Long userId) {
+        return repository.countByUserIdAndIsRead(userId, "N");
+    }
+
+    private Notification owned(Long userId, Long notificationId) {
         Notification n =
                 repository
                         .findById(notificationId)
@@ -84,7 +105,7 @@ public class NotificationService {
                                 () -> new IllegalArgumentException("Notification was not found."));
         if (!n.getUserId().equals(userId))
             throw new SecurityException("Notification does not belong to this user.");
-        n.markRead();
+        return n;
     }
 
     private static void requireText(String value, String field, int maximum) {

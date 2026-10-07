@@ -33,11 +33,29 @@ public class NotificationController {
                         .map(this::toResponse));
     }
 
+    @GetMapping("/unread-count")
+    public UnreadCount unreadCount() {
+        return new UnreadCount(notificationService.unreadCount(currentUserId()));
+    }
+
+    @GetMapping("/{notificationId}")
+    public NotificationResponse get(@PathVariable Long notificationId) {
+        return toResponse(notificationService.get(currentUserId(), notificationId));
+    }
+
+    @PatchMapping("/read-all")
+    public UnreadCount markAllRead() {
+        notificationService.markAllRead(currentUserId());
+        return new UnreadCount(0);
+    }
+
     @PatchMapping("/{notificationId}/read")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markRead(@PathVariable Long notificationId) {
         notificationService.markRead(currentUserId(), notificationId);
     }
+
+    public record UnreadCount(long unread) {}
 
     private Long currentUserId() {
         return SecurityContextHelper.currentUserId();
@@ -50,6 +68,8 @@ public class NotificationController {
                 notification.getTitle(),
                 notification.getMessage(),
                 notification.isRead(),
-                notification.getCreatedAt());
+                notification.getCreatedAt(),
+                notification.getNotificationType(),
+                notification.getReadAt());
     }
 }

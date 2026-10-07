@@ -8,4 +8,6 @@ public record NotificationResponse(
         String title,
         String message,
         boolean read,
-        LocalDateTime createdAt) {}
+        LocalDateTime createdAt,
+        String notificationType,
+        LocalDateTime readAt) {}

@@ -58,6 +58,14 @@ public class Notification {
         return message;
     }
 
+    public String getNotificationType() {
+        return notificationType;
+    }
+
+    public LocalDateTime getReadAt() {
+        return readAt;
+    }
+
     public boolean isRead() {
         return "Y".equals(isRead);
     }
