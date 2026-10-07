@@ -7,6 +7,8 @@ import com.netbanking.security.SecurityContextHelper;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/api/v1/forex")
 public class ForexController {
@@ -14,6 +16,17 @@ public class ForexController {
 
     public ForexController(ForexService service) {
         this.service = service;
+    }
+
+    @GetMapping("/rates")
+    public ForexRatesResponse rates() {
+        return service.rates();
+    }
+
+    @GetMapping("/rates/convert")
+    public ForexConversionPreview preview(
+            @RequestParam String from, @RequestParam String to, @RequestParam BigDecimal amount) {
+        return service.preview(from, to, amount);
     }
 
     @PostMapping("/quotes")
