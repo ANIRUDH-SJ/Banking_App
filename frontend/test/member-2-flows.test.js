@@ -65,6 +65,48 @@ const ui = loadUiSupport();
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
+test('bill payment checks the biller reference before requesting a code', async () => {
+  const calls = [];
+  const BillPayments = load('bill-payments.js', {
+    knockout: ko,
+    '../accUtils': { announce: () => {} },
+    '../services/registry': { otp: { validateCode: () => '' }, accounts: {} },
+    '../services/format': format,
+    '../services/ui-support': ui,
+    '../services/BillerService': {},
+    '../services/BillPaymentService': {
+      requestOtp: async (request) => {
+        calls.push(request);
+        return { challengeId: 'challenge-1' };
+      }
+    }
+  });
+  const screen = new BillPayments();
+  screen.choose({
+    billerId: 2,
+    referenceLabel: 'Consumer number',
+    referencePattern: '^[0-9]{5,20}$',
+    referenceHint: 'Enter 5 to 20 digits.',
+    minAmount: 1,
+    maxAmount: 100000
+  });
+  screen.sourceAccountId(1);
+  screen.amount(1000);
+  screen.billReference('5678');
+  screen.toReview();
+  assert.equal(screen.flow.at(), 1);
+  assert.equal(screen.referenceMessages()[0].summary, 'Enter 5 to 20 digits.');
+  assert.equal(calls.length, 0);
+
+  screen.billReference('56789');
+  screen.toReview();
+  assert.equal(screen.flow.at(), 2);
+  screen.sendCode();
+  await tick();
+  assert.equal(screen.flow.at(), 3);
+  assert.equal(calls[0].billReference, '56789');
+});
+
 test('accounts screen displays only bank-provided balances', async () => {
   const rows = [{ accountId: 11, accountNumber: '0000000011', currentBalance: 123, availableBalance: 100, currencyCode: 'INR', accountStatus: 'ACTIVE' }];
   const Accounts = load('accounts.js', {
