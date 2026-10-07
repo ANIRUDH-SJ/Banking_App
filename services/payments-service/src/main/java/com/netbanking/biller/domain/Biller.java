@@ -36,6 +36,9 @@ public class Biller {
     @Column(name = "reference_pattern", length = 200)
     private String referencePattern;
 
+    @Column(name = "reference_hint", length = 150)
+    private String referenceHint;
+
     protected Biller() {}
 
     public Long getBillerId() {
@@ -56,6 +59,14 @@ public class Biller {
 
     public String getReferenceLabel() {
         return referenceLabel;
+    }
+
+    public String getReferencePattern() {
+        return referencePattern;
+    }
+
+    public String getReferenceHint() {
+        return referenceHint;
     }
 
     public BigDecimal getMinAmount() {
