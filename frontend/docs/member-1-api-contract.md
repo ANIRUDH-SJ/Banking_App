@@ -96,7 +96,7 @@ The screen shows `qrCodeDataUri` and offers `manualEntryKey` only as a fallback.
 }
 ```
 
-The access token expires 15 minutes after it is issued. A bad or expired challenge returns `401`.
+The access token expires 60 minutes after it is issued. A bad or expired challenge returns `401`.
 
 ## Password recovery
 

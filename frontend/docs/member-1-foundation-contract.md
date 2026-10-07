@@ -54,7 +54,7 @@ var session = registry.session.getSession();
 }
 ```
 
-The shell stores that record in `sessionStorage` under `internet-banking.session`. Passwords, authenticator secrets, setup QR data, and login challenges are not stored. `registry.session.clear()` removes the record. There is no refresh token; the access token lasts 15 minutes and the shell signs out when it expires.
+The shell stores that record in `sessionStorage` under `internet-banking.session`. Passwords, authenticator secrets, setup QR data, and login challenges are not stored. `registry.session.clear()` removes the record. There is no refresh token; the access token lasts 60 minutes and the shell signs out when it expires.
 
 `registry.session.hasRole('ADMIN')` and `hasRole('CUSTOMER')` read the current session.
 
