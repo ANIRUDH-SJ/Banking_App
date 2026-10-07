@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -55,7 +56,7 @@ public class ForexStore {
                         + " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                 q.quoteId(), quote.userId(), q.sourceAccountId(), q.destinationAccountId(),
                 q.sourceCurrency(), q.destinationCurrency(), q.sourceAmount(), q.destinationAmount(),
-                q.exchangeRate(), quote.createdAt(), q.expiresAt());
+                q.exchangeRate(), quote.createdAt(), q.expiresAt().toLocalDateTime());
         return quote;
     }
 
@@ -71,7 +72,7 @@ public class ForexStore {
                 rs.getString("source_currency").trim(), rs.getString("destination_currency").trim(),
                 rs.getBigDecimal("source_amount"), rs.getBigDecimal("destination_amount"),
                 rs.getBigDecimal("exchange_rate"), "DEMO_CONFIGURED",
-                rs.getTimestamp("expires_at").toLocalDateTime()),
+                rs.getTimestamp("expires_at").toLocalDateTime().atOffset(ZoneOffset.UTC)),
                 rs.getLong("user_id"), rs.getTimestamp("created_at").toLocalDateTime());
     }
 
