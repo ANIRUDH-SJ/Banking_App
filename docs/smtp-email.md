@@ -11,6 +11,32 @@ notification service from starting, rather than making every delivery fail later
 
 ## Enable SMTP
 
+### Free Resend setup
+
+Resend's free tier includes SMTP sending. Create a Resend account and API key, then use a sender
+address from a domain you have verified in Resend. For a one-person test only, Resend's
+`onboarding@resend.dev` sender can send to the email address associated with that Resend account;
+it cannot deliver password-reset messages to other users. After creating `.local` with
+`node scripts/init-local.mjs`, run:
+
+```sh
+node scripts/configure-resend.mjs
+```
+
+The command prompts for the sender and hides the API key as it is entered. It updates only the
+ignored `.local/notification-service.json` file, enables SMTPS on port 465, and checks the SMTP
+connection when notification-service starts. Restart notification-service, request a reset code
+for a registered account at an allowed recipient address, and check the inbox and spam folder.
+The notification-service log shows delivery success or a concrete SMTP failure. Connection success
+alone does not prove that an email reached an inbox.
+
+Do not put the API key in Git or chat. A verified sending domain is needed before using this for
+all banking customers, and free-tier limits may change.
+
+### Other SMTP providers
+
+### Other SMTP providers
+
 Provide these values only to the notification service:
 
 ```sh
