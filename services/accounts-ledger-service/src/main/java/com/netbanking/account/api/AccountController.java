@@ -30,6 +30,12 @@ public class AccountController {
         return service.getOwnedAccount(SecurityContextHelper.currentUserId(), accountId);
     }
 
+    @PatchMapping("/{accountId}")
+    public AccountSummaryResponse rename(
+            @PathVariable Long accountId, @Valid @RequestBody RenameAccountRequest request) {
+        return service.rename(SecurityContextHelper.currentUserId(), accountId, request.nickname());
+    }
+
     @PostMapping("/foreign-currency")
     public AccountSummaryResponse openForeignCurrency(
             @Valid @RequestBody OpenForeignCurrencyAccountRequest request) {
