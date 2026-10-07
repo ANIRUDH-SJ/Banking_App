@@ -4,7 +4,7 @@ PR #60 owns the Oracle JET shell, navigation, session, sign-in, one-time-code re
 
 The feature services import `services/registry` and use `registry.apiClient`, `registry.accounts`, `registry.cards`, `registry.loans`, or `registry.otp`. They do not maintain a second token store, sign-in dialog, HTTP error parser, or API base URL. A `401` is handled by the foundation session flow.
 
-The page views use the foundation's `nb-page`, `nb-page-head`, `nb-kicker`, and `nb-lede` classes. `member3.css` applies the same petrol, brass, paper, status, typography, and radius tokens to feature cards and tables; it loads once when a Member 3 route opens. The branch does not change the shared shell files.
+The billers, bill payments, cards, loans and administration views use the same `nb-` page, sheet, flow, table and form classes in `app.css` as every other screen, so the app has one stylesheet and one look.
 
 ## Verification
 

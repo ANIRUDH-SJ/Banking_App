@@ -17,6 +17,9 @@ define(['./registry'], function (registry) {
     listHistory: function () {
       return registry.apiClient.get('/api/v1/bill-payments');
     },
+    listRecent: function (page, size) {
+      return registry.apiClient.get('/api/v1/payments?kind=BILL_PAYMENT&page=' + (page || 0) + '&size=' + (size || 10));
+    },
     requestOtp: function (payment) {
       return registry.otp.requestBillPaymentChallenge(paymentBody(payment));
     },

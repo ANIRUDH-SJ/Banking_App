@@ -17,7 +17,7 @@
   },
   "private": true,
   "scripts": {
-    "test": "node --test ./test/foundation.test.js",
+    "test": "node --test ./test/foundation.test.js ./test/member-2-flows.test.js ./test/member-3-services.test.js",
     "serve": "ojet serve --server-port=8000 --server-only"
   },
   "overrides": {

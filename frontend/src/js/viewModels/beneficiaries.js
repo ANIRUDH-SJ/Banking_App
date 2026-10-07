@@ -2,131 +2,229 @@ define([
   'knockout',
   '../accUtils',
   '../services/registry',
+  '../services/format',
+  '../services/ui-support',
   '../services/beneficiary-service',
-  '../services/member2-style',
-  'oj-c/button'
-], function (ko, accUtils, registry, BeneficiaryService) {
+  'oj-c/button',
+  'oj-c/input-text',
+  'oj-c/badge',
+  'oj-c/form-layout',
+  'oj-c/skeleton'
+], function (ko, accUtils, registry, format, ui, BeneficiaryService) {
+  var ACCOUNT = /^[0-9]{10,20}$/;
+  var IFSC = /^[A-Za-z]{4}0[A-Za-z0-9]{6}$/;
+
   function BeneficiariesViewModel() {
     var self = this;
-    var service = new BeneficiaryService(registry.apiClient);
-    self.beneficiaries = ko.observableArray([]);
-    self.loading = ko.observable(false);
+    var generation = 0;
+    var payees = new BeneficiaryService(registry.apiClient);
+
+    self.problem = new ui.Problem();
+    self.success = ko.observable('');
+    self.loading = ko.observable(true);
     self.busy = ko.observable(false);
-    self.error = ko.observable('');
-    self.message = ko.observable('');
-    self.activationTarget = ko.observable(null);
-    self.activationChallengeId = ko.observable('');
-    self.activationCode = ko.observable('');
+    self.items = ko.observableArray([]);
+    self.adding = ko.observable(false);
+    self.activatingId = ko.observable(null);
+    self.removingId = ko.observable(null);
+    self.challengeId = ko.observable('');
+    self.otpCode = ko.observable('');
+    self.otpMessages = ko.observableArray([]);
+
     self.form = {
       nickname: ko.observable(''),
       beneficiaryName: ko.observable(''),
       accountNumber: ko.observable(''),
+      confirmAccount: ko.observable(''),
       ifscCode: ko.observable(''),
       bankName: ko.observable('')
     };
+    self.formMessages = {};
+    Object.keys(self.form).forEach(function (key) {
+      self.formMessages[key] = ko.observableArray([]);
+    });
 
-    self.refresh = function () {
-      self.loading(true);
-      self.error('');
-      return service.list().then(function (rows) {
-        self.beneficiaries(Array.isArray(rows) ? rows : []);
-      }).catch(function (error) {
-        self.error(error.message || 'Unable to load beneficiaries.');
-      }).finally(function () { self.loading(false); });
+    self.activeCount = ko.pureComputed(function () {
+      return self.items().filter(function (item) { return item.status === 'ACTIVE'; }).length;
+    });
+
+    self.label = format.labelize;
+    self.statusVariant = ui.statusVariant;
+
+    self.initials = function (item) {
+      return String(item.nickname || item.beneficiaryName || '?').trim().split(/\s+/).slice(0, 2).map(function (word) {
+        return word.charAt(0).toUpperCase();
+      }).join('');
     };
 
-    self.addBeneficiary = function () {
-      if (self.busy()) return false;
-      var request = {
-        nickname: self.form.nickname().trim(),
-        beneficiaryName: self.form.beneficiaryName().trim(),
-        accountNumber: self.form.accountNumber().trim(),
-        ifscCode: self.form.ifscCode().trim().toUpperCase(),
-        bankName: self.form.bankName().trim()
+    self.openAdd = function () {
+      Object.keys(self.form).forEach(function (key) {
+        self.form[key]('');
+        self.formMessages[key]([]);
+      });
+      self.success('');
+      self.problem.clear();
+      self.adding(true);
+      window.setTimeout(function () {
+        var first = document.querySelector('.nb-add-payee input');
+        if (first) {
+          first.focus();
+        }
+      }, 50);
+    };
+
+    self.cancelAdd = function () {
+      self.adding(false);
+      self.problem.clear();
+    };
+
+    function check() {
+      var f = self.form;
+      var value = function (key) { return String(f[key]() || '').trim(); };
+      var errors = {
+        nickname: value('nickname') ? (value('nickname').length > 100 ? 'Keep the nickname under 100 characters.' : '') : 'Enter a nickname.',
+        beneficiaryName: value('beneficiaryName') ? '' : 'Enter the account holder\u2019s name.',
+        accountNumber: ACCOUNT.test(value('accountNumber')) ? '' : 'Enter the 10 to 20 digit account number.',
+        confirmAccount: value('confirmAccount') === value('accountNumber') ? '' : 'The account numbers do not match.',
+        ifscCode: IFSC.test(value('ifscCode')) ? '' : 'Enter an 11-character IFSC, for example HDFC0001234.',
+        bankName: value('bankName') ? '' : 'Enter the bank name.'
       };
-      if (!request.nickname || !request.beneficiaryName || !request.bankName ||
-          !/^[0-9]{10,20}$/.test(request.accountNumber) ||
-          !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(request.ifscCode)) {
-        self.error('Enter a nickname, name, bank, a 10–20 digit account number, and a valid IFSC code.');
+      Object.keys(errors).forEach(function (key) {
+        self.formMessages[key](ui.messages(errors[key]));
+      });
+      return Object.keys(errors).filter(function (key) { return errors[key]; }).length === 0;
+    }
+
+    self.save = function () {
+      if (!check()) {
+        self.problem.show('Check the highlighted fields.');
         return false;
       }
+      if (self.busy()) {
+        return false;
+      }
+      var f = self.form;
       self.busy(true);
-      self.error('');
-      self.message('');
-      service.create(request).then(function () {
-        Object.keys(self.form).forEach(function (key) { self.form[key](''); });
-        self.message('Beneficiary added. Verify it before transferring money.');
-        return self.refresh();
+      self.problem.clear();
+      payees.create({
+        nickname: f.nickname().trim(),
+        beneficiaryName: f.beneficiaryName().trim(),
+        accountNumber: f.accountNumber().trim(),
+        ifscCode: f.ifscCode().trim().toUpperCase(),
+        bankName: f.bankName().trim()
+      }).then(function (created) {
+        self.adding(false);
+        self.items.push(created);
+        self.success(created.nickname + ' was added. Activate it with a one-time code before sending money.');
+        self.startActivation(created);
       }).catch(function (error) {
-        self.error(error.message || 'Unable to add beneficiary.');
-      }).finally(function () { self.busy(false); });
+        ['nickname', 'beneficiaryName', 'accountNumber', 'ifscCode', 'bankName'].forEach(function (key) {
+          self.formMessages[key](ui.messages(ui.fieldMessage(error, key)));
+        });
+        self.problem.set(error, 'The beneficiary could not be added.');
+      }).finally(function () {
+        self.busy(false);
+      });
       return false;
     };
 
-    self.requestActivation = function (beneficiary) {
-      if (self.busy()) return;
+    self.startActivation = function (item) {
+      self.removingId(null);
+      self.problem.clear();
+      self.otpCode('');
+      self.otpMessages([]);
       self.busy(true);
-      self.error('');
-      self.message('');
-      registry.otp.requestBeneficiaryActivation(beneficiary.beneficiaryId).then(function (challenge) {
-        self.activationTarget(beneficiary);
-        self.activationChallengeId(challenge.challengeId);
-        self.activationCode('');
-        self.message('Enter the one-time code sent for ' + beneficiary.nickname + '.');
+      registry.otp.requestBeneficiaryActivation(item.beneficiaryId).then(function (challenge) {
+        self.challengeId(challenge && challenge.challengeId);
+        self.activatingId(item.beneficiaryId);
+        accUtils.announce('A one-time code has been sent to your registered email and mobile.', 'polite');
       }).catch(function (error) {
-        self.error(error.message || 'Unable to request the verification code.');
-      }).finally(function () { self.busy(false); });
+        self.problem.set(error, 'The activation code could not be sent.');
+      }).finally(function () {
+        self.busy(false);
+      });
     };
 
-    self.activate = function () {
-      if (self.busy() || !self.activationTarget()) return false;
-      var validation = registry.otp.validateCode(self.activationCode());
-      if (validation) {
-        self.error(validation);
+    self.activate = function (item) {
+      var error = registry.otp.validateCode(self.otpCode());
+      self.otpMessages(ui.messages(error));
+      if (error || self.busy()) {
         return false;
       }
       self.busy(true);
-      self.error('');
-      service.activate(
-        self.activationTarget().beneficiaryId,
-        self.activationChallengeId(),
-        self.activationCode().trim()
-      ).then(function () {
-        self.message('Beneficiary verified and ready for transfers.');
-        self.activationTarget(null);
-        self.activationChallengeId('');
-        self.activationCode('');
-        return self.refresh();
-      }).catch(function (error) {
-        self.error(error.message || 'Unable to verify beneficiary.');
-      }).finally(function () { self.busy(false); });
+      payees.activate(item.beneficiaryId, self.challengeId(), String(self.otpCode()).trim()).then(function (updated) {
+        self.items.replace(item, updated || Object.assign({}, item, { status: 'ACTIVE' }));
+        self.activatingId(null);
+        self.success(item.nickname + ' is active. You can now send money to them.');
+        accUtils.announce(item.nickname + ' activated.', 'polite');
+      }).catch(function (failure) {
+        self.otpMessages(ui.messages(ui.fieldMessage(failure, 'otpCode') || (failure && failure.message) || 'The code was not accepted.'));
+      }).finally(function () {
+        self.busy(false);
+      });
       return false;
     };
 
     self.cancelActivation = function () {
-      self.activationTarget(null);
-      self.activationChallengeId('');
-      self.activationCode('');
-      self.error('');
+      self.activatingId(null);
     };
 
-    self.disableBeneficiary = function (beneficiary) {
-      if (self.busy() || !window.confirm('Disable ' + beneficiary.nickname + '? Transfers to this beneficiary will stop.')) return;
+    self.askRemove = function (item) {
+      self.activatingId(null);
+      self.removingId(item.beneficiaryId);
+    };
+
+    self.keep = function () {
+      self.removingId(null);
+    };
+
+    self.remove = function (item) {
+      if (self.busy()) {
+        return;
+      }
       self.busy(true);
-      self.error('');
-      service.disable(beneficiary.beneficiaryId).then(function () {
-        self.message(beneficiary.nickname + ' disabled.');
-        return self.refresh();
+      payees.disable(item.beneficiaryId).then(function () {
+        self.items.remove(item);
+        self.removingId(null);
+        self.success(item.nickname + ' was removed.');
       }).catch(function (error) {
-        self.error(error.message || 'Unable to disable beneficiary.');
-      }).finally(function () { self.busy(false); });
+        self.problem.set(error, 'The beneficiary could not be removed.');
+      }).finally(function () {
+        self.busy(false);
+      });
+    };
+
+    self.pay = function (item) {
+      ui.hand('transfer.beneficiaryId', item.beneficiaryId);
+      registry.go('transfer');
     };
 
     self.connected = function () {
-      accUtils.announce('Beneficiaries page loaded.', 'polite');
+      var ticket = ++generation;
+      accUtils.announce('Beneficiaries.', 'polite');
       document.title = 'Beneficiaries | Internet Banking';
-      self.refresh();
+      self.loading(true);
+      self.problem.clear();
+      self.success('');
+      payees.list().then(function (list) {
+        if (ticket === generation) {
+          self.items(format.asList(list));
+        }
+      }).catch(function (error) {
+        if (ticket === generation) {
+          self.problem.set(error, 'Beneficiaries could not be loaded.');
+        }
+      }).finally(function () {
+        if (ticket === generation) {
+          self.loading(false);
+        }
+      });
+    };
+
+    self.disconnected = function () {
+      generation += 1;
     };
   }
+
   return BeneficiariesViewModel;
 });

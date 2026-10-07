@@ -1,44 +1,115 @@
-<div class="nb-page nb-product-page">
-  <header class="nb-hero nb-product-hero">
-    <div class="nb-hero-text">
-      <p class="nb-eyebrow">Savings & investments</p>
-      <h1 class="nb-hero-title">Grow your savings, your way</h1>
-      <p class="nb-hero-copy">Choose a fixed deposit for a lump sum or a recurring deposit for a regular saving habit. Review the rate before opening.</p>
-    </div>
-    <div class="nb-hero-actions"><a href="#" class="nb-hero-link" data-bind="click: startAgain">Open a deposit</a></div>
+<div class="nb-page nb-depositsdesk">
+  <header class="nb-page-head">
+    <p class="nb-kicker">Products</p>
+    <h1>Fixed and recurring deposits</h1>
+    <p class="nb-lede">Lock in a rate for a fixed term. A fixed deposit takes one amount up front; a recurring deposit takes the same instalment every month.</p>
   </header>
 
-  <p class="nb-alert" role="alert" data-bind="visible: error"><span data-bind="text: error"></span></p>
-  <p class="nb-product-message" role="status" data-bind="visible: message, text: message"></p>
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
+  </div>
+  <p class="nb-success" role="status" data-bind="visible: success, text: success"></p>
 
-  <section class="nb-sheet nb-product-form" data-bind="visible: step() === 'form'">
-    <div class="nb-sheet-head"><div><h2>Open a deposit</h2><p class="nb-sheet-sub">Rates are confirmed in a quote before money moves from your account.</p></div></div>
-    <div class="nb-product-types" role="radiogroup" aria-label="Deposit type">
-      <button type="button" data-kind="FD" data-bind="click: selectKind, css: { 'is-selected': kind() === 'FD' }"><strong>Fixed deposit</strong><span>Invest a lump sum</span></button>
-      <button type="button" data-kind="RD" data-bind="click: selectKind, css: { 'is-selected': kind() === 'RD' }"><strong>Recurring deposit</strong><span>Save monthly</span></button>
+  <div class="nb-work">
+    <section class="nb-sheet nb-flow-sheet" aria-label="Open a deposit">
+      <ol class="nb-flow" aria-label="Deposit steps" data-bind="foreach: flow.names">
+        <li data-bind="css: $parent.flow.stateOf($index()), attr: { 'aria-current': $parent.flow.is($index()) ? 'step' : null }">
+          <span class="nb-flow-no" data-bind="text: $index() + 1" aria-hidden="true"></span>
+          <span class="nb-flow-name" data-bind="text: $data"></span>
+        </li>
+      </ol>
+
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(0), submit: getQuote">
+        <h2 tabindex="-1">Plan a deposit</h2>
+        <oj-c-buttonset-single class="nb-segment" aria-label="Deposit type" items="[[kindItems]]" value="{{kind}}"></oj-c-buttonset-single>
+        <oj-c-form-layout max-columns="1" label-edge="top" user-assistance-density="reflow">
+          <oj-c-select-single label-hint="Fund from" data="[[accountOptions]]" item-text="label" value="{{sourceAccountId}}" messages-custom="[[accountMessages]]"></oj-c-select-single>
+          <oj-c-input-number class="nb-amount-input" converter="[[amountConverter]]" label-hint="[[amountLabel]]" value="{{amount}}" input-prefix="₹" min="0" step="0" messages-custom="[[amountMessages]]" assistive-text="[[amountHint]]"></oj-c-input-number>
+        </oj-c-form-layout>
+        <div class="nb-field-group">
+          <span class="nb-field-label" id="deposit-term-label">Term in months</span>
+          <oj-c-buttonset-single class="nb-segment is-fill" layout-width="equal" aria-labelledby="deposit-term-label" items="[[termItems]]" value="{{termMonths}}"></oj-c-buttonset-single>
+        </div>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Getting quote…' : 'Get quote']]" disabled="[[busy() || loading()]]"></oj-c-button>
+        </div>
+      </form>
+
+      <!-- ko if: flow.is(1) && quote() -->
+      <div class="nb-flow-panel">
+        <h2 tabindex="-1" data-bind="text: kindName(quote().kind) + ' for ' + quote().termMonths + ' months'"></h2>
+        <dl class="nb-quote">
+          <div><dt>Interest rate</dt><dd data-bind="text: quote().annualRatePercent + '%'"></dd></div>
+          <div><dt data-bind="text: quote().kind === 'RD' ? 'Each month' : 'You deposit'"></dt><dd data-bind="text: money(quote().amount, 'INR')"></dd></div>
+          <div><dt>At maturity</dt><dd data-bind="text: money(quote().estimatedMaturity, 'INR')"></dd></div>
+          <p class="nb-quote-foot" data-bind="text: 'Rate held until ' + expires() + '. The maturity amount is an estimate before tax.'"></p>
+        </dl>
+        <div class="nb-actions">
+          <oj-c-button chroming="callToAction" label="[[busy() ? 'Opening…' : 'Open deposit']]" disabled="[[busy]]" on-oj-action="[[open]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Change plan" on-oj-action="[[change]]"></oj-c-button>
+        </div>
+      </div>
+      <!-- /ko -->
+    </section>
+
+    <aside class="nb-sheet nb-aside" aria-labelledby="deposit-rates-heading">
+      <div class="nb-sheet-head">
+        <h2 id="deposit-rates-heading">Before you open</h2>
+      </div>
+      <ul class="nb-rows">
+        <li class="nb-row"><span class="nb-row-glyph i-deposits" aria-hidden="true"></span><span class="nb-row-main"><span class="nb-row-title">Fixed deposit</span><span class="nb-row-meta">From ₹1,000 · 6 to 36 months</span></span><span></span></li>
+        <li class="nb-row"><span class="nb-row-glyph i-clock" aria-hidden="true"></span><span class="nb-row-main"><span class="nb-row-title">Recurring deposit</span><span class="nb-row-meta">From ₹100 a month</span></span><span></span></li>
+        <li class="nb-row"><span class="nb-row-glyph i-shield" aria-hidden="true"></span><span class="nb-row-main"><span class="nb-row-title">Quotes last 10 minutes</span><span class="nb-row-meta">Funded from an active rupee account</span></span><span></span></li>
+      </ul>
+    </aside>
+  </div>
+
+  <section class="nb-sheet" aria-labelledby="deposit-list-heading">
+    <div class="nb-sheet-head">
+      <h2 id="deposit-list-heading">Your deposits</h2>
     </div>
-    <form class="nb-form nb-product-grid" data-bind="submit: requestQuote">
-      <label>Funding account<select class="nb-control" required data-bind="options: eligibleAccounts, optionsText: accountLabel, optionsValue: 'accountId', value: sourceAccountId, optionsCaption: 'Choose an active INR account'"></select></label>
-      <label><span data-bind="text: kind() === 'RD' ? 'Monthly installment (INR)' : 'Opening amount (INR)'"></span><input class="nb-control" type="number" inputmode="decimal" min="100" max="10000000" step="0.01" required data-bind="value: amount" /><small data-bind="text: minimumHint"></small></label>
-      <label>Term<select class="nb-control" data-bind="value: termMonths"><option value="6">6 months</option><option value="12">12 months</option><option value="24">24 months</option><option value="36">36 months</option></select></label>
-      <div class="nb-form-actions"><oj-c-button chroming="callToAction" type="submit" label="Get rate quote" disabled="[[!canQuote()]]"></oj-c-button></div>
-    </form>
-  </section>
-
-  <section class="nb-sheet nb-product-review" data-bind="visible: step() === 'review', with: quote">
-    <div class="nb-sheet-head"><div><p class="nb-eyebrow">Your rate quote</p><h2 data-bind="text: kind === 'RD' ? 'Recurring deposit' : 'Fixed deposit'"></h2><p class="nb-sheet-sub">Check the details. This quote is time-limited and does not move funds until you confirm.</p></div><oj-c-badge size="sm" variant="warningSubtle" label="Rate held"></oj-c-badge></div>
-    <dl class="nb-summary-list"><dt>Contribution</dt><dd data-bind="text: $parent.money(amount, 'INR')"></dd><dt>Term</dt><dd data-bind="text: termMonths + ' months'"></dd><dt>Annual rate</dt><dd data-bind="text: annualRatePercent + '% p.a.'"></dd><dt>Estimated value at maturity</dt><dd data-bind="text: $parent.money(estimatedMaturity, 'INR')"></dd><dt>Quote expires</dt><dd data-bind="text: $parent.date(expiresAt)"></dd></dl>
-    <p class="nb-disclosure">The maturity value is an estimate. It is calculated using the quoted rate and can change if recurring installments are delayed.</p>
-    <div class="nb-form-actions"><oj-c-button chroming="outlined" label="Change details" on-oj-action="[[$parent.backToForm]]"></oj-c-button><oj-c-button chroming="callToAction" label="Open deposit" on-oj-action="[[$parent.openDeposit]]"></oj-c-button></div>
-  </section>
-
-  <section class="nb-sheet nb-product-review" data-bind="visible: step() === 'receipt'">
-    <div class="nb-sheet-head"><div><p class="nb-eyebrow">Deposit opened</p><h2>Your funds are on their way to work</h2><p class="nb-sheet-sub" data-bind="text: message"></p></div><oj-c-badge size="sm" variant="successSubtle" label="Open"></oj-c-badge></div>
-    <div class="nb-form-actions"><oj-c-button chroming="callToAction" label="Open another deposit" on-oj-action="[[startAgain]]"></oj-c-button></div>
-  </section>
-
-  <section class="nb-sheet" aria-labelledby="existing-deposits"><div class="nb-sheet-head"><div><h2 id="existing-deposits">Your deposits</h2><p class="nb-sheet-sub">Open deposits and their projected maturity values.</p></div></div>
-    <div class="nb-empty-panel" data-bind="visible: !loading() && deposits().length === 0"><p><strong>You do not have a deposit yet.</strong></p><p>Your fixed and recurring deposits will appear here after opening.</p></div>
-    <ul class="nb-product-list" data-bind="foreach: deposits"><li><div><strong data-bind="text: kind === 'RD' ? 'Recurring deposit' : 'Fixed deposit'"></strong><span data-bind="text: $parent.label(status) + ' · ' + termMonths + ' months'"></span></div><div><strong data-bind="text: $parent.money(estimatedMaturity, 'INR')"></strong><span data-bind="text: 'Matures ' + $parent.date(maturityAt)"></span></div></li></ul>
+    <div class="nb-rail-skeleton" data-bind="visible: loading" aria-hidden="true">
+      <oj-c-skeleton height="3.5rem"></oj-c-skeleton>
+      <oj-c-skeleton height="3.5rem"></oj-c-skeleton>
+    </div>
+    <div class="nb-empty-panel is-quiet" data-bind="visible: !loading() && deposits().length === 0">
+      <span class="nb-empty-glyph i-deposits" aria-hidden="true"></span>
+      <p><strong>No deposits yet</strong></p>
+      <p>Deposits you open will be listed here with their maturity dates.</p>
+    </div>
+    <ul class="nb-items" data-bind="foreach: deposits">
+      <li class="nb-item">
+        <span class="nb-glyph" data-bind="css: kind === 'RD' ? 'i-clock' : 'i-deposits'" aria-hidden="true"></span>
+        <span class="nb-choice-main">
+          <span class="nb-choice-name" data-bind="text: $parent.kindName(kind) + ' · ' + termMonths + ' months at ' + annualRatePercent + '%'"></span>
+          <span class="nb-row-meta">
+            <span data-bind="text: 'Opened ' + $parent.date(openedAt)"></span>
+            <span data-bind="visible: maturityAt, text: 'Matures ' + $parent.date(maturityAt)"></span>
+          </span>
+        </span>
+        <span class="nb-item-side">
+          <span class="nb-deposit-figure">
+            <span class="nb-review-label">At maturity</span>
+            <span data-bind="text: $parent.money(estimatedMaturity, 'INR')"></span>
+          </span>
+          <oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge>
+        </span>
+        <!-- ko if: kind === 'RD' -->
+        <div class="nb-item-extra nb-deposit-rd">
+          <div class="nb-meter">
+            <div class="nb-meter-bar" role="progressbar" aria-label="Instalments paid" aria-valuemin="0" aria-valuemax="100" data-bind="attr: { 'aria-valuenow': $parent.progress($data) }">
+              <span data-bind="style: { width: $parent.progress($data) + '%' }"></span>
+            </div>
+            <p class="nb-meter-text">
+              <span data-bind="text: installmentsPaid + ' of ' + termMonths + ' instalments · ' + $parent.money(contributedAmount, 'INR') + ' saved'"></span>
+              <span data-bind="visible: nextDueAt, text: 'Next due ' + $parent.date(nextDueAt)"></span>
+            </p>
+          </div>
+          <oj-c-button size="sm" chroming="outlined" label="[[$parent.payingId() === depositId ? 'Paying…' : 'Pay ' + $parent.money(installmentOrPrincipal, 'INR')]]" disabled="[[status !== 'ACTIVE' || !!$parent.payingId()]]" on-oj-action="[[function () { $parent.payInstallment($data); }]]"></oj-c-button>
+        </div>
+        <!-- /ko -->
+      </li>
+    </ul>
   </section>
 </div>

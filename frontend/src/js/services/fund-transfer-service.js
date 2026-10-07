@@ -15,6 +15,10 @@ define([], function () {
     this.list = function () {
       return apiClient.get('/api/v1/transfers');
     };
+
+    this.history = function (page, size) {
+      return apiClient.get('/api/v1/payments?kind=TRANSFER&page=' + (page || 0) + '&size=' + (size || 10));
+    };
   }
 
   return FundTransferService;

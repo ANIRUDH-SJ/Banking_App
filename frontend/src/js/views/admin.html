@@ -1,44 +1,164 @@
-<div class="nb-page feature-page admin-page">
-  <div class="feature-heading">
-    <div class="nb-page-head"><p class="nb-kicker feature-eyebrow">Administration</p><h1>Operations overview</h1><p class="nb-lede">Monitor users, accounts, transactions, and audit events.</p></div>
-    <oj-button chroming="outlined" disabled="[[isLoading]]" on-oj-action="[[refresh]]">Refresh all</oj-button>
+<div class="nb-page nb-admin">
+  <header class="nb-page-head has-actions">
+    <p class="nb-kicker">Administration</p>
+    <h1>Operations console</h1>
+    <p class="nb-lede">Monitor customers, accounts, money movement and the audit trail from one place.</p>
+    <div class="nb-head-actions">
+      <oj-c-button chroming="outlined" label="[[isLoading() ? 'Refreshing…' : 'Refresh all']]" disabled="[[isLoading]]" on-oj-action="[[refresh]]"></oj-c-button>
+    </div>
+  </header>
+
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
   </div>
 
-  <p class="feature-error" data-bind="visible: errorMessage" role="alert"><oj-bind-text value="[[errorMessage]]"></oj-bind-text></p>
-  <div class="feature-loading" data-bind="visible: isLoading" role="status"><oj-progress-circle size="sm" value="-1"></oj-progress-circle> Loading administrator data…</div>
+  <dl class="nb-facts">
+    <div><dt>Users</dt><dd data-bind="text: isLoading() ? '…' : userTotal()"></dd></div>
+    <div><dt>Accounts</dt><dd data-bind="text: isLoading() ? '…' : accountTotal()"></dd></div>
+    <div><dt>Transactions</dt><dd data-bind="text: isLoading() ? '…' : transactionTotal()"></dd></div>
+    <div><dt>Audit events</dt><dd data-bind="text: isLoading() ? '…' : auditTotal()"></dd></div>
+  </dl>
 
-  <div class="admin-kpis">
-    <article><span>Users</span><strong><oj-bind-text value="[[userTotal]]"></oj-bind-text></strong></article>
-    <article><span>Accounts</span><strong><oj-bind-text value="[[accountTotal]]"></oj-bind-text></strong></article>
-    <article><span>Transactions</span><strong><oj-bind-text value="[[transactionTotal]]"></oj-bind-text></strong></article>
-    <article><span>Audit events</span><strong><oj-bind-text value="[[auditTotal]]"></oj-bind-text></strong></article>
-  </div>
+  <section class="nb-sheet" aria-labelledby="admin-view-heading">
+    <div class="nb-sheet-head nb-admin-head">
+      <div>
+        <h2 id="admin-view-heading" data-bind="text: current().label"></h2>
+        <p class="nb-sheet-sub" data-bind="text: current().sub"></p>
+      </div>
+      <oj-c-buttonset-single class="nb-segment" layout-width="equal" aria-label="Monitoring view" items="[[viewItems]]" value="{{view}}"></oj-c-buttonset-single>
+    </div>
 
-  <section class="admin-section">
-    <div class="admin-section-heading"><div><h2>User monitoring</h2><p>Search users by username, email, or customer details.</p></div><div class="admin-search"><oj-input-text value="{{userQuery}}" placeholder="Search users" aria-label="Search users"></oj-input-text><oj-button chroming="outlined" on-oj-action="[[loadUsers]]">Search</oj-button></div></div>
-    <div class="admin-table-wrap"><table><thead><tr><th>User</th><th>Email</th><th>Status</th><th>Roles</th><th>Customer</th><th>Last login</th></tr></thead><tbody>
-      <oj-bind-for-each data="[[usersProvider]]"><template><tr><td><oj-bind-text value="[[$current.data.username]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.email]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.status]]"></oj-bind-text></td><td><oj-bind-text value="[[joinValues($current.data.roles)]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.customer ? $current.data.customer.firstName + ' ' + $current.data.customer.lastName : '—']] "></oj-bind-text></td><td><oj-bind-text value="[[dateTime($current.data.lastLoginAt)]]"></oj-bind-text></td></tr></template></oj-bind-for-each>
-    </tbody></table></div>
-  </section>
+    <form class="nb-admin-search" role="search" novalidate data-bind="submit: search">
+      <oj-c-input-text class="nb-search" label-hint="[[current().hint]]" label-edge="none" placeholder="[[current().hint]]" value="{{query}}" clear-icon="conditional"></oj-c-input-text>
+      <oj-c-button chroming="callToAction" label="[[searching() ? 'Searching…' : 'Search']]" disabled="[[searching]]" on-oj-action="[[search]]"></oj-c-button>
+      <oj-c-button chroming="borderless" label="Clear" disabled="[[!query() || searching()]]" on-oj-action="[[clearSearch]]"></oj-c-button>
+    </form>
 
-  <section class="admin-section">
-    <div class="admin-section-heading"><div><h2>Account monitoring</h2><p>Balances, status, and linked customer IDs.</p></div><div class="admin-search"><oj-input-text value="{{accountQuery}}" placeholder="Search account" aria-label="Search accounts"></oj-input-text><oj-button chroming="outlined" on-oj-action="[[loadAccounts]]">Search</oj-button></div></div>
-    <div class="admin-table-wrap"><table><thead><tr><th>Account</th><th>Type</th><th>Status</th><th>Customers</th><th>Available balance</th></tr></thead><tbody>
-      <oj-bind-for-each data="[[accountsProvider]]"><template><tr><td><oj-bind-text value="[[$current.data.accountNumber]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.accountType]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.status]]"></oj-bind-text></td><td><oj-bind-text value="[[joinValues($current.data.customerIds)]]"></oj-bind-text></td><td><oj-bind-text value="[[money($current.data.availableBalance, $current.data.currencyCode)]]"></oj-bind-text></td></tr></template></oj-bind-for-each>
-    </tbody></table></div>
-  </section>
+    <div class="nb-rail-skeleton" data-bind="visible: isLoading() || searching()" aria-hidden="true">
+      <!-- ko foreach: [1, 2, 3, 4, 5] -->
+      <oj-c-skeleton height="2.5rem"></oj-c-skeleton>
+      <!-- /ko -->
+    </div>
 
-  <section class="admin-section">
-    <div class="admin-section-heading"><div><h2>Transaction monitoring</h2><p>Review the latest transaction activity.</p></div><div class="admin-search"><oj-input-text value="{{transactionQuery}}" placeholder="Search by reference" aria-label="Search transactions"></oj-input-text><oj-button chroming="outlined" on-oj-action="[[loadTransactions]]">Search</oj-button></div></div>
-    <div class="admin-table-wrap"><table><thead><tr><th>Reference</th><th>Type</th><th>Status</th><th>Initiated by</th><th>Amount</th><th>Initiated</th></tr></thead><tbody>
-      <oj-bind-for-each data="[[transactionsProvider]]"><template><tr><td><oj-bind-text value="[[$current.data.reference]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.type]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.status]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.initiatedByUserId]]"></oj-bind-text></td><td><oj-bind-text value="[[money($current.data.amount, $current.data.currencyCode)]]"></oj-bind-text></td><td><oj-bind-text value="[[dateTime($current.data.initiatedAt)]]"></oj-bind-text></td></tr></template></oj-bind-for-each>
-    </tbody></table></div>
-  </section>
+    <div class="nb-empty-panel is-quiet" data-bind="visible: empty">
+      <span class="nb-empty-glyph i-shield" aria-hidden="true"></span>
+      <p><strong data-bind="text: 'No ' + current().label.toLowerCase() + ' found'"></strong></p>
+      <p>Change the search or refresh the console.</p>
+    </div>
 
-  <section class="admin-section">
-    <div class="admin-section-heading"><div><h2>Audit viewer</h2><p>Review recorded events and outcomes.</p></div><div class="admin-search"><oj-input-text value="{{auditQuery}}" placeholder="Filter by event type" aria-label="Filter audit events"></oj-input-text><oj-button chroming="outlined" on-oj-action="[[loadAudit]]">Search</oj-button></div></div>
-    <div class="admin-table-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Event</th><th>Entity</th><th>Outcome</th><th>Details</th></tr></thead><tbody>
-      <oj-bind-for-each data="[[auditProvider]]"><template><tr><td><oj-bind-text value="[[dateTime($current.data.occurredAt)]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.userId]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.eventType]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.entityType + ' ' + ($current.data.entityId || '')]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.outcome]]"></oj-bind-text></td><td><oj-bind-text value="[[$current.data.details]]"></oj-bind-text></td></tr></template></oj-bind-for-each>
-    </tbody></table></div>
+    <!-- ko if: view() === 'users' && !isLoading() && !searching() && users().length -->
+    <div class="nb-table-wrap">
+      <table class="nb-table">
+        <caption class="nb-sr">Users</caption>
+        <thead>
+          <tr>
+            <th scope="col">User</th>
+            <th scope="col" class="is-wide">Customer</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="is-wide">Roles</th>
+            <th scope="col" class="is-num">Last sign-in</th>
+          </tr>
+        </thead>
+        <tbody data-bind="foreach: users">
+          <tr>
+            <td class="is-details">
+              <span data-bind="text: username"></span>
+              <span class="nb-table-sub" data-bind="text: $data.email || '—'"></span>
+            </td>
+            <td class="is-wide" data-bind="text: $parent.customerName($data)"></td>
+            <td class="is-status"><oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge></td>
+            <td class="is-wide nb-mono" data-bind="text: $parent.joinValues($data.roles)"></td>
+            <td class="is-num is-date" data-bind="text: $parent.when($data.lastLoginAt)"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- /ko -->
+
+    <!-- ko if: view() === 'accounts' && !isLoading() && !searching() && accounts().length -->
+    <div class="nb-table-wrap">
+      <table class="nb-table">
+        <caption class="nb-sr">Accounts</caption>
+        <thead>
+          <tr>
+            <th scope="col">Account</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="is-wide">Customers</th>
+            <th scope="col" class="is-num">Available</th>
+          </tr>
+        </thead>
+        <tbody data-bind="foreach: accounts">
+          <tr>
+            <td class="is-details">
+              <span class="nb-mono" data-bind="text: accountNumber"></span>
+              <span class="nb-table-sub" data-bind="text: $parent.label(accountType) + ' · ' + ($data.currencyCode || 'INR')"></span>
+            </td>
+            <td class="is-status"><oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge></td>
+            <td class="is-wide nb-mono" data-bind="text: $parent.joinValues($data.customerIds)"></td>
+            <td class="is-num is-amount" data-bind="text: $parent.money(availableBalance, currencyCode)"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- /ko -->
+
+    <!-- ko if: view() === 'transactions' && !isLoading() && !searching() && transactions().length -->
+    <div class="nb-table-wrap">
+      <table class="nb-table">
+        <caption class="nb-sr">Transactions</caption>
+        <thead>
+          <tr>
+            <th scope="col">Initiated</th>
+            <th scope="col">Reference</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="is-wide">User</th>
+            <th scope="col" class="is-num">Amount</th>
+          </tr>
+        </thead>
+        <tbody data-bind="foreach: transactions">
+          <tr>
+            <td class="is-date" data-bind="text: $parent.when($data.initiatedAt)"></td>
+            <td class="is-details">
+              <span data-bind="text: $parent.label(type)"></span>
+              <span class="nb-table-sub nb-mono" data-bind="text: reference"></span>
+            </td>
+            <td class="is-status"><oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge></td>
+            <td class="is-wide nb-mono" data-bind="text: $data.initiatedByUserId || '—'"></td>
+            <td class="is-num is-amount" data-bind="text: $parent.money(amount, currencyCode)"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- /ko -->
+
+    <!-- ko if: view() === 'audit' && !isLoading() && !searching() && auditEvents().length -->
+    <div class="nb-table-wrap">
+      <table class="nb-table">
+        <caption class="nb-sr">Audit events</caption>
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Event</th>
+            <th scope="col">Outcome</th>
+            <th scope="col" class="is-wide">Entity</th>
+            <th scope="col" class="is-wide">Details</th>
+          </tr>
+        </thead>
+        <tbody data-bind="foreach: auditEvents">
+          <tr>
+            <td class="is-date" data-bind="text: $parent.when($data.occurredAt)"></td>
+            <td class="is-details">
+              <span data-bind="text: $parent.label(eventType)"></span>
+              <span class="nb-table-sub" data-bind="text: $data.userId ? 'User ' + userId : 'System'"></span>
+            </td>
+            <td class="is-status"><oj-c-badge size="sm" variant="[[$parent.outcomeVariant(outcome)]]" label="[[$parent.label(outcome)]]"></oj-c-badge></td>
+            <td class="is-wide nb-mono" data-bind="text: [$data.entityType, $data.entityId].filter(Boolean).join(' ') || '—'"></td>
+            <td class="is-wide" data-bind="text: $data.details || '—'"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- /ko -->
   </section>
 </div>

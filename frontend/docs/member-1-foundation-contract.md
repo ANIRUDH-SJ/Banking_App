@@ -104,13 +104,14 @@ The shell uses the Oracle JET `UrlParamAdapter`. The address is `?ojr=<path>`.
 | `dashboard`, `profile`, `notifications` | `CUSTOMER` | App foundation |
 | `accounts`, `transactions`, `beneficiaries`, `transfer` | `CUSTOMER` | Accounts and transfers |
 | `billers`, `bill-payments`, `cards`, `loans` | `CUSTOMER` | Payments and administration |
+| `deposits`, `forex` | `CUSTOMER` | Products |
 | `admin`, `admin-users`, `admin-accounts`, `admin-transactions`, `admin-audit` | `ADMIN` | Payments and administration |
 
 Navigate with `registry.go('accounts')`. A customer who opens an administrator route returns to `dashboard`. An administrator without the customer role returns to `admin`. The navigation labels for the accounts workspace are Accounts, Transactions, Beneficiaries, and Transfer.
 
 If a workspace view is not in this branch yet, the shell keeps the route and shows a reserved page. Adding `viewModels/<path>.js` and `views/<path>.html` replaces that page.
 
-The masthead groups routes into Overview, Accounts, Payments, Cards & loans, and Profile. The bar under the masthead lists the routes in the current group, so a new screen appears there as soon as its route is in the router.
+The masthead groups routes into Overview, Accounts, Payments, Products (cards, loans, FD & RD, forex), and Profile. The bar under the masthead lists the routes in the current group, so a new screen appears there as soon as its route is in the router.
 
 ## Screen building blocks
 
@@ -127,6 +128,34 @@ The stylesheet provides these page classes:
 | `nb-empty-panel` | empty state |
 | `nb-actions` | button row |
 | `nb-icon i-<name>` | icon from `css/icons/<name>.svg` in the current text colour |
+| `nb-work` with `nb-aside` | main panel with a history rail that stacks below 1080px |
+| `nb-flow-sheet`, `nb-flow`, `nb-flow-panel` | stepped payment: steps bar and one panel per step |
+| `nb-choices`, `nb-choice`, `nb-picked`, `nb-glyph` | selectable tiles, such as billers, and the chosen tile |
+| `nb-review`, `nb-review-amount`, `nb-review-figure` | label and value list for review and receipt steps |
+| `nb-note` (`is-warn`) | inline explanation, such as where the one-time code is sent |
+| `nb-otp`, `nb-code-input` | six-digit code field |
+| `nb-receipt` with `nb-done-mark` (`is-clock` while pending) | final step of a payment |
+| `nb-toolbar` | filter row above a list or table |
+| `nb-table` | data table; rows stack on phones, `is-wide` columns are hidden there |
+| `nb-items`, `nb-item`, `nb-item-side`, `nb-item-extra` | list rows with actions and an inline panel |
+| `nb-inline-panel` (`is-danger`) | confirmation or code entry inside a row |
+| `nb-quote` | rate, amount and maturity summary for deposits and forex |
+| `nb-meter` | progress bar for loan repayment and recurring instalments |
+| `nb-paycard` | card artwork on the cards screen |
+
+`services/ui-support` holds the helpers these screens share:
+
+| Helper | Use |
+| --- | --- |
+| `Flow(names)` | step index with `at`, `is(i)`, `stateOf(i)` and `go(i)`; `go` focuses the visible `.nb-flow-panel h2[tabindex]` |
+| `Problem()` | form error `text` and gateway `reference`, set from an `ApiError` |
+| `messages(text)` | `messages-custom` array for a field |
+| `options(rows)`, `accountOption(account)` | `oj-c-select-single` data keyed on `value` |
+| `amountError(value, min, max, currency)`, `parseAmount(value)` | amount checks with two decimal places |
+| `amountConverter` | two-decimal converter for `oj-c-input-number` |
+| `newKey(prefix)` | idempotency key for one submission; reuse it when the user retries |
+| `hand(key, value)`, `take(key)` | one-time selection passed between screens, such as a biller or beneficiary |
+| `statusVariant(status)` | `oj-c-badge` variant for a status |
 
 ## Validation messages
 

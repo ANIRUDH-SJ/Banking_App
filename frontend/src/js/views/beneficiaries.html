@@ -1,68 +1,105 @@
-<div class="nb-page">
-  <header class="nb-page-head">
-    <p class="nb-kicker">Transfers</p>
+<div class="nb-page nb-payees">
+  <header class="nb-page-head has-actions">
+    <p class="nb-kicker">Accounts</p>
     <h1>Beneficiaries</h1>
-    <p class="nb-lede">Add a recipient, then verify the one-time code before making a transfer.</p>
+    <p class="nb-lede">People and accounts you can send money to. A new beneficiary must be activated with a one-time code before its first transfer.</p>
+    <div class="nb-head-actions">
+      <oj-c-button chroming="callToAction" label="Add beneficiary" on-oj-action="[[openAdd]]" disabled="[[adding]]">
+        <span slot="startIcon" class="nb-icon i-plus" aria-hidden="true"></span>
+      </oj-c-button>
+    </div>
   </header>
 
-  <div class="nb-alert" role="alert" data-bind="visible: error">
-    <span class="nb-alert-text" data-bind="text: error"></span>
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
   </div>
-  <p class="nb-success" role="status" data-bind="visible: message, text: message"></p>
+  <p class="nb-success" role="status" data-bind="visible: success, text: success"></p>
 
-  <form class="member2-form nb-sheet" data-bind="submit: addBeneficiary">
-    <h2 class="nb-form-section">Add beneficiary</h2>
-    <label for="beneficiaryNickname">Nickname
-      <input id="beneficiaryNickname" maxlength="100" required data-bind="value: form.nickname">
-    </label>
-    <label for="beneficiaryName">Beneficiary name
-      <input id="beneficiaryName" maxlength="200" required data-bind="value: form.beneficiaryName">
-    </label>
-    <label for="beneficiaryAccount">Account number
-      <input id="beneficiaryAccount" inputmode="numeric" maxlength="20" required data-bind="value: form.accountNumber">
-    </label>
-    <label for="beneficiaryIfsc">IFSC code
-      <input id="beneficiaryIfsc" maxlength="11" required data-bind="value: form.ifscCode">
-    </label>
-    <label for="beneficiaryBank">Bank name
-      <input id="beneficiaryBank" maxlength="200" required data-bind="value: form.bankName">
-    </label>
+  <form class="nb-sheet nb-form nb-add-payee" novalidate data-bind="visible: adding, submit: save" aria-labelledby="add-payee-heading">
+    <div class="nb-sheet-head">
+      <h2 id="add-payee-heading">New beneficiary</h2>
+    </div>
+    <oj-c-form-layout direction="row" max-columns="2" label-edge="top" user-assistance-density="reflow">
+      <oj-c-input-text label-hint="Nickname" value="{{form.nickname}}" messages-custom="[[formMessages.nickname]]" length.max="100" help-hints.definition="Shown in your lists, for example Landlord."></oj-c-input-text>
+      <oj-c-input-text label-hint="Account holder's name" value="{{form.beneficiaryName}}" messages-custom="[[formMessages.beneficiaryName]]" length.max="200"></oj-c-input-text>
+      <oj-c-input-text label-hint="Account number" value="{{form.accountNumber}}" messages-custom="[[formMessages.accountNumber]]" virtual-keyboard="number" autocomplete="off"></oj-c-input-text>
+      <oj-c-input-text label-hint="Re-enter account number" value="{{form.confirmAccount}}" messages-custom="[[formMessages.confirmAccount]]" virtual-keyboard="number" autocomplete="off"></oj-c-input-text>
+      <oj-c-input-text label-hint="IFSC" value="{{form.ifscCode}}" messages-custom="[[formMessages.ifscCode]]" length.max="11" autocomplete="off"></oj-c-input-text>
+      <oj-c-input-text label-hint="Bank name" value="{{form.bankName}}" messages-custom="[[formMessages.bankName]]" length.max="200"></oj-c-input-text>
+    </oj-c-form-layout>
     <div class="nb-actions">
-      <oj-c-button button-type="submit" chroming="callToAction" label="Add beneficiary" disabled="[[busy]]"></oj-c-button>
+      <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Adding…' : 'Add and send code']]" disabled="[[busy]]"></oj-c-button>
+      <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[cancelAdd]]"></oj-c-button>
     </div>
   </form>
 
-  <form class="member2-form nb-sheet" data-bind="visible: activationTarget, submit: activate">
-    <h2 class="nb-form-section">Verify beneficiary</h2>
-    <p>Enter the six-digit code sent for <strong data-bind="text: activationTarget() && activationTarget().nickname"></strong>.</p>
-    <label for="beneficiaryCode">One-time code
-      <input id="beneficiaryCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required data-bind="value: activationCode">
-    </label>
-    <div class="member2-actions">
-      <oj-c-button button-type="submit" chroming="callToAction" label="Verify beneficiary" disabled="[[busy]]"></oj-c-button>
-      <oj-c-button chroming="outlined" label="Cancel" on-oj-action="[[cancelActivation]]"></oj-c-button>
-    </div>
-  </form>
-
-  <div class="nb-actions">
-    <oj-c-button chroming="outlined" label="Refresh list" disabled="[[loading]]" on-oj-action="[[refresh]]"></oj-c-button>
-  </div>
-  <p class="nb-status" role="status" data-bind="visible: loading">Loading beneficiaries…</p>
-  <div class="nb-empty-panel" data-bind="visible: !loading() && !error() && beneficiaries().length === 0">
-    <strong>No beneficiaries yet</strong>
-    <span>Recipients you add will appear here.</span>
-  </div>
-  <div class="member2-grid" data-bind="foreach: beneficiaries">
-    <article class="member2-card">
-      <h2 data-bind="text: nickname"></h2>
-      <p data-bind="text: beneficiaryName"></p>
-      <p class="member2-meta nb-mono" data-bind="text: maskedAccountNumber"></p>
-      <p class="member2-meta" data-bind="text: bankName + ' · ' + ifscCode"></p>
-      <p class="member2-meta">Status <strong data-bind="text: status"></strong></p>
-      <div class="member2-actions">
-        <button type="button" class="member2-inline-action" data-bind="click: function () { $parent.requestActivation($data); }, visible: status === 'PENDING', disable: $parent.busy">Verify</button>
-        <button type="button" class="member2-inline-action" data-bind="click: function () { $parent.disableBeneficiary($data); }, visible: status !== 'DISABLED', disable: $parent.busy">Disable</button>
+  <section class="nb-sheet" aria-labelledby="payee-list-heading">
+    <div class="nb-sheet-head">
+      <div>
+        <h2 id="payee-list-heading">Saved beneficiaries</h2>
+        <p class="nb-sheet-sub" data-bind="visible: !loading() && items().length, text: activeCount() + ' active of ' + items().length"></p>
       </div>
-    </article>
-  </div>
+    </div>
+
+    <div class="nb-items" data-bind="visible: loading" aria-hidden="true">
+      <!-- ko foreach: [1, 2, 3] -->
+      <div class="nb-item"><oj-c-skeleton height="2.5rem" width="2.5rem" border-radius="50%"></oj-c-skeleton><oj-c-skeleton height="0.875rem" width="50%"></oj-c-skeleton></div>
+      <!-- /ko -->
+    </div>
+
+    <div class="nb-empty-panel is-quiet" data-bind="visible: !loading() && items().length === 0">
+      <span class="nb-empty-glyph i-beneficiaries" aria-hidden="true"></span>
+      <p><strong>No beneficiaries yet</strong></p>
+      <p>Add someone you pay regularly, such as family or a landlord.</p>
+    </div>
+
+    <ul class="nb-items" data-bind="foreach: items">
+      <li class="nb-item">
+        <span class="nb-glyph is-initials" data-bind="text: $parent.initials($data)" aria-hidden="true"></span>
+        <span class="nb-choice-main">
+          <span class="nb-choice-name" data-bind="text: nickname + ' · ' + beneficiaryName"></span>
+          <span class="nb-row-meta">
+            <span data-bind="text: bankName"></span>
+            <span class="nb-mono" data-bind="text: maskedAccountNumber"></span>
+            <span class="nb-mono" data-bind="text: ifscCode"></span>
+          </span>
+        </span>
+        <span class="nb-item-side">
+          <oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[status === 'ACTIVE' ? 'Active' : 'Pending']]"></oj-c-badge>
+          <!-- ko if: status === 'ACTIVE' -->
+          <oj-c-button size="sm" chroming="outlined" label="Send money" on-oj-action="[[function () { $parent.pay($data); }]]"></oj-c-button>
+          <!-- /ko -->
+          <!-- ko ifnot: status === 'ACTIVE' -->
+          <oj-c-button size="sm" chroming="outlined" label="Activate" disabled="[[$parent.busy]]" on-oj-action="[[function () { $parent.startActivation($data); }]]"></oj-c-button>
+          <!-- /ko -->
+          <oj-c-button size="sm" chroming="borderless" label="Remove" on-oj-action="[[function () { $parent.askRemove($data); }]]"></oj-c-button>
+        </span>
+
+        <!-- ko if: $parent.activatingId() === beneficiaryId -->
+        <form class="nb-item-extra nb-inline-panel" novalidate data-bind="submit: function () { return $parent.activate($data); }">
+          <p><strong>Activate <span data-bind="text: nickname"></span>.</strong> Enter the code sent to your registered email and mobile.</p>
+          <div class="nb-otp">
+            <oj-c-input-text class="nb-code-input" label-hint="6-digit code" value="{{$parent.otpCode}}" messages-custom="[[$parent.otpMessages]]" length.max="6" virtual-keyboard="number" autocomplete="one-time-code"></oj-c-input-text>
+          </div>
+          <div class="nb-actions">
+            <oj-c-button button-type="submit" chroming="callToAction" label="Activate" disabled="[[$parent.busy]]"></oj-c-button>
+            <oj-c-button chroming="borderless" label="Resend code" disabled="[[$parent.busy]]" on-oj-action="[[function () { $parent.startActivation($data); }]]"></oj-c-button>
+            <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[$parent.cancelActivation]]"></oj-c-button>
+          </div>
+        </form>
+        <!-- /ko -->
+
+        <!-- ko if: $parent.removingId() === beneficiaryId -->
+        <div class="nb-item-extra nb-inline-panel is-danger" role="alertdialog" aria-label="Remove beneficiary">
+          <p>Remove <strong data-bind="text: nickname"></strong>? You will need to add and activate them again to send money.</p>
+          <div class="nb-actions">
+            <oj-c-button chroming="danger" label="Remove" disabled="[[$parent.busy]]" on-oj-action="[[function () { $parent.remove($data); }]]"></oj-c-button>
+            <oj-c-button chroming="borderless" label="Keep" on-oj-action="[[$parent.keep]]"></oj-c-button>
+          </div>
+        </div>
+        <!-- /ko -->
+      </li>
+    </ul>
+  </section>
 </div>
