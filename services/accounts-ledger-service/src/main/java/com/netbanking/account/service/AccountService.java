@@ -6,6 +6,8 @@ import com.netbanking.account.domain.AccountHolder;
 import com.netbanking.account.domain.BankAccount;
 import com.netbanking.account.repository.AccountHolderRepository;
 import com.netbanking.account.repository.BankAccountRepository;
+import com.netbanking.bank.repository.BankRepository;
+import com.netbanking.branch.repository.BranchRepository;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.discovery.CustomerDirectory;
 
@@ -25,14 +27,20 @@ public class AccountService {
     private final BankAccountRepository bankAccountRepository;
     private final AccountHolderRepository accountHolderRepository;
     private final CustomerDirectory customerService;
+    private final BranchRepository branchRepository;
+    private final BankRepository bankRepository;
 
     public AccountService(
             BankAccountRepository bankAccountRepository,
             AccountHolderRepository accountHolderRepository,
-            CustomerDirectory customerService) {
+            CustomerDirectory customerService,
+            BranchRepository branchRepository,
+            BankRepository bankRepository) {
         this.bankAccountRepository = bankAccountRepository;
         this.accountHolderRepository = accountHolderRepository;
         this.customerService = customerService;
+        this.branchRepository = branchRepository;
+        this.bankRepository = bankRepository;
     }
 
     public List<AccountSummaryResponse> getAccountsForUser(Long userId) {
@@ -88,6 +96,10 @@ public class AccountService {
     }
 
     private AccountSummaryResponse toResponse(BankAccount account, String nickname) {
+        var branch = branchRepository.findById(account.getBranchId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account branch was not found."));
+        var bank = bankRepository.findById(branch.getBankId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account bank was not found."));
         return new AccountSummaryResponse(
                 account.getAccountId(),
                 account.getBranchId(),
@@ -97,6 +109,11 @@ public class AccountService {
                 account.getAccountStatus(),
                 account.getCurrentBalance(),
                 account.getAvailableBalance(),
-                nickname);
+                nickname,
+                bank.getDisplayName(),
+                branch.getBranchName(),
+                branch.getCity(),
+                branch.getState(),
+                branch.getIfscCode());
     }
 }

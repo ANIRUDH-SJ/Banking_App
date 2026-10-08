@@ -6,10 +6,12 @@ const vm = require('node:vm');
 
 function observable(initial) {
   let value = initial;
-  return function (next) {
+  const entry = function (next) {
     if (arguments.length) value = next;
     return value;
   };
+  entry.subscribe = () => {};
+  return entry;
 }
 
 const ko = {
@@ -22,6 +24,7 @@ const format = {
   asList: (value) => Array.isArray(value) ? value : (value?.content || []),
   formatMoney: (amount, currency) => `${currency} ${amount}`,
   formatDateTime: () => 'now',
+  formatDate: () => 'today',
   maskAccount: (number) => `•••• ${String(number).slice(-4)}`,
   labelize: (value) => value
 };
@@ -40,6 +43,7 @@ function load(name, dependencies) {
     Math,
     crypto: { randomUUID: () => 'test-idempotency-key' },
     document: { title: '' },
+    window: { setTimeout: () => 1, clearTimeout: () => {} },
     URLSearchParams
   }, { filename: name });
   return ViewModel;
@@ -81,6 +85,55 @@ function PinAuthorization() {
 }
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+test('profile shows the customer account summary without exposing full numbers', async () => {
+  const Profile = load('profile.js', {
+    knockout: ko,
+    '../accUtils': { announce: () => {} },
+    '../services/registry': {
+      profile: { get: async () => ({ customerNumber: 'C1', firstName: 'Demo', active: true }) },
+      accounts: { getAccounts: async () => [
+        { accountId: 1, accountType: 'SAVINGS', accountNumber: '001234567890', currencyCode: 'INR', accountStatus: 'ACTIVE', availableBalance: 500,
+          bankName: 'Net Banking', branchName: 'Main branch', branchCity: 'Bengaluru', branchState: 'Karnataka', ifscCode: 'NETB0000001' },
+        { accountId: 2, accountType: 'SAVINGS', accountNumber: '001234567891', currencyCode: 'USD', accountStatus: 'ACTIVE', availableBalance: 20 }
+      ] }
+    },
+    '../services/api-error': { fieldMessage: () => '' },
+    '../services/format': format
+  });
+  const screen = new Profile();
+  screen.connected();
+  await tick();
+  assert.equal(screen.rupeeAvailable(), 500);
+  assert.equal(screen.activeAccounts().length, 2);
+  assert.equal(screen.walletCount(), 1);
+  assert.equal(screen.maskAccount(screen.accounts()[0].accountNumber), '•••• 7890');
+  assert.equal(screen.accounts()[0].ifscCode, 'NETB0000001');
+  assert.equal(screen.branchLocation(screen.accounts()[0]), 'Bengaluru, Karnataka');
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '•••• 7890');
+  screen.toggleNumber(screen.accounts()[0]);
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '0012 3456 7890');
+  screen.disconnected();
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '•••• 7890');
+  assert.match(fs.readFileSync(path.join(__dirname, '../src/js/views/profile.html'), 'utf8'), /<dt>IFSC<\/dt>/);
+});
+
+test('account numbers start masked and hide when the page closes', () => {
+  const Accounts = load('accounts.js', {
+    knockout: ko,
+    '../accUtils': { announce: () => {} },
+    '../services/registry': { accounts: {} },
+    '../services/format': format,
+    '../services/ui-support': ui
+  });
+  const screen = new Accounts();
+  const account = { accountId: 1, accountNumber: '001234567890' };
+  assert.equal(screen.displayNumber(account), '•••• 7890');
+  screen.toggleNumber(account);
+  assert.equal(screen.displayNumber(account), '0012 3456 7890');
+  screen.disconnected();
+  assert.equal(screen.displayNumber(account), '•••• 7890');
+});
 
 test('bill payment checks the biller reference before requesting a code', async () => {
   const calls = [];

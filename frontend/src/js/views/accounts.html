@@ -78,7 +78,8 @@
         </div>
         <oj-c-badge size="sm" variant="[[$parent.statusVariant(accountStatus)]]" label="[[$parent.label(accountStatus)]]"></oj-c-badge>
       </div>
-      <p class="nb-tile-number" data-bind="text: $parent.grouped(accountNumber), attr: { 'aria-label': 'Account number ' + accountNumber }"></p>
+      <p class="nb-tile-number" data-bind="text: $parent.displayNumber($data), attr: { 'aria-label': 'Account number ' + $parent.displayNumber($data) }"></p>
+      <button type="button" class="nb-link-button" data-bind="click: $parent.toggleNumber, text: $parent.isNumberShown($data) ? 'Hide number' : 'Show number', attr: { 'aria-label': ($parent.isNumberShown($data) ? 'Hide' : 'Show') + ' number for ' + $parent.accountTitle($data) }"></button>
 
       <!-- ko if: $parent.isEditing($data) -->
       <form class="nb-rename" novalidate data-bind="submit: function () { return $parent.saveRename($data); }">

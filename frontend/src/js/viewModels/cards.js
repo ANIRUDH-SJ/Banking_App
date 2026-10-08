@@ -162,6 +162,9 @@ define([
     };
 
     self.openPin = function (view) {
+      if (!view || !self.canSetPin(view)) {
+        return;
+      }
       self.success('');
       self.problem.clear();
       self.confirming(null);
@@ -181,6 +184,9 @@ define([
     };
 
     self.savePin = function (view) {
+      if (!view || self.pinFor() !== view.id || !self.canSetPin(view)) {
+        return false;
+      }
       var changing = !!view.card.pinSet;
       var form = self.pinForm;
       var errors = {
