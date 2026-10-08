@@ -93,7 +93,8 @@ test('profile shows the customer account summary without exposing full numbers',
     '../services/registry': {
       profile: { get: async () => ({ customerNumber: 'C1', firstName: 'Demo', active: true }) },
       accounts: { getAccounts: async () => [
-        { accountId: 1, accountType: 'SAVINGS', accountNumber: '001234567890', currencyCode: 'INR', accountStatus: 'ACTIVE', availableBalance: 500 },
+        { accountId: 1, accountType: 'SAVINGS', accountNumber: '001234567890', currencyCode: 'INR', accountStatus: 'ACTIVE', availableBalance: 500,
+          bankName: 'Net Banking', branchName: 'Main branch', branchCity: 'Bengaluru', branchState: 'Karnataka', ifscCode: 'NETB0000001' },
         { accountId: 2, accountType: 'SAVINGS', accountNumber: '001234567891', currencyCode: 'USD', accountStatus: 'ACTIVE', availableBalance: 20 }
       ] }
     },
@@ -107,6 +108,14 @@ test('profile shows the customer account summary without exposing full numbers',
   assert.equal(screen.activeAccounts().length, 2);
   assert.equal(screen.walletCount(), 1);
   assert.equal(screen.maskAccount(screen.accounts()[0].accountNumber), '•••• 7890');
+  assert.equal(screen.accounts()[0].ifscCode, 'NETB0000001');
+  assert.equal(screen.branchLocation(screen.accounts()[0]), 'Bengaluru, Karnataka');
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '•••• 7890');
+  screen.toggleNumber(screen.accounts()[0]);
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '0012 3456 7890');
+  screen.disconnected();
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '•••• 7890');
+  assert.match(fs.readFileSync(path.join(__dirname, '../src/js/views/profile.html'), 'utf8'), /<dt>IFSC<\/dt>/);
 });
 
 test('account numbers start masked and hide when the page closes', () => {

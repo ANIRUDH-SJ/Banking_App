@@ -16,6 +16,7 @@ define([
   function ProfileViewModel() {
     var self = this;
     var generation = 0;
+    var revealTimer = null;
     self.loading = ko.observable(true);
     self.busy = ko.observable(false);
     self.formError = ko.observable('');
@@ -31,6 +32,7 @@ define([
     self.accounts = ko.observableArray([]);
     self.accountsLoading = ko.observable(true);
     self.accountsError = ko.observable('');
+    self.revealedAccountId = ko.observable(null);
     self.firstNameMessages = ko.observableArray([]);
     self.lastNameMessages = ko.observableArray([]);
     self.mobileMessages = ko.observableArray([]);
@@ -50,8 +52,35 @@ define([
     });
     self.money = format.formatMoney;
     self.maskAccount = format.maskAccount;
+    self.label = format.labelize;
     self.accountName = function (account) {
       return account.nickname || format.labelize(account.accountType) + ' account';
+    };
+    self.branchLocation = function (account) {
+      return [account.branchCity, account.branchState].filter(Boolean).join(', ');
+    };
+    self.isNumberShown = function (account) {
+      return self.revealedAccountId() === account.accountId;
+    };
+    self.displayNumber = function (account) {
+      return self.isNumberShown(account)
+        ? String(account.accountNumber || '').replace(/(\d{4})(?=\d)/g, '$1 ')
+        : format.maskAccount(account.accountNumber);
+    };
+    function hideNumber() {
+      if (revealTimer) window.clearTimeout(revealTimer);
+      revealTimer = null;
+      self.revealedAccountId(null);
+    }
+    self.toggleNumber = function (account) {
+      if (self.isNumberShown(account)) {
+        hideNumber();
+      } else {
+        hideNumber();
+        self.revealedAccountId(account.accountId);
+        revealTimer = window.setTimeout(hideNumber, 30000);
+      }
+      return false;
     };
     self.openAccounts = function () {
       registry.go('accounts');
@@ -116,6 +145,7 @@ define([
 
     self.connected = function () {
       var ticket = ++generation;
+      hideNumber();
       accUtils.announce('Customer profile.', 'polite');
       document.title = 'Profile | Internet Banking';
       self.loading(true);
@@ -158,6 +188,7 @@ define([
 
     self.disconnected = function () {
       generation += 1;
+      hideNumber();
     };
   }
 
