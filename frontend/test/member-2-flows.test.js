@@ -63,6 +63,13 @@ function loadUiSupport() {
 
 const ui = loadUiSupport();
 
+test('account tiles take their colour from the account', () => {
+  assert.equal(ui.accountTone({ accountType: 'SAVINGS', currencyCode: 'INR' }), 'savings');
+  assert.equal(ui.accountTone({ accountType: 'CURRENT', currencyCode: 'INR' }), 'current');
+  assert.equal(ui.accountTone({ accountType: 'FIXED_DEPOSIT', currencyCode: 'INR' }), 'deposit');
+  assert.equal(ui.accountTone({ accountType: 'SAVINGS', currencyCode: 'USD' }), 'wallet');
+});
+
 function PinAuthorization() {
   this.load = async () => {};
   this.use = () => {};

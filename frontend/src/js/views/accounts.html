@@ -70,7 +70,7 @@
   </div>
 
   <ul class="nb-tiles" data-bind="foreach: accounts">
-    <li class="nb-tile nb-acct" data-bind="css: { 'is-lead': $index() === 0, 'is-editing': $parent.isEditing($data) }">
+    <li class="nb-tile nb-acct" data-bind="css: $parent.tileCss($data)">
       <div class="nb-tile-top">
         <div class="nb-acct-id">
           <span class="nb-tile-name" data-bind="text: $parent.accountTitle($data)"></span>

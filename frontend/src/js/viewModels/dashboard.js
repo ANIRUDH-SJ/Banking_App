@@ -105,6 +105,11 @@ define([
     };
     self.accountTitle = ui.accountName;
     self.accountKind = ui.accountKind;
+    self.tileCss = function (account) {
+      var css = { 'is-ink': true };
+      css['is-tone-' + ui.accountTone(account)] = true;
+      return css;
+    };
     self.hasNickname = function (account) {
       return !!String(account.nickname || '').trim();
     };
