@@ -21,6 +21,15 @@ define([
     self.reference = ko.observable('');
     self.busy = ko.observable(false);
 
+    function clearPreviousAttempt() {
+      if (self.busy()) return;
+      self.formError('');
+      self.reference('');
+    }
+
+    self.username.subscribe(clearPreviousAttempt);
+    self.password.subscribe(clearPreviousAttempt);
+
     self.signIn = function () {
       var usernameError = registry.validation.usernameOrEmail(self.username());
       var passwordError = registry.validation.required(self.password(), 'Enter your password.');

@@ -10,6 +10,7 @@
   <div class="nb-alert" role="alert" data-bind="visible: problem.text">
     <span class="nb-alert-text" data-bind="text: problem.text"></span>
     <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
+    <oj-c-button label="Try again" chroming="borderless" on-oj-action="[[retry]]" data-bind="visible: !detail()"></oj-c-button>
   </div>
   <p class="nb-success" role="status" data-bind="visible: success, text: success"></p>
 

@@ -505,6 +505,10 @@ define([
       });
     };
 
+    self.retry = function () {
+      self.connected();
+    };
+
     self.focusId.subscribe(function (id) {
       if (!id) {
         return;
