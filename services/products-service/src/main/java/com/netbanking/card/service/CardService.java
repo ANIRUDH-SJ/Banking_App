@@ -48,8 +48,10 @@ public class CardService {
     public List<CardResponse> getCards(Long userId) {
         Long customerId = customerService.requireCustomerIdForUser(userId);
         List<BankCard> cards = cardRepository.findByCustomerIdOrderByCardIdAsc(customerId);
-        if (cards.isEmpty() && demoCards.isPresent()) {
-            cards = demoCards.get().issue(userId, customerId);
+        if (demoCards.isPresent()) {
+            cards = cards.isEmpty()
+                    ? demoCards.get().issue(userId, customerId)
+                    : demoCards.get().protectExisting(cards);
         }
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         return cards.stream().map(card -> toResponse(card, now)).toList();

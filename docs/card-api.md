@@ -109,3 +109,10 @@ billing columns introduced in V6. For an existing local demo database, run
 the matching seed card with a demo limit and zero balances; it is not a
 production migration. The card has no seeded purchases, so its transaction list
 remains empty until demo transactions are added.
+
+When `CARD_DEMO_ISSUANCE=true` and `CARD_PAN_ENCRYPTION_KEY` is configured, the
+products service also encrypts a synthetic PAN for legacy development seed cards
+that have no protected number. This makes the eye control available without ever
+storing a clear-text PAN. The number is returned only by the authenticated reveal
+endpoint, uses no-store response headers, and is automatically masked again after
+30 seconds.

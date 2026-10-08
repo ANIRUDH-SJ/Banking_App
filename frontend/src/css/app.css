@@ -3001,10 +3001,6 @@ h2[tabindex="-1"]:focus {
   font-weight: 600;
 }
 
-.nb-paycard-top {
-  padding-right: 2.4rem;
-}
-
 .nb-paycard.is-compact {
   aspect-ratio: 1.72;
   padding: 1rem 1.125rem;
@@ -3023,10 +3019,19 @@ h2[tabindex="-1"]:focus {
   font-variant-numeric: tabular-nums;
 }
 
+.nb-paycard-number-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.nb-paycard-number-row .nb-paycard-number {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .nb-eye {
-  position: absolute;
-  top: 0.7rem;
-  right: 0.7rem;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
   width: 2rem;
@@ -3049,7 +3054,7 @@ h2[tabindex="-1"]:focus {
 }
 
 .nb-eye:disabled {
-  cursor: progress;
+  cursor: not-allowed;
   opacity: 0.55;
 }
 

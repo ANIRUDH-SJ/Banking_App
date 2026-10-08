@@ -44,18 +44,26 @@ test('card reveal follows backend availability and returns to a masked number', 
   });
 
   const unavailable = new CardView({ cardId: 1, lastFour: '4242', cardType: 'DEBIT', cardNetwork: 'VISA', status: 'ACTIVE', revealable: false });
-  unavailable.reveal();
+  unavailable.toggle();
   assert.equal(unavailable.canReveal, false);
   assert.equal(requests, 0);
   assert.match(unavailable.display(), /4242$/);
+  assert.match(unavailable.toggleLabel(), /unavailable/);
 
   const available = new CardView({ cardId: 2, lastFour: '4242', cardType: 'DEBIT', cardNetwork: 'VISA', status: 'ACTIVE', revealable: true });
-  available.reveal();
+  available.toggle();
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(requests, 1);
   assert.equal(available.display(), '4242 4242 4242 4242');
   available.hide();
   assert.match(available.display(), /^••••/);
+});
+
+test('card list and detail surfaces expose accessible eye controls', () => {
+  const template = fs.readFileSync(path.join(__dirname, '../src/js/views/cards.html'), 'utf8');
+  assert.equal((template.match(/class="nb-eye"/g) || []).length, 2);
+  assert.equal((template.match(/click: toggle/g) || []).length, 2);
+  assert.equal((template.match(/'aria-label': toggleLabel/g) || []).length, 2);
 });
 
 test('a card PIN is four digits and not a trivial sequence', () => {
