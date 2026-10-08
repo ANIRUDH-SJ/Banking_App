@@ -3,6 +3,7 @@ import { chmodSync, existsSync, lstatSync, readFileSync, renameSync, writeFileSy
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
+import { updateServiceEnv } from './local-env.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const configPath = join(root, '.local', 'notification-service.json');
@@ -79,6 +80,7 @@ async function main() {
   writeFileSync(temporary, JSON.stringify(updated, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
   chmodSync(temporary, 0o600);
   renameSync(temporary, configPath);
+  updateServiceEnv(root, 'notification-service', resendSettings(address, apiKey));
   console.log('Resend SMTP configured locally. Restart notification-service, then request a password-reset code.');
   console.log('The API key was not printed or committed. Keep .local private.');
 }
