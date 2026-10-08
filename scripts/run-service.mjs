@@ -1,48 +1,19 @@
-import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { buildFreshJars } from './local-build.mjs';
+import { serviceLaunch, serviceNames } from './service-launch.mjs';
 
-const modules = {
-  'service-registry': 'platform',
-  'api-gateway': 'platform',
-  'identity-service': 'services',
-  'accounts-ledger-service': 'services',
-  'payments-service': 'services',
-  'products-service': 'services',
-  'notification-service': 'services',
-  'audit-reporting-service': 'services',
-};
-// Local runs have no SMTP or SMS provider by default, so the development
-// providers print OTPs and alerts to the console. Values in .local win.
-const localDefaults = {
-  'notification-service': { NOTIFICATION_LOG_MESSAGE_CONTENT: 'true' },
-};
 const name = process.argv[2];
-if (!Object.hasOwn(modules, name)) throw new Error(`Choose one of: ${Object.keys(modules).join(', ')}`);
+if (!serviceNames.includes(name)) throw new Error(`Choose one of: ${serviceNames.join(', ')}`);
 const root = fileURLToPath(new URL('../', import.meta.url));
-const config = JSON.parse(readFileSync(join(root, '.local', `${name}.json`), 'utf8'));
-for (const [key, value] of Object.entries(config)) {
-  if (typeof value !== 'string' || value.startsWith('REPLACE_')) throw new Error(`Configure ${key} in .local/${name}.json`);
-}
 // The all-services launcher builds once and marks its children as prebuilt.
 // A direct single-service launch must not silently reuse a stale JAR.
 if (process.env.BANKING_JARS_BUILT !== '1') {
   console.log('Building fresh service JARs from this checkout first...');
   await buildFreshJars(root);
 }
-const jar = join(root, modules[name], name, 'target', `${name}-0.0.1-SNAPSHOT.jar`);
-if (!existsSync(jar)) throw new Error('Build service JARs with ./mvnw clean package -DskipTests first, or start all services with node scripts/run-all-services.mjs.');
-// Windows environment variables are sometimes saved with surrounding quotes.
-// Remove only those outer quotes before constructing the Java executable path.
-const javaHome = process.env.JAVA_HOME?.replace(/^["']|["']$/g, '');
-const java = javaHome
-  ? join(javaHome, 'bin', process.platform === 'win32' ? 'java.exe' : 'java')
-  : 'java';
-const child = spawn(java, ['-Xms64m', '-Xmx256m', '-jar', jar], {
-  cwd: root, env: { ...localDefaults[name], ...process.env, ...config }, stdio: 'inherit',
-});
+const launch = serviceLaunch(root, name, { eventTransport: process.env.BANKING_EVENT_TRANSPORT });
+const child = spawn(launch.command, launch.args, { ...launch.options, stdio: 'inherit' });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
 child.on('error', error => { console.error(`Could not start Java: ${error.message}`); process.exitCode = 1; });
 child.on('exit', code => { process.exitCode = code ?? 1; });

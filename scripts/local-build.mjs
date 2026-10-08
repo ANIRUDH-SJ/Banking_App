@@ -1,12 +1,12 @@
 import { spawn } from 'node:child_process';
-import { join } from 'node:path';
+import { posix } from 'node:path';
 
 export function mavenBuildCommand(root, platform = process.platform) {
   const args = ['-B', '-ntp', '-DskipTests', 'clean', 'package'];
   if (platform === 'win32') {
     return { command: process.env.ComSpec || 'cmd.exe', args: ['/d', '/c', 'mvnw.cmd', ...args] };
   }
-  return { command: join(root, 'mvnw'), args };
+  return { command: posix.join(root, 'mvnw'), args };
 }
 
 export function buildFreshJars(root, options = {}) {
