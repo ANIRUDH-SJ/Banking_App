@@ -40,13 +40,14 @@ class StatementServiceTest {
 
     @Mock private AccountService accountService;
     @Mock private AccountTransactionEntryRepository entryRepository;
+    @Mock private StatementMailClient mail;
 
     @Test
     void rejectsAnUnownedAccountBeforeQuerying() {
         org.mockito.Mockito.doThrow(new AccessDeniedException("denied"))
                 .when(accountService)
                 .requireOwnership(7L, 10L);
-        StatementService service = new StatementService(accountService, entryRepository);
+        StatementService service = new StatementService(accountService, entryRepository, new StatementPdfRenderer(), mail);
 
         assertThatThrownBy(() -> service.getStatement(7L, 10L, emptyFilter(), 0, 20))
                 .isInstanceOf(AccessDeniedException.class);
@@ -70,7 +71,7 @@ class StatementServiceTest {
         AccountTransactionEntry entry = entry(" =SUM(1,2)\n\"test\"");
         when(entryRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(entry)));
-        StatementService service = new StatementService(accountService, entryRepository);
+        StatementService service = new StatementService(accountService, entryRepository, new StatementPdfRenderer(), mail);
 
         String csv = new String(service.exportCsv(7L, 10L, emptyFilter()), StandardCharsets.UTF_8);
 
@@ -84,11 +85,38 @@ class StatementServiceTest {
     void rejectsAnOversizedExport() {
         when(entryRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(entry("ok")), PageRequest.of(0, 500), 10_001));
-        StatementService service = new StatementService(accountService, entryRepository);
+        StatementService service = new StatementService(accountService, entryRepository, new StatementPdfRenderer(), mail);
 
         assertThatThrownBy(() -> service.exportCsv(7L, 10L, emptyFilter()))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("413");
+    }
+
+    @Test
+    void emailsTheSamePdfAsTheDownloadWithAMaskedAccount() {
+        when(accountService.getOwnedAccount(7L, 10L))
+                .thenReturn(new com.netbanking.account.api.AccountSummaryResponse(
+                        10L, 1L, "100000000000427731", "SAVINGS", "INR", "ACTIVE",
+                        new BigDecimal("87.50"), new BigDecimal("87.50"), "Salary"));
+        when(entryRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(entry("Rent"))));
+        when(mail.send(any(), any(), any(), any(), any()))
+                .thenReturn(new StatementMailClient.Receipt("SENT", "a***@example.in", java.time.Instant.now()));
+        StatementService service = new StatementService(accountService, entryRepository, new StatementPdfRenderer(), mail);
+        var filter = new StatementFilter(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), null, null);
+
+        var document = service.exportPdf(7L, 10L, filter);
+        var receipt = service.emailPdf(7L, 10L, filter);
+
+        assertThat(new String(document.content(), 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        assertThat(document.filename()).startsWith("statement-7731-").endsWith(".pdf");
+        assertThat(receipt.status()).isEqualTo("SENT");
+        var subject = org.mockito.ArgumentCaptor.forClass(String.class);
+        var body = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(mail).send(org.mockito.ArgumentMatchers.eq(7L), subject.capture(), body.capture(),
+                org.mockito.ArgumentMatchers.startsWith("statement-7731-"), any());
+        assertThat(subject.getValue()).contains("ending 7731").doesNotContain("100000000000427731");
+        assertThat(body.getValue()).contains("2026-08-01 to 2026-08-31", "1 entry");
     }
 
     private static StatementFilter emptyFilter() {

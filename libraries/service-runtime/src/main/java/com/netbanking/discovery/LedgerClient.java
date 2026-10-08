@@ -19,6 +19,15 @@ public class LedgerClient {
                 AccountSnapshot.class);
     }
 
+    public java.util.List<AccountSnapshot> accounts(Long userId) {
+        AccountSnapshot[] owned =
+                client.get(
+                        "accounts-ledger-service",
+                        "/internal/accounts/owners/" + userId,
+                        AccountSnapshot[].class);
+        return owned == null ? java.util.List.of() : java.util.List.of(owned);
+    }
+
     public LedgerReceipt post(LedgerCommand command) {
         return client.post(
                 "accounts-ledger-service",

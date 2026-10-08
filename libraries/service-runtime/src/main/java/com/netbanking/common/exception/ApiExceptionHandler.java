@@ -40,6 +40,21 @@ public class ApiExceptionHandler {
         return response(request, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", exception.getMessage());
     }
 
+    @ExceptionHandler(VerificationFailedException.class)
+    ResponseEntity<ApiErrorResponse> verificationFailed(
+            VerificationFailedException exception, HttpServletRequest request) {
+        HttpStatus status = exception.locked() ? HttpStatus.LOCKED : HttpStatus.UNPROCESSABLE_ENTITY;
+        Map<String, String> fields =
+                exception.field() == null ? Map.of() : Map.of(exception.field(), exception.getMessage());
+        var response = ResponseEntity.status(status).cacheControl(CacheControl.noStore());
+        if (exception.locked()) {
+            response.header("Retry-After", Long.toString(exception.retryAfterSeconds()));
+        }
+        return response.body(
+                errors.response(
+                        request, status.value(), exception.code(), exception.getMessage(), fields));
+    }
+
     @ExceptionHandler(AccountLockedException.class)
     ResponseEntity<ApiErrorResponse> accountLocked(
             AccountLockedException exception, HttpServletRequest request) {

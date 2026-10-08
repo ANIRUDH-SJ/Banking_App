@@ -1,5 +1,8 @@
 package com.netbanking.discovery;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -13,6 +16,8 @@ import java.time.Duration;
 
 @Component
 public class ServiceHttpClient {
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     private final ServiceResolver resolver;
     private final RestClient client;
 
@@ -58,12 +63,31 @@ public class ServiceHttpClient {
         try {
             return call.get();
         } catch (RestClientResponseException e) {
-            throw new ResponseStatusException(
-                    e.getStatusCode(), "Downstream service rejected the operation.");
+            throw rejected(e);
         } catch (ResourceAccessException e) {
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "Service unavailable; retry using the same operation key.");
         }
+    }
+
+    private static DownstreamRejectedException rejected(RestClientResponseException e) {
+        String code = null;
+        String detail = null;
+        try {
+            JsonNode body = JSON.readTree(e.getResponseBodyAsString());
+            if (body != null && body.isObject()) {
+                code = body.path("code").isTextual() ? body.path("code").asText() : null;
+                detail = body.path("message").isTextual() ? body.path("message").asText() : null;
+            }
+        } catch (java.io.IOException unreadable) {
+            // Non-JSON error bodies carry no contract; keep the status only.
+        }
+        long retryAfter = 0;
+        String header = e.getResponseHeaders() == null ? null : e.getResponseHeaders().getFirst("Retry-After");
+        if (header != null && header.matches("[0-9]{1,9}")) {
+            retryAfter = Long.parseLong(header);
+        }
+        return new DownstreamRejectedException(e.getStatusCode(), code, detail, retryAfter);
     }
 }

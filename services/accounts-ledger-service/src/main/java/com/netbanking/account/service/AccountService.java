@@ -2,6 +2,7 @@ package com.netbanking.account.service;
 
 import com.netbanking.account.api.AccountStatus;
 import com.netbanking.account.api.AccountSummaryResponse;
+import com.netbanking.account.domain.AccountHolder;
 import com.netbanking.account.domain.BankAccount;
 import com.netbanking.account.repository.AccountHolderRepository;
 import com.netbanking.account.repository.BankAccountRepository;
@@ -13,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
@@ -34,17 +37,33 @@ public class AccountService {
 
     public List<AccountSummaryResponse> getAccountsForUser(Long userId) {
         Long customerId = customerService.requireCustomerIdForUser(userId);
-        return bankAccountRepository
-                .findAllById(accountHolderRepository.findActiveAccountIdsByCustomerId(customerId))
-                .stream()
+        Map<Long, String> nicknames = new HashMap<>();
+        accountHolderRepository
+                .findByCustomerIdAndIsActive(customerId, "Y")
+                .forEach(holder -> nicknames.put(holder.getAccountId(), holder.getNickname()));
+        return bankAccountRepository.findAllById(nicknames.keySet()).stream()
                 .sorted(Comparator.comparing(BankAccount::getAccountNumber))
-                .map(this::toResponse)
+                .map(account -> toResponse(account, nicknames.get(account.getAccountId())))
                 .toList();
     }
 
     public AccountSummaryResponse getOwnedAccount(Long userId, Long accountId) {
-        requireOwnership(userId, accountId);
-        return toResponse(findAccount(accountId));
+        AccountHolder holder = requireHolder(userId, accountId);
+        return toResponse(findAccount(accountId), holder.getNickname());
+    }
+
+    @Transactional
+    public AccountSummaryResponse rename(Long userId, Long accountId, String nickname) {
+        AccountHolder holder = requireHolder(userId, accountId);
+        holder.rename(nickname);
+        return toResponse(findAccount(accountId), holder.getNickname());
+    }
+
+    private AccountHolder requireHolder(Long userId, Long accountId) {
+        Long customerId = customerService.requireCustomerIdForUser(userId);
+        return accountHolderRepository
+                .findByAccountIdAndCustomerIdAndIsActive(accountId, customerId, "Y")
+                .orElseThrow(() -> new AccessDeniedException("You do not have access to this account."));
     }
 
     public void requireOwnership(Long userId, Long accountId) {
@@ -59,7 +78,7 @@ public class AccountService {
     public AccountSummaryResponse changeAccountStatus(Long accountId, AccountStatus accountStatus) {
         BankAccount account = findAccount(accountId);
         account.changeStatus(accountStatus.name());
-        return toResponse(account);
+        return toResponse(account, null);
     }
 
     private BankAccount findAccount(Long accountId) {
@@ -68,7 +87,7 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("Account was not found."));
     }
 
-    private AccountSummaryResponse toResponse(BankAccount account) {
+    private AccountSummaryResponse toResponse(BankAccount account, String nickname) {
         return new AccountSummaryResponse(
                 account.getAccountId(),
                 account.getBranchId(),
@@ -77,6 +96,7 @@ public class AccountService {
                 account.getCurrencyCode(),
                 account.getAccountStatus(),
                 account.getCurrentBalance(),
-                account.getAvailableBalance());
+                account.getAvailableBalance(),
+                nickname);
     }
 }

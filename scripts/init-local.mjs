@@ -47,6 +47,12 @@ for (const [name, [schema, port]] of Object.entries(applications)) {
       TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
       SPRING_PROFILES_ACTIVE: 'local',
     } : {}),
+    ...(name === 'products-service' ? {
+      CARD_PAN_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+      CARD_PIN_TRANSPORT_KEY: generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey
+        .export({ type: 'pkcs8', format: 'der' }).toString('base64'),
+      CARD_DEMO_ISSUANCE: 'true',
+    } : {}),
   });
 }
 save('api-gateway', { ...common, SERVICE_TOKEN: randomBytes(32).toString('hex'), SERVER_PORT: '8080' });

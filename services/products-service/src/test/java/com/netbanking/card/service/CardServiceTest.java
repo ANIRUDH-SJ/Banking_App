@@ -12,6 +12,7 @@ import com.netbanking.card.domain.CardStatus;
 import com.netbanking.card.domain.CardStatusAction;
 import com.netbanking.card.domain.CardType;
 import com.netbanking.card.repository.BankCardRepository;
+import com.netbanking.card.security.CardNumberCipher;
 import com.netbanking.common.exception.ResourceNotFoundException;
 import com.netbanking.discovery.CustomerDirectory;
 
@@ -35,7 +36,13 @@ class CardServiceTest {
 
     @BeforeEach
     void setUp() {
-        cardService = new CardService(cardRepository, customerService, audit);
+        cardService =
+                new CardService(
+                        cardRepository,
+                        customerService,
+                        audit,
+                        new CardNumberCipher(""),
+                        java.util.Optional.empty());
         when(customerService.requireCustomerIdForUser(7L)).thenReturn(21L);
     }
 

@@ -15,6 +15,8 @@ before querying any entries.
 | `GET /api/v1/accounts/{accountId}/transactions/{entryId}/status-history` | Ordered lifecycle history for the entry's transaction. |
 | `GET /api/v1/accounts/{accountId}/statement?from=2026-08-01&to=2026-08-31&type=TRANSFER&status=COMPLETED&page=0&size=20` | Filtered, paged ledger entries. All filters are optional. Dates include the whole `to` day. |
 | `GET /api/v1/accounts/{accountId}/statement.csv?from=2026-08-01&to=2026-08-31` | CSV attachment with the same optional filters. Maximum 10,000 rows; narrow the filters if exceeded. |
+| `GET /api/v1/accounts/{accountId}/statement.pdf?from=2026-08-01&to=2026-08-31` | The same entries as an A4 PDF statement. |
+| `POST /api/v1/accounts/{accountId}/statement-emails` | Emails that PDF to the customer's registered address. Body: optional `from`, `to`, `type`, `status`. |
 
 `type` accepts `TRANSFER`, `DEPOSIT`, `WITHDRAWAL`, `LOAN_PAYMENT`, or `REVERSAL`. `status` accepts `PENDING`,
 `PROCESSING`, `COMPLETED`, `FAILED`, or `REVERSED`. Results are ordered by `postedAt` and then `entryId`,
@@ -38,6 +40,13 @@ Example response item:
   "postedAt": "2026-08-01T12:30:00"
 }
 ```
+
+The PDF lists the account type and nickname, currency, the period and filters, opening and closing
+balances, credit and debit totals, and each entry's date, details, reference, type, status, amount and
+running balance, oldest first. Only the last four digits of the account number are printed. The email
+route sends the identical document through notification-service, which looks up the registered address
+itself, and returns `{"status":"SENT","sentTo":"a***@example.in","sentAt":...}`; a delivery failure
+returns `502`, and attachments over 5 MB return `413`.
 
 Invalid page sizes and inverted date ranges return `400`; an entry absent from the specified account
 returns `404`; an account the user does not hold returns `403`. Oversized CSV exports return `413`.

@@ -10,4 +10,5 @@ public record AccountSummaryResponse(
         String currencyCode,
         String accountStatus,
         BigDecimal currentBalance,
-        BigDecimal availableBalance) {}
+        BigDecimal availableBalance,
+        String nickname) {}

@@ -35,6 +35,16 @@ public class DevelopmentEmailService implements EmailService {
         log.info("Mock email delivered to {} with subject {}", mask(recipient), subject);
     }
 
+    @Override
+    public void send(String recipient, String subject, String body, Attachment attachment) {
+        log.info(
+                "Mock email delivered to {} with subject {} and attachment {} ({} bytes)",
+                mask(recipient),
+                subject,
+                attachment.filename(),
+                attachment.content().length);
+    }
+
     private static String mask(String recipient) {
         int separator = recipient.indexOf('@');
         return separator < 0 ? "***" : "***" + recipient.substring(separator);

@@ -2,16 +2,20 @@ package com.netbanking.statement.api;
 
 import com.netbanking.common.api.PagedResponse;
 import com.netbanking.security.SecurityContextHelper;
+import com.netbanking.statement.service.StatementMailClient;
 import com.netbanking.statement.service.StatementService;
 import com.netbanking.transaction.api.TransactionResponse;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -71,5 +75,42 @@ public class StatementController {
                                 .build()
                                 .toString())
                 .body(csv);
+    }
+
+    @GetMapping(value = "/statement.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportPdf(
+            @PathVariable Long accountId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                    LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                    LocalDate to,
+            @RequestParam(required = false) StatementTransactionType type,
+            @RequestParam(required = false) StatementTransactionStatus status) {
+        var document =
+                statementService.exportPdf(
+                        SecurityContextHelper.currentUserId(),
+                        accountId,
+                        new StatementFilter(from, to, type, status));
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .cacheControl(CacheControl.noStore())
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(document.filename())
+                                .build()
+                                .toString())
+                .body(document.content());
+    }
+
+    /** Sends the PDF for the same filters to the customer's registered email address. */
+    @PostMapping("/statement-emails")
+    public StatementMailClient.Receipt emailPdf(
+            @PathVariable Long accountId, @RequestBody(required = false) StatementEmailRequest request) {
+        StatementEmailRequest filters = request == null ? new StatementEmailRequest(null, null, null, null) : request;
+        return statementService.emailPdf(
+                SecurityContextHelper.currentUserId(),
+                accountId,
+                new StatementFilter(filters.from(), filters.to(), filters.type(), filters.status()));
     }
 }

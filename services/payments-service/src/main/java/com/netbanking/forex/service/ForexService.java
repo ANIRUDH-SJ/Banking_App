@@ -50,15 +50,51 @@ public class ForexService {
             throw new IllegalArgumentException("Forex requires accounts with different currencies.");
         BigDecimal rate = rates.rate(source.currencyCode(), destination.currencyCode());
         BigDecimal amount = request.sourceAmount();
-        BigDecimal converted = amount.multiply(rate).setScale(4, RoundingMode.HALF_EVEN);
+        BigDecimal converted = convertAmount(amount, rate, destination.currencyCode());
         if (converted.signum() <= 0 || converted.precision() - converted.scale() > 15)
             throw new IllegalArgumentException("Converted amount is outside the supported range.");
         LocalDateTime now = LocalDateTime.now(clock);
         var response = new ForexQuoteResponse(UUID.randomUUID().toString(),
                 source.accountId(), destination.accountId(), source.currencyCode(),
                 destination.currencyCode(), amount, converted, rate,
-                "DEMO_CONFIGURED", now.plusSeconds(quoteSeconds).atOffset(ZoneOffset.UTC));
+                DemoForexRates.SOURCE, now.plusSeconds(quoteSeconds).atOffset(ZoneOffset.UTC));
         return store.saveQuote(new ForexStore.Quote(response, userId, now)).response();
+    }
+
+    public ForexRatesResponse rates() {
+        return new ForexRatesResponse(
+                "INR",
+                DemoForexRates.SOURCE,
+                rates.asOf(),
+                rates.currencies().stream()
+                        .map(c -> new ForexRatesResponse.Currency(
+                                c.code(), c.name(), c.fractionDigits(), c.inrValue()))
+                        .toList());
+    }
+
+    /** Indicative conversion between any two supported currencies; nothing is booked. */
+    public ForexConversionPreview preview(String from, String to, BigDecimal amount) {
+        String source = code(from);
+        String destination = code(to);
+        if (amount == null || amount.signum() <= 0 || amount.scale() > 4
+                || amount.precision() - amount.scale() > 15)
+            throw new IllegalArgumentException("Enter an amount greater than zero with at most 4 decimals.");
+        BigDecimal rate = rates.rate(source, destination);
+        return new ForexConversionPreview(
+                source, destination, amount, rate, rates.rate(destination, source),
+                convertAmount(amount, rate, destination), DemoForexRates.SOURCE, rates.asOf());
+    }
+
+    private String code(String value) {
+        String code = value == null ? "" : value.strip().toUpperCase(java.util.Locale.ROOT);
+        if (!rates.supports(code))
+            throw new IllegalArgumentException("Currency " + code + " is not supported for conversion.");
+        return code;
+    }
+
+    private static BigDecimal convertAmount(BigDecimal amount, BigDecimal rate, String currency) {
+        int digits = Math.min(4, Math.max(0, java.util.Currency.getInstance(currency).getDefaultFractionDigits()));
+        return amount.multiply(rate).setScale(digits, RoundingMode.HALF_EVEN);
     }
 
     public OtpChallengeResponse challenge(Long userId, String quoteId) {

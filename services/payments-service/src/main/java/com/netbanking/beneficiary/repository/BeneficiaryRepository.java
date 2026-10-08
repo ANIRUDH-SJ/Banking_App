@@ -14,6 +14,9 @@ public interface BeneficiaryRepository extends JpaRepository<Beneficiary, Long> 
 
     boolean existsByCustomerIdAndNicknameIgnoreCase(Long customerId, String nickname);
 
+    boolean existsByCustomerIdAndNicknameIgnoreCaseAndBeneficiaryIdNot(
+            Long customerId, String nickname, Long beneficiaryId);
+
     boolean existsByCustomerIdAndAccountNumberAndIfscCode(
             Long customerId, String accountNumber, String ifscCode);
 }

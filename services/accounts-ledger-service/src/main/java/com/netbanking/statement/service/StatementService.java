@@ -1,5 +1,6 @@
 package com.netbanking.statement.service;
 
+import com.netbanking.account.api.AccountSummaryResponse;
 import com.netbanking.account.service.AccountService;
 import com.netbanking.statement.api.StatementFilter;
 import com.netbanking.statement.api.StatementTransactionStatus;
@@ -26,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -34,6 +36,7 @@ public class StatementService {
 
     private static final int EXPORT_PAGE_SIZE = 500;
     private static final int MAX_EXPORT_ROWS = 10_000;
+    private static final int MAX_EMAIL_BYTES = 5 * 1024 * 1024;
     private static final Sort NEWEST_FIRST =
             Sort.by(Sort.Order.desc("postedAt"), Sort.Order.desc("entryId"));
     private static final String CSV_HEADER =
@@ -41,11 +44,18 @@ public class StatementService {
 
     private final AccountService accountService;
     private final AccountTransactionEntryRepository entryRepository;
+    private final StatementPdfRenderer pdfRenderer;
+    private final StatementMailClient mail;
 
     public StatementService(
-            AccountService accountService, AccountTransactionEntryRepository entryRepository) {
+            AccountService accountService,
+            AccountTransactionEntryRepository entryRepository,
+            StatementPdfRenderer pdfRenderer,
+            StatementMailClient mail) {
         this.accountService = accountService;
         this.entryRepository = entryRepository;
+        this.pdfRenderer = pdfRenderer;
+        this.mail = mail;
     }
 
     public Page<TransactionResponse> getStatement(
@@ -62,8 +72,79 @@ public class StatementService {
 
     public byte[] exportCsv(Long userId, Long accountId, StatementFilter filter) {
         accountService.requireOwnership(userId, accountId);
-        Specification<AccountTransactionEntry> specification = specification(accountId, filter);
         StringBuilder csv = new StringBuilder(CSV_HEADER);
+        for (TransactionResponse row : collect(accountId, filter)) {
+            appendCsvRow(csv, row);
+        }
+        return csv.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public StatementDocument exportPdf(Long userId, Long accountId, StatementFilter filter) {
+        AccountSummaryResponse account = accountService.getOwnedAccount(userId, accountId);
+        List<TransactionResponse> rows = new ArrayList<>(collect(accountId, filter));
+        Collections.reverse(rows);
+        LocalDateTime generatedAt = LocalDateTime.now();
+        byte[] pdf =
+                pdfRenderer.render(
+                        new StatementPdfRenderer.Account(
+                                account.accountType(),
+                                account.accountNumber(),
+                                account.currencyCode(),
+                                account.nickname()),
+                        new StatementPdfRenderer.Period(
+                                filter.from(),
+                                filter.to(),
+                                filter.type() == null ? null : filter.type().name(),
+                                filter.status() == null ? null : filter.status().name()),
+                        rows,
+                        generatedAt);
+        String last4 = StatementPdfRenderer.masked(account.accountNumber()).substring(5);
+        return new StatementDocument(
+                "statement-" + last4 + "-" + generatedAt.toLocalDate() + ".pdf",
+                pdf,
+                last4,
+                rows.size());
+    }
+
+    /** Emails the same document {@link #exportPdf} would download to the customer's registered address. */
+    public StatementMailClient.Receipt emailPdf(Long userId, Long accountId, StatementFilter filter) {
+        StatementDocument document = exportPdf(userId, accountId, filter);
+        if (document.content().length > MAX_EMAIL_BYTES) {
+            throw new ResponseStatusException(
+                    HttpStatus.PAYLOAD_TOO_LARGE,
+                    "This statement is too large to email; narrow the date range.");
+        }
+        String period = periodText(filter);
+        return mail.send(
+                userId,
+                "Your account statement (account ending " + document.accountLast4() + ")",
+                "Your statement for the account ending "
+                        + document.accountLast4()
+                        + " ("
+                        + period
+                        + ", "
+                        + document.entries()
+                        + (document.entries() == 1 ? " entry" : " entries")
+                        + ") is attached as a PDF.\n\n"
+                        + "If you did not request this statement, sign in and review your recent "
+                        + "activity, or contact the bank.",
+                document.filename(),
+                document.content());
+    }
+
+    private static String periodText(StatementFilter filter) {
+        if (filter.from() == null && filter.to() == null) return "all available history";
+        if (filter.from() == null) return "up to " + filter.to();
+        if (filter.to() == null) return "from " + filter.from();
+        return filter.from() + " to " + filter.to();
+    }
+
+    public record StatementDocument(
+            String filename, byte[] content, String accountLast4, int entries) {}
+
+    private List<TransactionResponse> collect(Long accountId, StatementFilter filter) {
+        Specification<AccountTransactionEntry> specification = specification(accountId, filter);
+        List<TransactionResponse> rows = new ArrayList<>();
         int pageNumber = 0;
         Page<AccountTransactionEntry> result;
         do {
@@ -77,10 +158,10 @@ public class StatementService {
                         "Statement has more than 10000 rows; narrow the date range.");
             }
             for (AccountTransactionEntry entry : result.getContent()) {
-                appendCsvRow(csv, TransactionService.toResponse(entry));
+                rows.add(TransactionService.toResponse(entry));
             }
         } while (result.hasNext());
-        return csv.toString().getBytes(StandardCharsets.UTF_8);
+        return rows;
     }
 
     private static Specification<AccountTransactionEntry> specification(
