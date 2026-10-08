@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.netbanking.audit.service.AuditLogService;
+import com.netbanking.card.api.CardResponse;
 import com.netbanking.card.api.SetCardPinRequest;
 import com.netbanking.card.domain.BankCard;
 import com.netbanking.card.domain.CardNetwork;
@@ -46,6 +47,9 @@ class CardPinServiceTest {
 
     @Test
     void setsAPinAndStoresOnlyAHash() {
+        CardResponse cardResponse = mock(CardResponse.class);
+        when(cardResponse.pinSet()).thenReturn(true);
+        when(cards.toResponse(eq(debit), any())).thenReturn(cardResponse);
         var response = pins.setPin(7L, 1L, request("4826", null));
 
         assertThat(response.pinSet()).isTrue();

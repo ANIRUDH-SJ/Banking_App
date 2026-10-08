@@ -31,7 +31,7 @@ define(['knockout', './registry', './format'], function (ko, registry, format) {
     self.expiry = card.expiryMonth && card.expiryYear
       ? String(card.expiryMonth).padStart(2, '0') + '/' + String(card.expiryYear).slice(-2)
       : '—';
-    self.canReveal = card.revealable !== false && ['CLOSED', 'EXPIRED'].indexOf(String(card.status).toUpperCase()) < 0;
+    self.canReveal = card.revealable === true && ['CLOSED', 'EXPIRED'].indexOf(String(card.status).toUpperCase()) < 0;
 
     self.number = ko.observable('');
     self.secondsLeft = ko.observable(0);
@@ -76,8 +76,11 @@ define(['knockout', './registry', './format'], function (ko, registry, format) {
         if (mine !== ticket) {
           return;
         }
+        var digits = String(details && details.cardNumber || '').replace(/\s/g, '');
+        if (!/^[0-9]{12,19}$/.test(digits) || !digits.endsWith(self.last4))
+          throw new Error('The full card number is unavailable for this card.');
         var until = Date.now() + Math.max(5, Number(details && details.revealSeconds) || 30) * 1000;
-        self.number(grouped(details && details.cardNumber));
+        self.number(grouped(digits));
         self.secondsLeft(Math.ceil((until - Date.now()) / 1000));
         stop();
         timer = window.setInterval(function () {

@@ -95,7 +95,7 @@ public class CardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Card was not found."));
     }
 
-    static CardResponse toResponse(BankCard card, LocalDateTime now) {
+    CardResponse toResponse(BankCard card, LocalDateTime now) {
         CardResponse.Credit credit =
                 card.hasCreditAccount()
                         ? new CardResponse.Credit(
@@ -120,7 +120,7 @@ public class CardService {
                 card.getLastFour(),
                 card.hasPin(),
                 card.pinLocked(now) ? card.getPinLockedUntil() : null,
-                card.getPanCiphertext() != null,
+                card.getPanCiphertext() != null && numbers.enabled(),
                 credit);
     }
 

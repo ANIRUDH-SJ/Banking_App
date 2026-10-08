@@ -21,6 +21,43 @@ function loadAmd(name) {
   return service;
 }
 
+test('card reveal follows backend availability and returns to a masked number', async () => {
+  let CardView;
+  let requests = 0;
+  const observable = (initial) => {
+    let value = initial;
+    return function (next) {
+      if (arguments.length) value = next;
+      return value;
+    };
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/js/services/card-view.js'), 'utf8'), {
+    define: (names, factory) => {
+      CardView = factory(
+        { observable, pureComputed: (compute) => compute },
+        { cards: { reveal: async () => { requests += 1; return { cardNumber: '4242424242424242', revealSeconds: 30 }; } } },
+        { labelize: (value) => value, asList: (value) => value }
+      );
+    },
+    window: { setInterval: () => 1, clearInterval: () => {} },
+    Date, Math, Number, String
+  });
+
+  const unavailable = new CardView({ cardId: 1, lastFour: '4242', cardType: 'DEBIT', cardNetwork: 'VISA', status: 'ACTIVE', revealable: false });
+  unavailable.reveal();
+  assert.equal(unavailable.canReveal, false);
+  assert.equal(requests, 0);
+  assert.match(unavailable.display(), /4242$/);
+
+  const available = new CardView({ cardId: 2, lastFour: '4242', cardType: 'DEBIT', cardNetwork: 'VISA', status: 'ACTIVE', revealable: true });
+  available.reveal();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(requests, 1);
+  assert.equal(available.display(), '4242 4242 4242 4242');
+  available.hide();
+  assert.match(available.display(), /^••••/);
+});
+
 test('a card PIN is four digits and not a trivial sequence', () => {
   assert.equal(pinCrypto.formatError('12'), 'Enter the four-digit PIN.');
   assert.equal(pinCrypto.formatError('1234'), '');

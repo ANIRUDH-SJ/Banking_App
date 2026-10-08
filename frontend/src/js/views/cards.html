@@ -46,6 +46,9 @@
           <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
         </button>
         <!-- /ko -->
+        <!-- ko ifnot: canReveal -->
+        <span class="nb-row-meta">Full number unavailable</span>
+        <!-- /ko -->
       </div>
       <p class="nb-field-error" role="alert" data-bind="visible: error, text: error"></p>
 
@@ -156,6 +159,9 @@
           <button type="button" class="nb-eye" data-bind="click: toggle, disable: revealing, css: { 'is-on': shown }, attr: { 'aria-pressed': shown() ? 'true' : 'false', 'aria-label': toggleLabel, title: toggleLabel }">
             <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
           </button>
+          <!-- /ko -->
+          <!-- ko ifnot: canReveal -->
+          <span class="nb-row-meta">Full number unavailable</span>
           <!-- /ko -->
         </div>
         <p class="nb-field-error" role="alert" data-bind="visible: error, text: error"></p>
