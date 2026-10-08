@@ -40,6 +40,34 @@
     </div>
   </dl>
 
+  <section class="nb-sheet" aria-labelledby="profile-accounts-heading">
+    <div class="nb-sheet-head">
+      <div>
+        <h2 id="profile-accounts-heading">Your accounts at a glance</h2>
+        <p class="nb-sheet-sub">Balances shown are from your accounts, not your cards or deposits.</p>
+      </div>
+      <button type="button" class="nb-link-button" data-bind="click: openAccounts">View accounts</button>
+    </div>
+    <p class="nb-sr" role="status" data-bind="text: accountsLoading() ? 'Loading account summary' : ''"></p>
+    <p class="nb-rail-error" role="alert" data-bind="visible: accountsError, text: accountsError"></p>
+    <dl class="nb-facts" data-bind="visible: !accountsLoading() && !accountsError()">
+      <div><dt>Available in rupee accounts</dt><dd data-bind="text: money(rupeeAvailable(), 'INR')"></dd></div>
+      <div><dt>Active accounts</dt><dd data-bind="text: activeAccounts().length"></dd></div>
+      <div><dt>Foreign currency wallets</dt><dd data-bind="text: walletCount"></dd></div>
+    </dl>
+    <p class="nb-rail-empty" data-bind="visible: !accountsLoading() && !accountsError() && accounts().length === 0">No accounts are linked to this profile yet.</p>
+    <ul class="nb-rows" data-bind="visible: !accountsLoading() && !accountsError(), foreach: accounts">
+      <li class="nb-row">
+        <span class="nb-row-glyph i-accounts" aria-hidden="true"></span>
+        <span class="nb-row-main">
+          <span class="nb-row-title" data-bind="text: $parent.accountName($data)"></span>
+          <span class="nb-row-meta" data-bind="text: $parent.maskAccount(accountNumber) + ' · ' + $parent.money(availableBalance, currencyCode) + ' available'"></span>
+        </span>
+        <span class="nb-row-status" data-bind="text: accountStatus"></span>
+      </li>
+    </ul>
+  </section>
+
   <form class="nb-sheet nb-form nb-profile-form" novalidate data-bind="submit: save, visible: !loading() && customerNumber()" aria-labelledby="profile-edit-heading">
     <h2 id="profile-edit-heading" class="nb-form-section">Details you can update</h2>
     <oj-c-form-layout direction="row" max-columns="2" label-edge="top" user-assistance-density="reflow">
