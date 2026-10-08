@@ -1,6 +1,7 @@
 package com.netbanking.deposit.api;
 
 import com.netbanking.deposit.service.DepositService;
+import com.netbanking.deposit.service.DepositClosureService;
 import com.netbanking.security.SecurityContextHelper;
 
 import jakarta.validation.Valid;
@@ -14,9 +15,11 @@ import java.util.List;
 @RequestMapping("/api/v1/deposits")
 public class DepositController {
     private final DepositService deposits;
+    private final DepositClosureService closures;
 
-    public DepositController(DepositService deposits) {
+    public DepositController(DepositService deposits, DepositClosureService closures) {
         this.deposits = deposits;
+        this.closures = closures;
     }
 
     @PostMapping("/quotes")
@@ -44,5 +47,23 @@ public class DepositController {
     @PostMapping("/{depositId}/installments")
     public DepositResponse payDueInstallment(@PathVariable String depositId) {
         return deposits.payDueInstallment(SecurityContextHelper.currentUserId(), depositId);
+    }
+
+    @PostMapping("/{depositId}/closure-quotes")
+    public DepositClosureQuoteResponse closureQuote(@PathVariable String depositId) {
+        return closures.quote(SecurityContextHelper.currentUserId(), depositId);
+    }
+
+    @PostMapping("/{depositId}/closure-challenges")
+    public DepositClosureChallengeResponse closureChallenge(
+            @PathVariable String depositId,
+            @Valid @RequestBody DepositClosureChallengeRequest request) {
+        return closures.challenge(SecurityContextHelper.currentUserId(), depositId, request);
+    }
+
+    @PostMapping("/{depositId}/close")
+    public DepositClosureResponse close(
+            @PathVariable String depositId, @Valid @RequestBody CloseDepositRequest request) {
+        return closures.close(SecurityContextHelper.currentUserId(), depositId, request);
     }
 }

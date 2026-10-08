@@ -93,7 +93,7 @@ public class CardPinService {
         card.changePin(encoder.encode(material(card, pin)), now());
         audit.record(userId, changing ? "CARD_PIN_CHANGED" : "CARD_PIN_SET", "CARD",
                 String.valueOf(cardId), "SUCCESS");
-        return CardService.toResponse(card, now());
+        return cards.toResponse(card, now());
     }
 
     /**

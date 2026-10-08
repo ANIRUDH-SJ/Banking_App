@@ -40,6 +40,48 @@
     </div>
   </dl>
 
+  <section class="nb-sheet" aria-labelledby="profile-accounts-heading">
+    <div class="nb-sheet-head">
+      <div>
+        <h2 id="profile-accounts-heading">Your bank accounts</h2>
+        <p class="nb-sheet-sub">Account and branch details come from the bank. Account numbers stay hidden until you choose to show one.</p>
+      </div>
+      <button type="button" class="nb-link-button" data-bind="click: openAccounts">View accounts</button>
+    </div>
+    <p class="nb-sr" role="status" data-bind="text: accountsLoading() ? 'Loading account summary' : ''"></p>
+    <p class="nb-rail-error" role="alert" data-bind="visible: accountsError, text: accountsError"></p>
+    <dl class="nb-facts" data-bind="visible: !accountsLoading() && !accountsError()">
+      <div><dt>Available in rupee accounts</dt><dd data-bind="text: money(rupeeAvailable(), 'INR')"></dd></div>
+      <div><dt>Active accounts</dt><dd data-bind="text: activeAccounts().length"></dd></div>
+      <div><dt>Foreign currency wallets</dt><dd data-bind="text: walletCount"></dd></div>
+    </dl>
+    <p class="nb-rail-empty" data-bind="visible: !accountsLoading() && !accountsError() && accounts().length === 0">No accounts are linked to this profile yet.</p>
+    <ul class="nb-profile-account-list" data-bind="visible: !accountsLoading() && !accountsError(), foreach: accounts">
+      <li class="nb-profile-account">
+        <div class="nb-profile-account-head">
+          <div>
+            <h3 data-bind="text: $parent.accountName($data)"></h3>
+            <p data-bind="text: (bankName || 'Bank') + ' · ' + $parent.label(accountType) + ' · ' + currencyCode"></p>
+          </div>
+          <span class="nb-row-status" data-bind="text: $parent.label(accountStatus)"></span>
+        </div>
+        <dl class="nb-profile-account-facts">
+          <div>
+            <dt>Account number</dt>
+            <dd class="nb-mono"><span data-bind="text: $parent.displayNumber($data)"></span>
+              <button type="button" class="nb-link-button" data-bind="click: $parent.toggleNumber, text: $parent.isNumberShown($data) ? 'Hide number' : 'Show number', attr: { 'aria-label': ($parent.isNumberShown($data) ? 'Hide' : 'Show') + ' account number for ' + $parent.accountName($data) }"></button>
+            </dd>
+          </div>
+          <div><dt>IFSC</dt><dd class="nb-mono" data-bind="text: ifscCode || '—'"></dd></div>
+          <div><dt>Branch</dt><dd data-bind="text: branchName || '—'"></dd></div>
+          <div><dt>Location</dt><dd data-bind="text: $parent.branchLocation($data) || '—'"></dd></div>
+          <div><dt>Available balance</dt><dd data-bind="text: $parent.money(availableBalance, currencyCode)"></dd></div>
+          <div><dt>Current balance</dt><dd data-bind="text: $parent.money(currentBalance, currencyCode)"></dd></div>
+        </dl>
+      </li>
+    </ul>
+  </section>
+
   <form class="nb-sheet nb-form nb-profile-form" novalidate data-bind="submit: save, visible: !loading() && customerNumber()" aria-labelledby="profile-edit-heading">
     <h2 id="profile-edit-heading" class="nb-form-section">Details you can update</h2>
     <oj-c-form-layout direction="row" max-columns="2" label-edge="top" user-assistance-density="reflow">

@@ -22,6 +22,15 @@ services must be running; products service cannot post a balance directly.
 5. At maturity, the scheduler credits the source account. The payout and each
    installment have stable ledger operation IDs, so a retry cannot move money
    twice. `payoutReference` is the bank statement transaction reference.
+6. To close an active FD or RD before maturity, request
+   `POST /api/v1/deposits/{depositId}/closure-quotes`. The 10-minute quote shows
+   contributed principal, earned interest, reduced annual rate, and exact payout.
+   An RD must have no overdue installment. Request
+   `POST /api/v1/deposits/{depositId}/closure-challenges` with `quoteId`, then
+   `POST /api/v1/deposits/{depositId}/close` with `quoteId`, `idempotencyKey`,
+   `otpChallengeId`, and `otpCode`. Retry an uncertain response with the *same*
+   key and quote. The payout returns to the original INR account. A pending
+   payout is retried by recovery without double crediting.
 
 FD minimum: INR 1,000; RD installment minimum: INR 100; maximum per quote:
 INR 10,000,000. Amounts have at most two decimal places.
@@ -31,11 +40,15 @@ INR 10,000,000. Amounts have at most two decimal places.
 `app.deposits.fd-rate-percent` defaults to `6.50` and
 `app.deposits.rd-rate-percent` defaults to `6.00`. These are **configurable demo
 rates**, not a live bank rate sheet. The quote snapshots the annual rate.
+`app.deposits.early-closure-rate-reduction` defaults to `1.00` percentage point.
+Early closure applies the reduced rate, floored at zero, to each paid
+contribution through the closure date. This is a **demo policy**, not a bank's
+premature-withdrawal schedule. It charges no separate fee.
 Interest is calculated as simple daily interest (actual days / 365) on each
 contribution through maturity; delayed RD installments earn less than the
 on-time estimate. The estimate is not a guarantee of payout.
 
-This implementation has no premature closure, tax withholding, nominee,
+This implementation has no tax withholding, nominee,
 regulatory disclosures, deposit insurance representation, or production
 reconciliation. Those require bank policy and legal review before real-money
 use. Run the Oracle migration and full service integration checks in the

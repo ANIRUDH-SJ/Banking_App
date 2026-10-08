@@ -6,10 +6,12 @@ const vm = require('node:vm');
 
 function observable(initial) {
   let value = initial;
-  return function (next) {
+  const entry = function (next) {
     if (arguments.length) value = next;
     return value;
   };
+  entry.subscribe = () => {};
+  return entry;
 }
 
 const ko = {
@@ -22,6 +24,7 @@ const format = {
   asList: (value) => Array.isArray(value) ? value : (value?.content || []),
   formatMoney: (amount, currency) => `${currency} ${amount}`,
   formatDateTime: () => 'now',
+  formatDate: () => 'today',
   maskAccount: (number) => `•••• ${String(number).slice(-4)}`,
   labelize: (value) => value
 };
@@ -40,6 +43,7 @@ function load(name, dependencies) {
     Math,
     crypto: { randomUUID: () => 'test-idempotency-key' },
     document: { title: '' },
+    window: { setTimeout: () => 1, clearTimeout: () => {} },
     URLSearchParams
   }, { filename: name });
   return ViewModel;
@@ -81,6 +85,55 @@ function PinAuthorization() {
 }
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+test('profile shows the customer account summary without exposing full numbers', async () => {
+  const Profile = load('profile.js', {
+    knockout: ko,
+    '../accUtils': { announce: () => {} },
+    '../services/registry': {
+      profile: { get: async () => ({ customerNumber: 'C1', firstName: 'Demo', active: true }) },
+      accounts: { getAccounts: async () => [
+        { accountId: 1, accountType: 'SAVINGS', accountNumber: '001234567890', currencyCode: 'INR', accountStatus: 'ACTIVE', availableBalance: 500,
+          bankName: 'Net Banking', branchName: 'Main branch', branchCity: 'Bengaluru', branchState: 'Karnataka', ifscCode: 'NETB0000001' },
+        { accountId: 2, accountType: 'SAVINGS', accountNumber: '001234567891', currencyCode: 'USD', accountStatus: 'ACTIVE', availableBalance: 20 }
+      ] }
+    },
+    '../services/api-error': { fieldMessage: () => '' },
+    '../services/format': format
+  });
+  const screen = new Profile();
+  screen.connected();
+  await tick();
+  assert.equal(screen.rupeeAvailable(), 500);
+  assert.equal(screen.activeAccounts().length, 2);
+  assert.equal(screen.walletCount(), 1);
+  assert.equal(screen.maskAccount(screen.accounts()[0].accountNumber), '•••• 7890');
+  assert.equal(screen.accounts()[0].ifscCode, 'NETB0000001');
+  assert.equal(screen.branchLocation(screen.accounts()[0]), 'Bengaluru, Karnataka');
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '•••• 7890');
+  screen.toggleNumber(screen.accounts()[0]);
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '0012 3456 7890');
+  screen.disconnected();
+  assert.equal(screen.displayNumber(screen.accounts()[0]), '•••• 7890');
+  assert.match(fs.readFileSync(path.join(__dirname, '../src/js/views/profile.html'), 'utf8'), /<dt>IFSC<\/dt>/);
+});
+
+test('account numbers start masked and hide when the page closes', () => {
+  const Accounts = load('accounts.js', {
+    knockout: ko,
+    '../accUtils': { announce: () => {} },
+    '../services/registry': { accounts: {} },
+    '../services/format': format,
+    '../services/ui-support': ui
+  });
+  const screen = new Accounts();
+  const account = { accountId: 1, accountNumber: '001234567890' };
+  assert.equal(screen.displayNumber(account), '•••• 7890');
+  screen.toggleNumber(account);
+  assert.equal(screen.displayNumber(account), '0012 3456 7890');
+  screen.disconnected();
+  assert.equal(screen.displayNumber(account), '•••• 7890');
+});
 
 test('bill payment checks the biller reference before requesting a code', async () => {
   const calls = [];
@@ -140,6 +193,66 @@ test('accounts screen displays only bank-provided balances', async () => {
   await tick();
   assert.equal(screen.accounts()[0].currentBalance, 123);
   assert.equal(screen.loading(), false);
+});
+
+test('deposit closure requires a server quote and code before showing a payout', async () => {
+  const calls = [];
+  const deposit = {
+    depositId: 'deposit-1', kind: 'FD', status: 'ACTIVE', sourceAccountId: 11,
+    termMonths: 12, installmentsPaid: 1, installmentOrPrincipal: 1000
+  };
+  const customKo = Object.assign({}, ko, {
+    observable(initial) {
+      const value = observable(initial);
+      value.subscribe = () => {};
+      return value;
+    },
+    observableArray(initial) {
+      const value = observable(initial || []);
+      value.replace = (oldItem, newItem) => value(value().map((item) => item === oldItem ? newItem : item));
+      return value;
+    }
+  });
+  const Deposits = load('deposits.js', {
+    knockout: customKo,
+    '../accUtils': { announce: () => {} },
+    '../services/registry': {
+      otp: { validateCode: (code) => /^\d{6}$/.test(code) ? '' : 'Enter the 6-digit code.' },
+      deposits: {
+        closureQuote: async (id) => {
+          calls.push(['quote', id]);
+          return { quoteId: 'quote-1', principal: 1000, interest: 5, payoutAmount: 1005,
+            expiresAt: new Date(Date.now() + 600000).toISOString() };
+        },
+        closureChallenge: async (id, quoteId) => {
+          calls.push(['challenge', id, quoteId]);
+          return { challengeId: 'challenge-1' };
+        },
+        close: async (id, request) => {
+          calls.push(['close', id, request]);
+          return { depositId: id, status: 'CLOSED', payoutAmount: 1005, payoutReference: 'ledger-1' };
+        }
+      }
+    },
+    '../services/format': Object.assign({}, format, { formatDate: () => 'today', formatTime: () => 'soon' }),
+    '../services/ui-support': ui
+  });
+  const screen = new Deposits();
+  screen.deposits([deposit]);
+  screen.startClosure(deposit);
+  await tick();
+  assert.equal(calls.length, 1);
+  assert.equal(screen.closureQuote().payoutAmount, 1005);
+  screen.sendClosureCode();
+  await tick();
+  assert.equal(screen.closureChallengeId(), 'challenge-1');
+  screen.closureCode('123456');
+  screen.confirmClosure();
+  await tick();
+  assert.deepEqual(calls.map((call) => call[0]), ['quote', 'challenge', 'close']);
+  assert.equal(calls[2][2].idempotencyKey, 'test-idempotency-key');
+  assert.equal(screen.deposits()[0].status, 'CLOSED');
+  assert.equal(screen.deposits()[0].payoutReference, 'ledger-1');
 });
 
 test('transfer receipt comes only from the server after a real OTP challenge', async () => {

@@ -1566,6 +1566,67 @@ oj-c-badge {
   max-width: 48rem;
 }
 
+.nb-profile-account-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.nb-profile-account {
+  padding: 1.25rem;
+  border: 1px solid var(--nb-line);
+  border-radius: var(--nb-radius-sheet);
+  background: var(--nb-surface);
+}
+
+.nb-profile-account-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--nb-line);
+}
+
+.nb-profile-account-head h3 {
+  color: var(--nb-ink);
+  font-family: var(--nb-serif);
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.nb-profile-account-head p {
+  color: var(--nb-muted);
+  font-size: 0.8125rem;
+}
+
+.nb-profile-account-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding-top: 1rem;
+}
+
+.nb-profile-account-facts dt {
+  color: var(--nb-muted);
+  font-size: 0.75rem;
+}
+
+.nb-profile-account-facts dd {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.nb-profile-account-facts .nb-link-button {
+  margin-left: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .nb-profile-account-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Notices */
 
 .nb-inbox {

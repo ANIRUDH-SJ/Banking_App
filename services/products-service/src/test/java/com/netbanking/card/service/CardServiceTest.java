@@ -59,7 +59,18 @@ class CardServiceTest {
                         card -> {
                             assertThat(card.maskedCardNumber()).isEqualTo("************4242");
                             assertThat(card.status()).isEqualTo("ACTIVE");
+                            assertThat(card.revealable()).isFalse();
                         });
+    }
+
+    @Test
+    void doesNotOfferRevealWhenCardIsEncryptedButKeyIsMissing() {
+        BankCard card = card(CardStatus.ACTIVE);
+        card.protectNumber("v1:encrypted");
+        when(cardRepository.findByCustomerIdOrderByCardIdAsc(21L)).thenReturn(List.of(card));
+
+        assertThat(cardService.getCards(7L)).singleElement()
+                .satisfies(result -> assertThat(result.revealable()).isFalse());
     }
 
     @Test
