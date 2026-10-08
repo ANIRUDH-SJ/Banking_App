@@ -45,7 +45,7 @@
           <div class="nb-mast-end">
             <a class="nb-icon-button nb-bell" href="#" data-bind="click: openNotices, attr: { 'aria-label': unreadCount() ? 'Notices, ' + unreadCount() + ' unread' : 'Notices' }">
               <span class="nb-icon i-bell" aria-hidden="true"></span>
-              <span class="nb-bell-count" data-bind="visible: unreadCount() > 0, text: unreadCount" aria-hidden="true"></span>
+              <span class="nb-bell-count" data-bind="visible: unreadCount() > 0, text: unreadCount() > 99 ? '99+' : unreadCount()" aria-hidden="true"></span>
             </a>
             <a class="nb-who" href="#" data-bind="click: function () { return open('profile'); }">
               <oj-c-avatar size="xs" shape="circle" background="neutral" initials="[[initials]]" aria-hidden="true"></oj-c-avatar>

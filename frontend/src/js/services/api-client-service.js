@@ -19,6 +19,11 @@
     return headers.get(name) || headers.get(name.toLowerCase()) || '';
   }
 
+  function attachmentName(disposition) {
+    var match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition || '');
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+
   function ApiClientService(options) {
     var session = options.session;
     var fetchImpl = options.fetch;
@@ -78,6 +83,11 @@
       }).then(function (response) {
         var retryAfter = headerValue(response.headers, 'Retry-After');
         var contentType = headerValue(response.headers, 'Content-Type');
+        if (response.ok && options.as === 'blob') {
+          return response.blob().then(function (blob) {
+            return { blob: blob, filename: attachmentName(headerValue(response.headers, 'Content-Disposition')) };
+          });
+        }
         var reader = contentType.indexOf('application/json') >= 0
           ? response.json().catch(function () { return null; })
           : response.text();
@@ -111,6 +121,10 @@
 
     this.get = function (path, options) {
       return request('GET', path, null, options);
+    };
+    /** Resolves to { blob, filename } for file responses such as statements. */
+    this.download = function (path, options) {
+      return request('GET', path, null, Object.assign({}, options, { as: 'blob' }));
     };
     this.post = function (path, body, options) {
       return request('POST', path, body === undefined ? null : body, options);

@@ -27,6 +27,20 @@ define([], function () {
     this.getStatement = function (accountId, query) {
       return apiClient.get('/api/v1/accounts/' + encodeURIComponent(accountId) + '/statement' + (query || ''));
     };
+
+    this.downloadStatementPdf = function (accountId, query) {
+      return apiClient.download('/api/v1/accounts/' + encodeURIComponent(accountId) + '/statement.pdf' + (query || ''));
+    };
+
+    /** Emails the PDF for the same filters to the customer's registered address. */
+    this.emailStatement = function (accountId, filters) {
+      return apiClient.post('/api/v1/accounts/' + encodeURIComponent(accountId) + '/statement-emails', filters || {});
+    };
+
+    /** The nickname is personal to the signed-in holder; an empty value clears it. */
+    this.rename = function (accountId, nickname) {
+      return apiClient.patch('/api/v1/accounts/' + encodeURIComponent(accountId), { nickname: nickname || null });
+    };
   }
 
   return AccountService;

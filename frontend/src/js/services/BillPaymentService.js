@@ -26,11 +26,9 @@ define(['./registry'], function (registry) {
     submitPayment: function (payment) {
       return registry.apiClient.post('/api/v1/bill-payments', Object.assign(
         paymentBody(payment),
-        {
-          idempotencyKey: payment.idempotencyKey,
-          otpChallengeId: payment.otpChallengeId,
-          otpCode: payment.otpCode
-        }
+        payment.cardPin
+          ? { idempotencyKey: payment.idempotencyKey, cardPin: payment.cardPin }
+          : { idempotencyKey: payment.idempotencyKey, otpChallengeId: payment.otpChallengeId, otpCode: payment.otpCode }
       ));
     }
   };

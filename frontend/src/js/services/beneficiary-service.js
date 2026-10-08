@@ -21,6 +21,10 @@ define([], function () {
       });
     };
 
+    this.rename = function (beneficiaryId, nickname) {
+      return apiClient.patch('/api/v1/beneficiaries/' + beneficiaryId, { nickname: nickname });
+    };
+
     this.disable = function (beneficiaryId) {
       return apiClient.delete('/api/v1/beneficiaries/' + beneficiaryId);
     };

@@ -3,10 +3,12 @@ define([
   '../accUtils',
   '../services/registry',
   '../services/format',
+  '../services/ui-support',
+  '../services/card-view',
   'oj-c/button',
   'oj-c/badge',
   'oj-c/skeleton'
-], function (ko, accUtils, registry, format) {
+], function (ko, accUtils, registry, format, ui, CardView) {
   function describe(error, fallback) {
     var message = (error && error.message) || fallback;
     if (error && error.correlationId) {
@@ -101,26 +103,27 @@ define([
       var date = new Date(value);
       return Number.isNaN(date.getTime()) ? '' : format.formatTime(date.getTime());
     };
-    self.accountTitle = function (account) {
-      var type = format.labelize(account.accountType);
-      return type ? type + ' account' : 'Account';
+    self.accountTitle = ui.accountName;
+    self.accountKind = ui.accountKind;
+    self.hasNickname = function (account) {
+      return !!String(account.nickname || '').trim();
     };
-    self.statusVariant = function (status) {
-      var value = String(status || '').toUpperCase();
-      if (value === 'ACTIVE' || value === 'OPEN' || value === 'CURRENT') {
-        return 'successSubtle';
+    self.grouped = function (number) {
+      return String(number || '').replace(/(\d{4})(?=\d)/g, '$1 ');
+    };
+    self.statusVariant = ui.statusVariant;
+    self.canTransfer = function (account) {
+      return (account.currencyCode || 'INR') === 'INR' && account.accountStatus === 'ACTIVE';
+    };
+    self.credit = function (view) {
+      return view.card.credit || null;
+    };
+    self.creditUsed = function (view) {
+      var credit = view.card.credit;
+      if (!credit || !Number(credit.creditLimit)) {
+        return 0;
       }
-      if (value === 'CLOSED' || value === 'BLOCKED' || value === 'FROZEN' || value === 'DORMANT' || value === 'OVERDUE') {
-        return 'dangerSubtle';
-      }
-      return 'neutralSubtle';
-    };
-    self.cardTone = function (card) {
-      return String(card.cardType || '').toUpperCase() === 'CREDIT' ? 'is-credit-card' : 'is-debit-card';
-    };
-    self.cardDigits = function (card) {
-      var digits = String(card.maskedCardNumber || '').replace(/[^0-9]/g, '');
-      return digits ? digits.slice(-4) : '';
+      return Math.min(100, Math.max(0, Math.round(Number(credit.outstandingBalance || 0) / Number(credit.creditLimit) * 100)));
     };
 
     function go(path) {
@@ -138,10 +141,31 @@ define([
     self.openBeneficiaries = go('beneficiaries');
     self.openNotices = go('notifications');
 
+    self.openStatementFor = function (account) {
+      ui.hand('transactions.accountId', account.accountId);
+      registry.go('transactions');
+      return false;
+    };
+    self.openTransferFor = function (account) {
+      ui.hand('transfer.sourceAccountId', account.accountId);
+      registry.go('transfer');
+      return false;
+    };
+    self.openCard = function (view) {
+      ui.hand('cards.cardId', view.id);
+      registry.go('cards');
+      return false;
+    };
+    self.openNotice = function (notice) {
+      ui.hand('notifications.id', notice.notificationId);
+      registry.go('notifications');
+      return false;
+    };
+
     function loadTransactions(account, ticket) {
       self.transactionsLoading(true);
       self.transactionsError('');
-      self.transactionAccount(format.maskAccount(account.accountNumber));
+      self.transactionAccount(ui.accountName(account) + ' ' + format.maskAccount(account.accountNumber));
       registry.transactions.list(account.accountId, '?page=0&size=6').then(function (page) {
         if (ticket !== generation) {
           return;
@@ -232,13 +256,21 @@ define([
         }
       });
 
-      track(registry.cards.list(), ticket, self.cards, self.cardsLoading, self.cardsError, 'Cards could not be loaded.');
+      disposeCards();
+      track(registry.cards.list().then(CardView.wrap), ticket, self.cards, self.cardsLoading, self.cardsError, 'Cards could not be loaded.');
       track(registry.loans.list(), ticket, self.loans, self.loansLoading, self.loansError, 'Loans could not be loaded.');
       track(registry.notifications.list(0, 3), ticket, self.notices, self.noticesLoading, self.noticesError, 'Notices could not be loaded.');
     };
 
+    function disposeCards() {
+      self.cards().forEach(function (view) {
+        view.dispose();
+      });
+    }
+
     self.disconnected = function () {
       generation += 1;
+      disposeCards();
     };
   }
 

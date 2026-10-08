@@ -58,7 +58,7 @@
       <li class="nb-item">
         <span class="nb-glyph is-initials" data-bind="text: $parent.initials($data)" aria-hidden="true"></span>
         <span class="nb-choice-main">
-          <span class="nb-choice-name" data-bind="text: nickname + ' · ' + beneficiaryName"></span>
+          <span class="nb-choice-name"><span data-bind="text: nickname"></span><span class="nb-choice-sub" data-bind="text: beneficiaryName"></span></span>
           <span class="nb-row-meta">
             <span data-bind="text: bankName"></span>
             <span class="nb-mono" data-bind="text: maskedAccountNumber"></span>
@@ -73,8 +73,20 @@
           <!-- ko ifnot: status === 'ACTIVE' -->
           <oj-c-button size="sm" chroming="outlined" label="Activate" disabled="[[$parent.busy]]" on-oj-action="[[function () { $parent.startActivation($data); }]]"></oj-c-button>
           <!-- /ko -->
+          <oj-c-button size="sm" chroming="borderless" label="Edit nickname" on-oj-action="[[function () { $parent.startRename($data); }]]"></oj-c-button>
           <oj-c-button size="sm" chroming="borderless" label="Remove" on-oj-action="[[function () { $parent.askRemove($data); }]]"></oj-c-button>
         </span>
+
+        <!-- ko if: $parent.renamingId() === beneficiaryId -->
+        <form class="nb-item-extra nb-inline-panel nb-rename" novalidate data-bind="submit: function () { return $parent.saveRename($data); }">
+          <p>Choose how <strong data-bind="text: beneficiaryName"></strong> appears when you send money and in your payment history. Bank details are not changed.</p>
+          <oj-c-input-text label-hint="Nickname" value="{{$parent.renameValue}}" messages-custom="[[$parent.renameMessages]]" length.max="100"></oj-c-input-text>
+          <div class="nb-actions">
+            <oj-c-button button-type="submit" chroming="callToAction" label="[[$parent.busy() ? 'Saving…' : 'Save nickname']]" disabled="[[$parent.busy]]"></oj-c-button>
+            <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[$parent.cancelRename]]"></oj-c-button>
+          </div>
+        </form>
+        <!-- /ko -->
 
         <!-- ko if: $parent.activatingId() === beneficiaryId -->
         <form class="nb-item-extra nb-inline-panel" novalidate data-bind="submit: function () { return $parent.activate($data); }">

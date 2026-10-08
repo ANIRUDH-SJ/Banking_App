@@ -12,7 +12,19 @@ define([
   'oj-c/form-layout',
   'oj-c/skeleton'
 ], function (ko, accUtils, registry, format, ui) {
-  var SYMBOLS = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
+  var SYMBOLS = { INR: '₹', USD: '$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$', CAD: 'C$', SGD: 'S$' };
+  var NAMES = {
+    INR: 'Indian rupee', USD: 'US dollar', EUR: 'Euro', GBP: 'Pound sterling',
+    JPY: 'Japanese yen', AUD: 'Australian dollar', CAD: 'Canadian dollar', SGD: 'Singapore dollar'
+  };
+
+  function trimRate(value, digits) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) {
+      return '—';
+    }
+    return number.toFixed(digits).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '');
+  }
 
   function ForexViewModel() {
     var self = this;
@@ -41,6 +53,130 @@ define([
     self.amountMessages = ko.observableArray([]);
     self.otpMessages = ko.observableArray([]);
 
+    self.board = ko.observable(null);
+    self.boardError = ko.observable('');
+    self.cvFrom = ko.observable('USD');
+    self.cvTo = ko.observable('INR');
+    self.cvAmount = ko.observable(100);
+    self.cvResult = ko.observable(null);
+    self.cvBusy = ko.observable(false);
+    self.cvError = ko.observable('');
+    self.cvMessages = ko.observableArray([]);
+    var previewTimer = null;
+    var previewTicket = 0;
+
+    self.currencies = ko.pureComputed(function () {
+      var board = self.board();
+      var listed = board && board.currencies && board.currencies.length ? board.currencies : Object.keys(NAMES).map(function (code) {
+        return { code: code, name: NAMES[code] };
+      });
+      return listed;
+    });
+
+    self.currencyOptions = ko.pureComputed(function () {
+      return ui.options(self.currencies().map(function (currency) {
+        return { value: currency.code, label: currency.code + ' · ' + (currency.name || NAMES[currency.code] || currency.code) };
+      }));
+    });
+
+    self.cvPrefix = ko.pureComputed(function () {
+      return SYMBOLS[self.cvFrom()] || '';
+    });
+
+    self.boardRows = ko.pureComputed(function () {
+      return self.currencies().filter(function (currency) {
+        return currency.code !== 'INR' && Number(currency.inrValue);
+      }).map(function (currency) {
+        var value = Number(currency.inrValue);
+        return {
+          code: currency.code,
+          name: currency.name || NAMES[currency.code],
+          buy: '₹' + trimRate(value, value < 1 ? 4 : 2),
+          per100: format.formatMoney(100 / value, currency.code)
+        };
+      });
+    });
+
+    self.cvRateLine = ko.pureComputed(function () {
+      var result = self.cvResult();
+      return result ? '1 ' + result.fromCurrency + ' = ' + trimRate(result.exchangeRate, 6) + ' ' + result.toCurrency : '';
+    });
+
+    self.cvInverseLine = ko.pureComputed(function () {
+      var result = self.cvResult();
+      return result ? '1 ' + result.toCurrency + ' = ' + trimRate(result.inverseRate, 6) + ' ' + result.fromCurrency : '';
+    });
+
+    self.cvSource = ko.pureComputed(function () {
+      var result = self.cvResult() || self.board();
+      if (!result) {
+        return '';
+      }
+      var source = result.rateSource === 'DEMO_CONFIGURED' ? 'Bank reference rates (demo)' : format.labelize(result.rateSource || 'bank');
+      return source + (result.asOf ? ' · as of ' + format.formatDateTime(result.asOf) : '');
+    });
+
+    function preview() {
+      var from = self.cvFrom();
+      var to = self.cvTo();
+      var amount = ui.parseAmount(self.cvAmount());
+      var error = !Number.isFinite(amount) || amount <= 0 ? 'Enter an amount to convert.' : '';
+      if (!error && amount > 1e12) {
+        error = 'Enter a smaller amount.';
+      }
+      self.cvMessages(ui.messages(error));
+      if (error || !from || !to) {
+        self.cvResult(null);
+        return;
+      }
+      if (from === to) {
+        self.cvResult({ fromCurrency: from, toCurrency: to, amount: amount, convertedAmount: amount, exchangeRate: 1, inverseRate: 1,
+          rateSource: self.board() && self.board().rateSource, asOf: self.board() && self.board().asOf });
+        return;
+      }
+      var ticket = ++previewTicket;
+      self.cvBusy(true);
+      self.cvError('');
+      registry.forex.preview(from, to, amount).then(function (result) {
+        if (ticket === previewTicket) {
+          self.cvResult(result);
+        }
+      }).catch(function (failure) {
+        if (ticket === previewTicket) {
+          self.cvResult(null);
+          self.cvError((failure && failure.message) || 'A rate is not available right now.');
+        }
+      }).finally(function () {
+        if (ticket === previewTicket) {
+          self.cvBusy(false);
+        }
+      });
+    }
+
+    function schedulePreview() {
+      window.clearTimeout(previewTimer);
+      previewTimer = window.setTimeout(preview, 250);
+    }
+
+    [self.cvFrom, self.cvTo, self.cvAmount].forEach(function (field) {
+      field.subscribe(schedulePreview);
+    });
+
+    self.swap = function () {
+      var from = self.cvFrom();
+      self.cvFrom(self.cvTo());
+      self.cvTo(from);
+    };
+
+    function loadBoard() {
+      self.boardError('');
+      return registry.forex.rates().then(function (board) {
+        self.board(board);
+      }).catch(function (error) {
+        self.boardError((error && error.message) || 'Reference rates could not be loaded.');
+      }).then(preview);
+    }
+
     function byId(id) {
       return self.accounts().filter(function (account) { return account.accountId === id; })[0] || null;
     }
@@ -55,7 +191,7 @@ define([
     function walletOption(account) {
       var option = ui.accountOption(account);
       if ((account.currencyCode || 'INR') !== 'INR') {
-        option.label = account.currencyCode + ' wallet ' + format.maskAccount(account.accountNumber) + ' · ' +
+        option.label = ui.accountName(account) + ' ' + format.maskAccount(account.accountNumber) + ' · ' +
           format.formatMoney(account.availableBalance, account.currencyCode);
       }
       return option;
@@ -281,11 +417,14 @@ define([
       timer = window.setInterval(tick, 1000);
       loadAccounts(ticket);
       loadHistory();
+      loadBoard();
     };
 
     self.disconnected = function () {
       generation += 1;
       window.clearInterval(timer);
+      window.clearTimeout(previewTimer);
+      previewTicket += 1;
       timer = null;
     };
   }

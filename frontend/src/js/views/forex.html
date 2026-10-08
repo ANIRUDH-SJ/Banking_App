@@ -2,13 +2,60 @@
   <header class="nb-page-head">
     <p class="nb-kicker">Products</p>
     <h1>Foreign exchange</h1>
-    <p class="nb-lede">Move money between your rupee account and your US dollar, euro or pound wallets. You see the exact rate before you confirm, and each rate is held for two minutes.</p>
+    <p class="nb-lede">Check rates across eight currencies, then move money between your rupee account and your currency wallets. You see the exact rate before you confirm, and each rate is held for two minutes.</p>
   </header>
 
   <div class="nb-alert" role="alert" data-bind="visible: problem.text">
     <span class="nb-alert-text" data-bind="text: problem.text"></span>
     <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
   </div>
+
+  <section class="nb-sheet nb-converter" aria-labelledby="converter-heading">
+    <div class="nb-sheet-head">
+      <div>
+        <h2 id="converter-heading">Currency converter</h2>
+        <p class="nb-sheet-sub">Indicative rates for INR, USD, EUR, GBP, JPY, AUD, CAD and SGD. Nothing is converted until you confirm below.</p>
+      </div>
+    </div>
+    <div class="nb-converter-grid">
+      <div class="nb-converter-side">
+        <oj-c-input-number class="nb-amount-input" converter="[[amountConverter]]" label-hint="Amount" value="{{cvAmount}}" input-prefix="[[cvPrefix]]" min="0" step="0" messages-custom="[[cvMessages]]"></oj-c-input-number>
+        <oj-c-select-single label-hint="From" data="[[currencyOptions]]" item-text="label" value="{{cvFrom}}"></oj-c-select-single>
+      </div>
+      <button type="button" class="nb-swap-button" data-bind="click: swap" aria-label="Swap currencies" title="Swap currencies">
+        <span class="nb-icon i-swap" aria-hidden="true"></span>
+      </button>
+      <div class="nb-converter-side">
+        <div class="nb-converter-result" aria-live="polite" data-bind="css: { 'is-busy': cvBusy }">
+          <span class="nb-review-label">Converted amount</span>
+          <span class="nb-converter-figure" data-bind="text: cvResult() ? money(cvResult().convertedAmount, cvResult().toCurrency) : '—'"></span>
+        </div>
+        <oj-c-select-single label-hint="To" data="[[currencyOptions]]" item-text="label" value="{{cvTo}}"></oj-c-select-single>
+      </div>
+    </div>
+    <p class="nb-field-error" role="alert" data-bind="visible: cvError, text: cvError"></p>
+    <div class="nb-converter-foot" data-bind="visible: cvResult">
+      <p class="nb-rate"><b data-bind="text: cvRateLine"></b><span data-bind="text: cvInverseLine"></span></p>
+      <p class="nb-converter-source"><span class="nb-icon i-clock" aria-hidden="true"></span><span data-bind="text: cvSource"></span></p>
+    </div>
+
+    <div class="nb-table-wrap nb-rateboard" data-bind="visible: boardRows().length">
+      <table class="nb-table">
+        <caption class="nb-sr">Reference rates against the Indian rupee</caption>
+        <thead>
+          <tr><th scope="col">Currency</th><th scope="col" class="is-num">1 unit in rupees</th><th scope="col" class="is-num">₹100 buys</th></tr>
+        </thead>
+        <tbody data-bind="foreach: boardRows">
+          <tr>
+            <td><span class="nb-ccy" data-bind="text: code"></span><span class="nb-table-sub" data-bind="text: name"></span></td>
+            <td class="is-num" data-bind="text: buy"></td>
+            <td class="is-num" data-bind="text: per100"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="nb-rail-error" role="alert" data-bind="visible: boardError, text: boardError"></p>
+  </section>
 
   <div class="nb-work">
     <section class="nb-sheet nb-flow-sheet" aria-label="Currency conversion">
@@ -23,7 +70,7 @@
         <h2 tabindex="-1">What are you converting?</h2>
         <div class="nb-note is-warn" data-bind="visible: !loading() && !hasWallet()">
           <span class="nb-icon i-forex" aria-hidden="true"></span>
-          <span>You need a foreign currency wallet to convert into. <a href="#" data-bind="click: openAccounts">Open a USD, EUR or GBP wallet</a> from Accounts.</span>
+          <span>You need a foreign currency wallet to convert into. <a href="#" data-bind="click: openAccounts">Open a currency wallet</a> from Accounts.</span>
         </div>
         <div class="nb-swap">
           <oj-c-select-single label-hint="From" data="[[sourceOptions]]" item-text="label" value="{{sourceAccountId}}" messages-custom="[[sourceMessages]]"></oj-c-select-single>

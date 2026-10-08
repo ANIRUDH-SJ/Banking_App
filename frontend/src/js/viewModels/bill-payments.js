@@ -6,15 +6,17 @@ define([
   '../services/ui-support',
   '../services/BillerService',
   '../services/BillPaymentService',
+  '../services/pin-authorization',
   'oj-c/button',
   'oj-c/input-text',
+  'oj-c/input-sensitive-text',
   'oj-c/input-number',
   'oj-c/select-single',
   'oj-c/buttonset-single',
   'oj-c/badge',
   'oj-c/form-layout',
   'oj-c/skeleton'
-], function (ko, accUtils, registry, format, ui, billers, billPayments) {
+], function (ko, accUtils, registry, format, ui, billers, billPayments, PinAuthorization) {
   var GLYPHS = { ELECTRICITY: 'i-bolt', WATER: 'i-drop', MOBILE: 'i-phone', GAS: 'i-bolt' };
 
   function BillPaymentsViewModel() {
@@ -43,6 +45,7 @@ define([
     self.referenceMessages = ko.observableArray([]);
     self.amountMessages = ko.observableArray([]);
     self.otpMessages = ko.observableArray([]);
+    self.pinAuth = new PinAuthorization(self.sourceAccountId);
 
     self.categories = ko.pureComputed(function () {
       var seen = {};
@@ -99,6 +102,15 @@ define([
     self.when = format.formatDateTime;
     self.mask = format.maskAccount;
     self.statusVariant = ui.statusVariant;
+
+    self.sourceName = ko.pureComputed(function () {
+      var account = self.sourceAccount();
+      return account ? ui.accountName(account) + ' ' + format.maskAccount(account.accountNumber) : '';
+    });
+
+    self.paymentName = function (payment) {
+      return (payment && payment.billerName) || self.billerName(payment && payment.billerId);
+    };
 
     self.billerName = function (billerId) {
       var match = self.billers().filter(function (biller) { return biller.billerId === billerId; })[0];
@@ -170,10 +182,17 @@ define([
       };
     }
 
+    self.usePin = function () {
+      self.problem.clear();
+      self.pinAuth.use('PIN');
+      self.flow.go(3);
+    };
+
     self.sendCode = function () {
       if (self.busy()) {
         return;
       }
+      self.pinAuth.use('OTP');
       self.busy(true);
       self.problem.clear();
       billPayments.requestOtp(payload()).then(function (challenge) {
@@ -190,26 +209,36 @@ define([
     };
 
     self.pay = function () {
-      var error = registry.otp.validateCode(self.otpCode());
+      var usingPin = self.pinAuth.usingPin();
+      var error = usingPin ? '' : registry.otp.validateCode(self.otpCode());
       self.otpMessages(ui.messages(error));
-      if (error || self.busy()) {
+      if (error || (usingPin && !self.pinAuth.validate()) || self.busy()) {
         return false;
       }
       self.busy(true);
       self.problem.clear();
       var request = payload();
       request.idempotencyKey = idempotencyKey;
-      request.otpChallengeId = self.challengeId();
-      request.otpCode = String(self.otpCode()).trim();
-      billPayments.submitPayment(request).then(function (receipt) {
+      var authorized = usingPin
+        ? self.pinAuth.authorization().then(function (cardPin) { request.cardPin = cardPin; return request; })
+        : Promise.resolve(Object.assign(request, { otpChallengeId: self.challengeId(), otpCode: String(self.otpCode()).trim() }));
+      authorized.then(billPayments.submitPayment).then(function (receipt) {
         self.receipt(receipt);
+        self.pinAuth.reset();
         self.flow.go(4);
         accUtils.announce('Bill payment submitted.', 'polite');
         loadHistory();
         registry.events.emit('accounts-changed');
-      }).catch(function (error) {
-        self.otpMessages(ui.messages(ui.fieldMessage(error, 'otpCode')));
-        self.problem.set(error, 'The payment could not be completed.');
+      }).catch(function (failure) {
+        if (usingPin) {
+          self.pinAuth.rejected(failure);
+          if (!failure || String(failure.code || '').indexOf('PIN_') !== 0) {
+            self.problem.set(failure, 'The payment could not be completed.');
+          }
+        } else {
+          self.otpMessages(ui.messages(ui.fieldMessage(failure, 'otpCode')));
+          self.problem.set(failure, 'The payment could not be completed.');
+        }
       }).finally(function () {
         self.busy(false);
       });
@@ -222,11 +251,15 @@ define([
       self.billReference('');
       self.amount(null);
       self.otpCode('');
+      self.pinAuth.reset();
       self.problem.clear();
       self.flow.go(0);
     };
 
     self.openStatement = function () {
+      if (self.sourceAccountId()) {
+        ui.hand('transactions.accountId', self.sourceAccountId());
+      }
       registry.go('transactions');
     };
 
@@ -276,6 +309,7 @@ define([
       self.loading(true);
       self.problem.clear();
       var preset = ui.take('bill.billerId');
+      self.pinAuth.load();
       Promise.all([billers.listActive(), registry.accounts.getAccounts()]).then(function (results) {
         if (ticket !== generation) {
           return;

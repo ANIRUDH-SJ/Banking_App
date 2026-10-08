@@ -1,9 +1,11 @@
 <div class="nb-page nb-cardsdesk">
+  <!-- ko ifnot: detail -->
   <header class="nb-page-head">
     <p class="nb-kicker">Products</p>
     <h1>Cards</h1>
-    <p class="nb-lede">Debit and credit cards linked to your accounts. Block a card at once if it is lost, and unblock it when it turns up.</p>
+    <p class="nb-lede">Debit and credit cards linked to your accounts. Show a card number for a few seconds when you need it, set or change its PIN, and block it at once if it is lost.</p>
   </header>
+  <!-- /ko -->
 
   <div class="nb-alert" role="alert" data-bind="visible: problem.text">
     <span class="nb-alert-text" data-bind="text: problem.text"></span>
@@ -11,9 +13,10 @@
   </div>
   <p class="nb-success" role="status" data-bind="visible: success, text: success"></p>
 
+  <!-- ko ifnot: detail -->
   <div class="nb-paycards" data-bind="visible: loading" aria-hidden="true">
     <!-- ko foreach: [1, 2] -->
-    <div class="nb-sheet nb-paycard-sheet"><oj-c-skeleton height="12rem" border-radius="12px"></oj-c-skeleton><oj-c-skeleton height="0.875rem" width="60%"></oj-c-skeleton></div>
+    <div class="nb-sheet nb-paycard-sheet"><oj-c-skeleton height="12rem" border-radius="14px"></oj-c-skeleton><oj-c-skeleton height="0.875rem" width="60%"></oj-c-skeleton></div>
     <!-- /ko -->
   </div>
 
@@ -24,46 +27,302 @@
   </div>
 
   <ul class="nb-paycards" data-bind="foreach: cards">
-    <li class="nb-sheet nb-paycard-sheet">
-      <div class="nb-paycard" data-bind="css: { 'is-credit': cardType === 'CREDIT', 'is-off': status !== 'ACTIVE' }" aria-hidden="true">
+    <li class="nb-sheet nb-paycard-sheet" tabindex="-1" data-bind="attr: { id: 'card-' + id }, css: { 'is-focus': $parent.focusId() === id }">
+      <div class="nb-paycard" data-bind="css: { 'is-credit': isCredit, 'is-off': card.status !== 'ACTIVE', 'is-shown': shown }">
         <div class="nb-paycard-top">
-          <span data-bind="text: $parent.label(cardType) + ' card'"></span>
-          <span class="nb-paycard-network" data-bind="text: $parent.network($data)"></span>
+          <span data-bind="text: typeLabel"></span>
+          <span class="nb-paycard-network" data-bind="text: network"></span>
         </div>
-        <span class="nb-paycard-chip"></span>
+        <span class="nb-paycard-chip" aria-hidden="true"></span>
         <div>
-          <p class="nb-paycard-number" data-bind="text: maskedCardNumber"></p>
+          <p class="nb-paycard-number" data-bind="text: display, attr: { 'aria-label': shown() ? 'Card number ' + display() : 'Card number ending ' + last4 }"></p>
           <div class="nb-paycard-foot">
-            <span>Valid thru <b data-bind="text: $parent.expiry($data)"></b></span>
-            <span>Internet Banking</span>
+            <span>Valid thru <b data-bind="text: expiry"></b></span>
+            <span class="nb-paycard-timer" data-bind="visible: shown, text: 'Hides in ' + secondsLeft() + 's'"></span>
           </div>
         </div>
+        <!-- ko if: canReveal -->
+        <button type="button" class="nb-eye" data-bind="click: toggle, disable: revealing, css: { 'is-on': shown }, attr: { 'aria-pressed': shown() ? 'true' : 'false', 'aria-label': toggleLabel, title: toggleLabel }">
+          <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
+        </button>
+        <!-- /ko -->
       </div>
+      <p class="nb-field-error" role="alert" data-bind="visible: error, text: error"></p>
 
       <div class="nb-product-head">
         <div>
-          <p class="nb-choice-name" data-bind="text: $parent.label(cardType) + ' card ' + maskedCardNumber.slice(-4)"></p>
-          <p class="nb-choice-meta" data-bind="text: $parent.network($data) + ' · linked to ' + $parent.linked($data)"></p>
+          <p class="nb-choice-name" data-bind="text: typeLabel + ' ending ' + last4"></p>
+          <p class="nb-choice-meta" data-bind="text: $parent.meta($data)"></p>
         </div>
-        <oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge>
+        <oj-c-badge size="sm" variant="[[$parent.statusVariant(card.status)]]" label="[[$parent.label(card.status)]]"></oj-c-badge>
       </div>
 
-      <!-- ko with: { card: $data, plan: $parent.actionFor($data) } -->
-      <!-- ko if: plan && $parents[1].confirming() !== card.cardId -->
+      <!-- ko if: isCredit && card.credit -->
+      <div class="nb-meter">
+        <div class="nb-meter-text"><span>Available <b data-bind="text: $parent.money(card.credit.availableCredit, 'INR')"></b></span><span data-bind="text: 'of ' + $parent.money(card.credit.creditLimit, 'INR')"></span></div>
+        <div class="nb-meter-bar" role="img" data-bind="attr: { 'aria-label': $parent.used(card.credit) + ' percent of the limit used' }"><span data-bind="style: { width: $parent.used(card.credit) + '%' }"></span></div>
+      </div>
+      <dl class="nb-mini-facts">
+        <div><dt>Outstanding</dt><dd data-bind="text: $parent.money(card.credit.outstandingBalance, 'INR')"></dd></div>
+        <div><dt>Minimum due</dt><dd data-bind="text: $parent.money(card.credit.minimumDue, 'INR')"></dd></div>
+        <div><dt>Due date</dt><dd data-bind="text: card.credit.paymentDueDate ? $parent.day(card.credit.paymentDueDate) : '—'"></dd></div>
+      </dl>
+      <!-- /ko -->
+      <!-- ko ifnot: isCredit && card.credit -->
+      <dl class="nb-mini-facts">
+        <div><dt>PIN</dt><dd data-bind="text: $parent.pinStatus($data), css: { 'is-danger': $parent.pinLockedUntil($data) }"></dd></div>
+        <div><dt>Valid thru</dt><dd data-bind="text: expiry"></dd></div>
+        <div><dt>CVV</dt><dd>Printed on card</dd></div>
+      </dl>
+      <!-- /ko -->
+
+      <!-- ko with: { view: $data, plan: $parent.actionFor($data) } -->
+      <!-- ko if: $parents[1].pinFor() !== view.id && $parents[1].confirming() !== view.id -->
       <div class="nb-actions">
-        <oj-c-button chroming="[[plan.chroming === 'danger' ? 'outlined' : plan.chroming]]" label="[[plan.label]]" on-oj-action="[[function () { $parents[1].ask(card); }]]"></oj-c-button>
+        <!-- ko if: view.isCredit -->
+        <oj-c-button chroming="callToAction" label="View statement" on-oj-action="[[function () { $parents[1].openDetail(view); }]]"></oj-c-button>
+        <!-- /ko -->
+        <!-- ko if: $parents[1].canSetPin(view) -->
+        <oj-c-button chroming="outlined" label="[[$parents[1].pinLabel(view)]]" on-oj-action="[[function () { $parents[1].openPin(view); }]]">
+          <span slot="startIcon" class="nb-icon i-key" aria-hidden="true"></span>
+        </oj-c-button>
+        <!-- /ko -->
+        <!-- ko if: plan -->
+        <oj-c-button chroming="[[plan.chroming === 'danger' ? 'borderless' : (view.isCredit ? 'borderless' : plan.chroming)]]" label="[[plan.label]]" on-oj-action="[[function () { $parents[1].ask(view); }]]"></oj-c-button>
+        <!-- /ko -->
       </div>
       <!-- /ko -->
-      <!-- ko if: plan && $parents[1].confirming() === card.cardId -->
+
+      <!-- ko if: plan && $parents[1].confirming() === view.id -->
       <div class="nb-inline-panel" data-bind="css: { 'is-danger': plan.action === 'BLOCK' }" role="alertdialog" aria-label="Confirm card change">
         <p data-bind="text: plan.confirm"></p>
         <div class="nb-actions">
-          <oj-c-button chroming="[[plan.chroming]]" label="[[plan.label]]" disabled="[[$parents[1].busy]]" on-oj-action="[[function () { $parents[1].apply(card); }]]"></oj-c-button>
+          <oj-c-button chroming="[[plan.chroming]]" label="[[plan.label]]" disabled="[[$parents[1].busy]]" on-oj-action="[[function () { $parents[1].apply(view); }]]"></oj-c-button>
           <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[$parents[1].cancel]]"></oj-c-button>
         </div>
       </div>
       <!-- /ko -->
+
+      <!-- ko if: $parents[1].pinFor() === view.id -->
+      <form class="nb-inline-panel nb-pin-form" novalidate data-bind="submit: function () { return $parents[1].savePin(view); }" aria-label="Card PIN">
+        <p><strong data-bind="text: view.card.pinSet ? 'Change your PIN' : 'Set a PIN'"></strong> Choose four digits that are not repeated or in sequence. The PIN is encrypted on this device and the bank never stores it in readable form.</p>
+        <div class="nb-pin-fields">
+          <!-- ko if: view.card.pinSet -->
+          <oj-c-input-sensitive-text class="nb-pin-input" label-hint="Current PIN" value="{{$parents[1].pinForm.current}}" messages-custom="[[$parents[1].pinMessages.current]]" length.max="4" virtual-keyboard="number" autocomplete="off" mask-icon="hidden"></oj-c-input-sensitive-text>
+          <!-- /ko -->
+          <oj-c-input-sensitive-text class="nb-pin-input" label-hint="New PIN" value="{{$parents[1].pinForm.next}}" messages-custom="[[$parents[1].pinMessages.next]]" length.max="4" virtual-keyboard="number" autocomplete="off" mask-icon="hidden"></oj-c-input-sensitive-text>
+          <oj-c-input-sensitive-text class="nb-pin-input" label-hint="Re-enter new PIN" value="{{$parents[1].pinForm.confirm}}" messages-custom="[[$parents[1].pinMessages.confirm]]" length.max="4" virtual-keyboard="number" autocomplete="off" mask-icon="hidden"></oj-c-input-sensitive-text>
+        </div>
+        <p class="nb-hint" data-bind="visible: view.card.pinSet">Three wrong current PINs lock the PIN for 30 minutes.</p>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="[[$parents[1].busy() ? 'Saving…' : (view.card.pinSet ? 'Change PIN' : 'Set PIN')]]" disabled="[[$parents[1].busy]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[$parents[1].closePin]]"></oj-c-button>
+        </div>
+      </form>
+      <!-- /ko -->
       <!-- /ko -->
     </li>
   </ul>
+  <!-- /ko -->
+
+  <!-- ko with: detail -->
+  <div class="nb-carddetail">
+    <button type="button" class="nb-back" data-bind="click: $parent.closeDetail">
+      <span class="nb-icon i-chevron" aria-hidden="true"></span>All cards
+    </button>
+
+    <header class="nb-page-head">
+      <p class="nb-kicker" data-bind="text: network + ' credit card'"></p>
+      <h1 id="card-detail-heading" tabindex="-1" data-bind="text: 'Credit card ending ' + last4"></h1>
+    </header>
+
+    <div class="nb-carddetail-top">
+      <div class="nb-carddetail-visual">
+        <div class="nb-paycard is-credit" data-bind="css: { 'is-off': card.status !== 'ACTIVE', 'is-shown': shown }">
+          <div class="nb-paycard-top">
+            <span data-bind="text: typeLabel"></span>
+            <span class="nb-paycard-network" data-bind="text: network"></span>
+          </div>
+          <span class="nb-paycard-chip" aria-hidden="true"></span>
+          <div>
+            <p class="nb-paycard-number" data-bind="text: display, attr: { 'aria-label': shown() ? 'Card number ' + display() : 'Card number ending ' + last4 }"></p>
+            <div class="nb-paycard-foot">
+              <span>Valid thru <b data-bind="text: expiry"></b></span>
+              <span class="nb-paycard-timer" data-bind="visible: shown, text: 'Hides in ' + secondsLeft() + 's'"></span>
+            </div>
+          </div>
+          <!-- ko if: canReveal -->
+          <button type="button" class="nb-eye" data-bind="click: toggle, disable: revealing, css: { 'is-on': shown }, attr: { 'aria-pressed': shown() ? 'true' : 'false', 'aria-label': toggleLabel, title: toggleLabel }">
+            <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
+          </button>
+          <!-- /ko -->
+        </div>
+        <p class="nb-field-error" role="alert" data-bind="visible: error, text: error"></p>
+        <dl class="nb-mini-facts">
+          <div><dt>Status</dt><dd><oj-c-badge size="sm" variant="[[$parent.statusVariant(card.status)]]" label="[[$parent.label(card.status)]]"></oj-c-badge></dd></div>
+          <div><dt>PIN</dt><dd data-bind="text: $parent.pinStatus($data)"></dd></div>
+          <div><dt>CVV</dt><dd>Printed on card</dd></div>
+        </dl>
+      </div>
+
+      <!-- ko with: $parent.credit -->
+      <section class="nb-sheet nb-bill" aria-labelledby="bill-heading">
+        <div class="nb-sheet-head">
+          <div>
+            <h2 id="bill-heading">Current bill</h2>
+            <p class="nb-sheet-sub" data-bind="text: statementDate ? 'Statement of ' + $parents[1].day(statementDate) : 'No statement yet'"></p>
+          </div>
+          <span class="nb-chip" data-bind="visible: paymentDueDate, text: $parents[1].dueIn($data), css: { 'is-warn': $parents[1].dueIn($data).indexOf('Overdue') === 0 }"></span>
+        </div>
+        <div class="nb-bill-figures">
+          <div>
+            <span class="nb-review-label">Statement balance</span>
+            <span class="nb-review-figure" data-bind="text: $parents[1].money(statementBalance, 'INR')"></span>
+          </div>
+          <div>
+            <span class="nb-review-label">Minimum due</span>
+            <span class="nb-review-figure is-small" data-bind="text: $parents[1].money(minimumDue, 'INR')"></span>
+          </div>
+          <div>
+            <span class="nb-review-label">Pay by</span>
+            <span class="nb-review-figure is-small" data-bind="text: paymentDueDate ? $parents[1].day(paymentDueDate) : '—'"></span>
+          </div>
+        </div>
+        <div class="nb-meter">
+          <div class="nb-meter-text"><span>Available credit <b data-bind="text: $parents[1].money(availableCredit, 'INR')"></b></span><span data-bind="text: $parents[1].used($data) + '% used'"></span></div>
+          <div class="nb-meter-bar" role="img" data-bind="attr: { 'aria-label': $parents[1].used($data) + ' percent of the limit used' }"><span data-bind="style: { width: $parents[1].used($data) + '%' }"></span></div>
+        </div>
+        <dl class="nb-review">
+          <div><dt>Credit limit</dt><dd data-bind="text: $parents[1].money(creditLimit, 'INR')"></dd></div>
+          <div><dt>Total outstanding</dt><dd data-bind="text: $parents[1].money(outstandingBalance, 'INR')"></dd></div>
+          <div><dt>Unbilled since statement</dt><dd data-bind="text: $parents[1].money($parents[1].unbilled(), 'INR')"></dd></div>
+          <div><dt>Billing cycle</dt><dd data-bind="text: $parents[1].cycle() || '—'"></dd></div>
+          <div data-bind="visible: $parents[1].linked($parent)"><dt>Pays from</dt><dd data-bind="text: $parents[1].linked($parent)"></dd></div>
+        </dl>
+      </section>
+      <!-- /ko -->
+    </div>
+
+    <section class="nb-sheet" aria-labelledby="card-tx-heading">
+      <div class="nb-sheet-head">
+        <div>
+          <h2 id="card-tx-heading">Transactions</h2>
+          <p class="nb-sheet-sub">Purchases of ₹2,500 or more from the last 60 days can be converted to monthly instalments.</p>
+        </div>
+      </div>
+      <div class="nb-rail-skeleton" data-bind="visible: $parent.detailLoading" aria-hidden="true">
+        <!-- ko foreach: [1, 2, 3, 4] -->
+        <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
+        <!-- /ko -->
+      </div>
+      <p class="nb-rail-error" role="alert" data-bind="visible: $parent.detailError, text: $parent.detailError"></p>
+      <p class="nb-rail-empty" data-bind="visible: !$parent.detailLoading() && !$parent.detailError() && $parent.transactions().length === 0">No transactions on this card yet.</p>
+
+      <ul class="nb-ctx" data-bind="visible: !$parent.detailLoading(), foreach: $parent.transactions">
+        <li data-bind="css: { 'is-open': $parents[1].isEmiRow($data) }">
+          <div class="nb-ctx-row">
+            <span class="nb-row-glyph" data-bind="css: $parents[1].inbound($data) ? 'i-arrow-in' : 'i-cards'" aria-hidden="true"></span>
+            <span class="nb-row-main">
+              <span class="nb-row-title" data-bind="text: merchantName"></span>
+              <span class="nb-row-meta">
+                <span data-bind="text: $parents[1].day(postedAt)"></span>
+                <span data-bind="visible: $data.category, text: $parents[1].label($data.category)"></span>
+                <span class="nb-mono" data-bind="text: reference"></span>
+              </span>
+            </span>
+            <!-- ko with: $parents[1].rowState($data) -->
+            <oj-c-badge size="sm" variant="[[variant]]" label="[[label]]"></oj-c-badge>
+            <!-- /ko -->
+            <span class="nb-row-amount" data-bind="text: $parents[1].signed($data), css: { 'is-credit': $parents[1].inbound($data) }"></span>
+            <span class="nb-ctx-action">
+              <!-- ko if: emiEligible && !emiPlan && !$parents[1].isEmiRow($data) -->
+              <oj-c-button size="sm" chroming="outlined" label="Convert to EMI" on-oj-action="[[function () { $parents[1].startEmi($data); }]]"></oj-c-button>
+              <!-- /ko -->
+            </span>
+          </div>
+
+          <!-- ko if: $parents[1].isEmiRow($data) -->
+          <div class="nb-emi" role="region" data-bind="attr: { 'aria-label': 'Convert ' + merchantName + ' to EMI' }">
+            <ol class="nb-flow is-compact" aria-label="EMI steps">
+              <li data-bind="css: $parents[1].emiStep() === 'choose' ? 'is-current' : 'is-done'"><span class="nb-flow-no" aria-hidden="true">1</span><span class="nb-flow-name">Choose a plan</span></li>
+              <li data-bind="css: $parents[1].emiStep() === 'review' ? 'is-current' : ''"><span class="nb-flow-no" aria-hidden="true">2</span><span class="nb-flow-name">Review and confirm</span></li>
+            </ol>
+
+            <div class="nb-rail-skeleton" data-bind="visible: $parents[1].emiLoading" aria-hidden="true">
+              <oj-c-skeleton height="6rem"></oj-c-skeleton>
+            </div>
+
+            <!-- ko if: $parents[1].emiStep() === 'choose' && !$parents[1].emiLoading() -->
+            <fieldset class="nb-emi-options">
+              <legend>Pay <b data-bind="text: $parents[1].money(amount, currencyCode || 'INR')"></b> in monthly instalments</legend>
+              <!-- ko foreach: $parents[1].emiOptions -->
+              <label class="nb-emi-option" data-bind="css: { 'is-chosen': $parents[2].emiTenure() === tenureMonths }">
+                <input type="radio" name="emi-tenure" data-bind="checkedValue: tenureMonths, checked: $parents[2].emiTenure">
+                <span class="nb-emi-tenure" data-bind="text: tenureMonths + ' months'"></span>
+                <span class="nb-emi-monthly"><b data-bind="text: $parents[2].money(monthlyInstalment, 'INR')"></b><span>/month</span></span>
+                <span class="nb-emi-line"><span>Interest rate</span><b data-bind="text: annualInterestRate + '% p.a.'"></b></span>
+                <span class="nb-emi-line"><span>Total interest</span><b data-bind="text: $parents[2].money(totalInterest, 'INR')"></b></span>
+                <span class="nb-emi-line is-total"><span>Total payable</span><b data-bind="text: $parents[2].money(totalPayable, 'INR')"></b></span>
+              </label>
+              <!-- /ko -->
+            </fieldset>
+            <p class="nb-hint">Interest is charged on the reducing balance. Paying the full amount by the due date costs no interest.</p>
+            <p class="nb-field-error" role="alert" data-bind="visible: $parents[1].emiError, text: $parents[1].emiError"></p>
+            <div class="nb-actions">
+              <oj-c-button chroming="callToAction" label="Review plan" disabled="[[!$parents[1].emiChoice()]]" on-oj-action="[[$parents[1].toEmiReview]]"></oj-c-button>
+              <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[$parents[1].closeEmi]]"></oj-c-button>
+            </div>
+            <!-- /ko -->
+
+            <!-- ko if: $parents[1].emiStep() === 'review' -->
+            <!-- ko with: $parents[1].emiChoice -->
+            <div class="nb-review-amount">
+              <span class="nb-review-label" data-bind="text: tenureMonths + ' monthly instalments of'"></span>
+              <span class="nb-review-figure" data-bind="text: $parents[2].money(monthlyInstalment, 'INR')"></span>
+            </div>
+            <dl class="nb-review">
+              <div><dt>Purchase</dt><dd data-bind="text: $parent.merchantName + ' · ' + $parents[2].money($parent.amount, 'INR')"></dd></div>
+              <div><dt>Interest rate</dt><dd data-bind="text: annualInterestRate + '% a year, reducing balance'"></dd></div>
+              <div><dt>Total interest</dt><dd data-bind="text: $parents[2].money(totalInterest, 'INR')"></dd></div>
+              <div><dt>Total you will pay</dt><dd data-bind="text: $parents[2].money(totalPayable, 'INR')"></dd></div>
+              <div><dt>First instalment</dt><dd>On your next statement</dd></div>
+            </dl>
+            <!-- /ko -->
+            <oj-c-checkbox value="{{$parents[1].emiConsent}}">I understand the purchase moves out of my bill and is charged as monthly instalments with interest. A conversion cannot be undone online.</oj-c-checkbox>
+            <p class="nb-field-error" role="alert" data-bind="visible: $parents[1].emiError, text: $parents[1].emiError"></p>
+            <div class="nb-actions">
+              <oj-c-button chroming="callToAction" label="[[$parents[1].busy() ? 'Converting…' : 'Convert to EMI']]" disabled="[[$parents[1].busy() || !$parents[1].emiConsent()]]" on-oj-action="[[$parents[1].confirmEmi]]"></oj-c-button>
+              <oj-c-button chroming="borderless" label="Change plan" on-oj-action="[[$parents[1].backToOptions]]"></oj-c-button>
+            </div>
+            <!-- /ko -->
+          </div>
+          <!-- /ko -->
+        </li>
+      </ul>
+    </section>
+
+    <section class="nb-sheet" aria-labelledby="emi-plans-heading" data-bind="visible: $parent.plans().length">
+      <div class="nb-sheet-head">
+        <h2 id="emi-plans-heading">EMI plans</h2>
+      </div>
+      <ul class="nb-items" data-bind="foreach: $parent.plans">
+        <li class="nb-item">
+          <span class="nb-glyph i-loans" aria-hidden="true"></span>
+          <span class="nb-choice-main">
+            <span class="nb-choice-name" data-bind="text: $parents[1].planRow($data)"></span>
+            <span class="nb-row-meta">
+              <span data-bind="text: tenureMonths + ' months at ' + annualInterestRate + '%'"></span>
+              <span data-bind="text: instalmentsPaid + ' of ' + tenureMonths + ' paid'"></span>
+              <span data-bind="visible: $data.firstDueDate, text: 'First due ' + $parents[1].day($data.firstDueDate)"></span>
+            </span>
+          </span>
+          <span class="nb-item-side">
+            <span class="nb-row-amount" data-bind="text: $parents[1].money(monthlyInstalment, 'INR') + '/mo'"></span>
+            <oj-c-badge size="sm" variant="[[$parents[1].statusVariant(status)]]" label="[[$parents[1].label(status)]]"></oj-c-badge>
+          </span>
+        </li>
+      </ul>
+    </section>
+  </div>
+  <!-- /ko -->
 </div>

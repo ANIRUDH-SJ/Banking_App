@@ -63,6 +63,16 @@ function loadUiSupport() {
 
 const ui = loadUiSupport();
 
+function PinAuthorization() {
+  this.load = async () => {};
+  this.use = () => {};
+  this.reset = () => {};
+  this.usingPin = () => false;
+  this.available = () => false;
+  this.lockText = () => '';
+  this.cardLabel = () => '';
+}
+
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 test('bill payment checks the biller reference before requesting a code', async () => {
@@ -79,7 +89,8 @@ test('bill payment checks the biller reference before requesting a code', async 
         calls.push(request);
         return { challengeId: 'challenge-1' };
       }
-    }
+    },
+    '../services/pin-authorization': PinAuthorization
   });
   const screen = new BillPayments();
   screen.choose({
@@ -150,7 +161,8 @@ test('transfer receipt comes only from the server after a real OTP challenge', a
     '../services/format': format,
     '../services/ui-support': ui,
     '../services/beneficiary-service': BeneficiaryService,
-    '../services/fund-transfer-service': FundTransferService
+    '../services/fund-transfer-service': FundTransferService,
+    '../services/pin-authorization': PinAuthorization
   });
   const screen = new Transfer();
   await screen.refreshOptions();

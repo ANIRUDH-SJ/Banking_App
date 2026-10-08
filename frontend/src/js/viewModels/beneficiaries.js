@@ -27,6 +27,9 @@ define([
     self.adding = ko.observable(false);
     self.activatingId = ko.observable(null);
     self.removingId = ko.observable(null);
+    self.renamingId = ko.observable(null);
+    self.renameValue = ko.observable('');
+    self.renameMessages = ko.observableArray([]);
     self.challengeId = ko.observable('');
     self.otpCode = ko.observable('');
     self.otpMessages = ko.observableArray([]);
@@ -130,6 +133,7 @@ define([
 
     self.startActivation = function (item) {
       self.removingId(null);
+      self.renamingId(null);
       self.problem.clear();
       self.otpCode('');
       self.otpMessages([]);
@@ -169,7 +173,60 @@ define([
       self.activatingId(null);
     };
 
+    self.startRename = function (item) {
+      self.activatingId(null);
+      self.removingId(null);
+      self.success('');
+      self.problem.clear();
+      self.renameValue(item.nickname || '');
+      self.renameMessages([]);
+      self.renamingId(item.beneficiaryId);
+      window.setTimeout(function () {
+        var input = document.querySelector('.nb-rename input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 50);
+    };
+
+    self.cancelRename = function () {
+      self.renamingId(null);
+    };
+
+    self.saveRename = function (item) {
+      var value = String(self.renameValue() || '').trim().replace(/\s+/g, ' ');
+      var error = !value ? 'Enter a nickname.' : (value.length > 100 ? 'Keep the nickname under 100 characters.' : '');
+      var clash = self.items().some(function (other) {
+        return other.beneficiaryId !== item.beneficiaryId && String(other.nickname || '').toLowerCase() === value.toLowerCase();
+      });
+      if (!error && clash) {
+        error = 'Another beneficiary already uses this nickname.';
+      }
+      self.renameMessages(ui.messages(error));
+      if (error || self.busy()) {
+        return false;
+      }
+      if (value === item.nickname) {
+        self.renamingId(null);
+        return false;
+      }
+      self.busy(true);
+      payees.rename(item.beneficiaryId, value).then(function (updated) {
+        self.items.replace(item, Object.assign({}, item, updated || {}, { nickname: (updated && updated.nickname) || value }));
+        self.renamingId(null);
+        self.success(item.beneficiaryName + ' is now listed as ' + value + '.');
+        accUtils.announce('Nickname saved.', 'polite');
+      }).catch(function (failure) {
+        self.renameMessages(ui.messages(ui.fieldMessage(failure, 'nickname') || (failure && failure.message) || 'The nickname could not be saved.'));
+      }).finally(function () {
+        self.busy(false);
+      });
+      return false;
+    };
+
     self.askRemove = function (item) {
+      self.renamingId(null);
       self.activatingId(null);
       self.removingId(item.beneficiaryId);
     };
