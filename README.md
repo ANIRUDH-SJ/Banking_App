@@ -70,6 +70,18 @@ occupied, waits for each service health check, and stops its own Java processes
 if one fails. Stop an existing run with Ctrl+C before starting it again; do not
 run a second copy against the same JARs.
 
+For the complete Kafka-backed stack on Windows, use one command:
+
+```powershell
+node scripts/run-all-services.mjs --kafka
+```
+
+The same launcher requires Java 17, starts or reuses Kafka from `KAFKA_HOME`
+(`C:\kafka` by default on Windows), safely formats only an empty KRaft data
+directory, creates and verifies the single `banking.events.v1` application
+topic, then starts Eureka, all six business services and the API gateway in
+dependency order. Ctrl+C stops every process that the launcher started.
+
 ## Local .env configuration
 
 With Node 20.12 or newer, run `node scripts/export-local-env.mjs` once after

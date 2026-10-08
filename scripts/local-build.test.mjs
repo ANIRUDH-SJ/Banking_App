@@ -31,12 +31,17 @@ test('rejects a failed build before services can start', async () => {
 });
 
 test('accepts a completed build', async () => {
+  let receivedOptions;
+  const buildEnv = { JAVA_HOME: '/jdk-17' };
   await buildFreshJars('/workspace', {
     platform: 'linux',
-    spawnProcess() {
+    env: buildEnv,
+    spawnProcess(command, args, options) {
+      receivedOptions = options;
       const child = new EventEmitter();
       queueMicrotask(() => child.emit('close', 0));
       return child;
     },
   });
+  assert.equal(receivedOptions.env, buildEnv);
 });

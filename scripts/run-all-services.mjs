@@ -1,13 +1,22 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createConnection } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { buildFreshJars } from './local-build.mjs';
+import {
+  defaultKafkaTopic,
+  ensureSingleKafkaTopic,
+  java17Environment,
+  kafkaPaths,
+  parseBootstrapServer,
+  prepareKafkaStorage,
+  startKafkaBroker,
+} from './local-kafka.mjs';
 import { readLocalEnv, sharedEnv } from './local-env.mjs';
 import { serviceLaunch } from './service-launch.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const common = sharedEnv(readLocalEnv(root));
-const serviceEnv = { ...process.env, ...common };
+let serviceEnv = { ...process.env, ...common };
 const eventTransport = process.argv.includes('--kafka') || (common.EVENT_TRANSPORT || process.env.EVENT_TRANSPORT) === 'kafka'
   ? 'kafka' : (common.EVENT_TRANSPORT || process.env.EVENT_TRANSPORT || 'http');
 const servicePorts = [
@@ -35,6 +44,17 @@ function serviceFailed(error) {
   }
 }
 
+function trackChild(name, child, { processTree = false } = {}) {
+  children.push({ name, child, processTree });
+  child.stdout?.on('data', data => process.stdout.write(`[${name}] ${data}`));
+  child.stderr?.on('data', data => process.stderr.write(`[${name}] ${data}`));
+  child.on('error', error => serviceFailed(new Error(`${name} could not start: ${error.message}`)));
+  child.on('exit', (code, signal) => {
+    if (!stopping) serviceFailed(new Error(`${name} exited unexpectedly (${signal || `code ${code}`}).`));
+  });
+  return child;
+}
+
 function startService(name) {
   const launch = serviceLaunch(root, name, { env: serviceEnv, eventTransport });
   // Own the Java process directly. On Windows, killing a Node wrapper leaves its
@@ -45,14 +65,7 @@ function startService(name) {
     windowsHide: true,
   });
 
-  children.push({ name, child });
-  child.stdout.on('data', data => process.stdout.write(`[${name}] ${data}`));
-  child.stderr.on('data', data => process.stderr.write(`[${name}] ${data}`));
-  child.on('error', error => serviceFailed(new Error(`${name} could not start: ${error.message}`)));
-  child.on('exit', (code, signal) => {
-    if (!stopping) serviceFailed(new Error(`${name} exited unexpectedly (${signal || `code ${code}`}).`));
-  });
-  return child;
+  return trackChild(name, child);
 }
 
 function waitForPort(port, name, timeoutMs = 60000, host = '127.0.0.1') {
@@ -68,6 +81,14 @@ function waitForPort(port, name, timeoutMs = 60000, host = '127.0.0.1') {
       });
       socket.once('error', () => {
         socket.destroy();
+        if (startupFailure) {
+          reject(startupFailure);
+          return;
+        }
+        if (stopping) {
+          reject(new Error('Startup was stopped.'));
+          return;
+        }
         if (Date.now() - startedAt >= timeoutMs) {
           reject(new Error(`${name} did not open port ${port} within ${timeoutMs / 1000} seconds.`));
           return;
@@ -123,25 +144,33 @@ async function waitForHealth(name, port, timeoutMs = 120000) {
 
 async function main() {
   console.log('Starting local banking backend services...');
+  serviceEnv = java17Environment(serviceEnv);
+  console.log(`Java runtime: ${serviceEnv.JAVA_HOME || 'Java 17 from PATH'}`);
   await requireFreeServicePorts();
   if (eventTransport === 'kafka') {
     const bootstrap = (common.KAFKA_BOOTSTRAP_SERVERS || process.env.KAFKA_BOOTSTRAP_SERVERS || '127.0.0.1:9092').split(',')[0].trim();
-    const match = /^(?:\[([^\]]+)\]|([^:]+)):(\d+)$/.exec(bootstrap);
-    if (!match) throw new Error(`Invalid Kafka bootstrap server: ${bootstrap}`);
-    const host = match[1] || match[2];
-    const port = Number(match[3]);
-    if (port < 1 || port > 65535) throw new Error(`Invalid Kafka bootstrap port: ${bootstrap}`);
-    console.log(`Kafka event transport is enabled; checking ${bootstrap}...`);
-    try {
-      await waitForPort(port, 'Kafka', 5000, host);
-    } catch {
-      throw new Error(`Kafka is not reachable at ${bootstrap}. Start the broker or update KAFKA_BOOTSTRAP_SERVERS.`);
+    const { host, port } = parseBootstrapServer(bootstrap);
+    const localBroker = ['127.0.0.1', 'localhost', '::1'].includes(host);
+    const paths = kafkaPaths(serviceEnv);
+    if (!await portIsOpen(port, host)) {
+      if (!localBroker) {
+        throw new Error(`Kafka is not reachable at ${bootstrap}; automatic startup is available only for a local broker.`);
+      }
+      console.log(`Kafka is not running at ${bootstrap}; starting it from ${paths.home}...`);
+      await prepareKafkaStorage(paths, serviceEnv);
+      trackChild('kafka', startKafkaBroker(paths, serviceEnv), { processTree: process.platform === 'win32' });
+      await waitForPort(port, 'Kafka', 60000, host);
+    } else {
+      console.log(`Reusing Kafka already listening at ${bootstrap}.`);
     }
+    await ensureSingleKafkaTopic(paths, serviceEnv,
+      common.KAFKA_EVENT_TOPIC || process.env.KAFKA_EVENT_TOPIC || defaultKafkaTopic,
+      { bootstrap });
   } else {
     console.log('Event transport: HTTP. Pass --kafka when a Kafka broker is available.');
   }
   console.log('Building fresh service JARs from this checkout first...');
-  await buildFreshJars(root);
+  await buildFreshJars(root, { env: serviceEnv });
   if (stopping) return;
   startService('service-registry');
   await waitForHealth('Service Registry', 8761);
@@ -165,8 +194,13 @@ function stopAll() {
   if (stopping) return;
   stopping = true;
   console.log('\nStopping backend services...');
-  for (const { child } of children) {
-    if (child.exitCode === null && child.pid) child.kill('SIGTERM');
+  for (const { child, processTree } of [...children].reverse()) {
+    if (child.exitCode !== null || !child.pid) continue;
+    if (processTree && process.platform === 'win32') {
+      spawnSync('taskkill', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true, stdio: 'ignore' });
+    } else {
+      child.kill('SIGTERM');
+    }
   }
 }
 

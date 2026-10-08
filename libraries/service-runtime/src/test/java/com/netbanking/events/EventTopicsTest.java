@@ -9,16 +9,16 @@ import org.junit.jupiter.api.Test;
 
 class EventTopicsTest {
     private final EventTopics topics =
-            new EventTopics("customer-topic", "notification-topic", "audit-topic");
+            new EventTopics("banking-events");
 
     @Test
     void routesTheThreeSupportedEventFamilies() {
         assertThat(topics.forEvent("accounts-ledger-service", "CUSTOMER_REGISTERED"))
-                .isEqualTo("customer-topic");
+                .isEqualTo("banking-events");
         assertThat(topics.forEvent("notification-service", "NOTIFICATION"))
-                .isEqualTo("notification-topic");
+                .isEqualTo("banking-events");
         assertThat(topics.forEvent("audit-reporting-service", "AUDIT"))
-                .isEqualTo("audit-topic");
+                .isEqualTo("banking-events");
     }
 
     @Test
