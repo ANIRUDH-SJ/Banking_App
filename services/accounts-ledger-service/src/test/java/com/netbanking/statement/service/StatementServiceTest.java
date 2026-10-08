@@ -97,7 +97,8 @@ class StatementServiceTest {
         when(accountService.getOwnedAccount(7L, 10L))
                 .thenReturn(new com.netbanking.account.api.AccountSummaryResponse(
                         10L, 1L, "100000000000427731", "SAVINGS", "INR", "ACTIVE",
-                        new BigDecimal("87.50"), new BigDecimal("87.50"), "Salary"));
+                        new BigDecimal("87.50"), new BigDecimal("87.50"), "Salary",
+                        "Net Banking", "Main", "Bengaluru", "Karnataka", "NETB0000001"));
         when(entryRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(entry("Rent"))));
         when(mail.send(any(), any(), any(), any(), any()))

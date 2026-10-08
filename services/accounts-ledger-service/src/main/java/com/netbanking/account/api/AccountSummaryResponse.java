@@ -11,4 +11,9 @@ public record AccountSummaryResponse(
         String accountStatus,
         BigDecimal currentBalance,
         BigDecimal availableBalance,
-        String nickname) {}
+        String nickname,
+        String bankName,
+        String branchName,
+        String branchCity,
+        String branchState,
+        String ifscCode) {}
