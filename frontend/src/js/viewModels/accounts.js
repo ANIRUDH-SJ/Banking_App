@@ -24,12 +24,14 @@ define([
   function AccountsViewModel() {
     var self = this;
     var generation = 0;
+    var revealTimers = {};
 
     self.problem = new ui.Problem();
     self.success = ko.observable('');
     self.loading = ko.observable(true);
     self.busy = ko.observable(false);
     self.accounts = ko.observableArray([]);
+    self.revealedAccountIds = ko.observable({});
     self.walletOpen = ko.observable(false);
     self.walletCurrency = ko.observable(null);
     self.editingId = ko.observable(null);
@@ -81,6 +83,45 @@ define([
 
     self.grouped = function (number) {
       return String(number || '').replace(/(\d{4})(?=\d)/g, '$1 ');
+    };
+
+    self.isNumberShown = function (account) {
+      return !!self.revealedAccountIds()[account.accountId];
+    };
+
+    function hideNumber(id) {
+      var shown = Object.assign({}, self.revealedAccountIds());
+      delete shown[id];
+      self.revealedAccountIds(shown);
+      if (revealTimers[id]) {
+        window.clearTimeout(revealTimers[id]);
+        delete revealTimers[id];
+      }
+    }
+
+    function hideAllNumbers() {
+      Object.keys(revealTimers).forEach(function (id) { window.clearTimeout(revealTimers[id]); });
+      revealTimers = {};
+      self.revealedAccountIds({});
+    }
+
+    self.displayNumber = function (account) {
+      return self.isNumberShown(account)
+        ? self.grouped(account.accountNumber)
+        : format.maskAccount(account.accountNumber);
+    };
+
+    self.toggleNumber = function (account) {
+      var id = account.accountId;
+      if (self.isNumberShown(account)) {
+        hideNumber(id);
+      } else {
+        var shown = Object.assign({}, self.revealedAccountIds());
+        shown[id] = true;
+        self.revealedAccountIds(shown);
+        revealTimers[id] = window.setTimeout(function () { hideNumber(id); }, 30000);
+      }
+      return false;
     };
 
     self.openStatement = function (account) {
@@ -179,6 +220,7 @@ define([
 
     self.refreshAccounts = function () {
       var ticket = ++generation;
+      hideAllNumbers();
       self.loading(true);
       self.problem.clear();
       registry.accounts.getAccounts().then(function (accounts) {
@@ -204,6 +246,7 @@ define([
 
     self.disconnected = function () {
       generation += 1;
+      hideAllNumbers();
     };
   }
 
