@@ -20,6 +20,7 @@ define([
     var warnedFor = 0;
     var leaving = false;
     var identityLoaded = false;
+    var unreadTicket = 0;
 
     this.currentPath = ko.observable('login');
     this.showDesk = ko.observable(false);
@@ -159,7 +160,12 @@ define([
       }
     });
 
-    registry.events.on('notifications-changed', function () {
+    registry.events.on('notifications-changed', function (change) {
+      if (change && typeof change.unread === 'number') {
+        self.unreadCount(Math.max(0, change.unread));
+      } else if (change && change.read) {
+        self.unreadCount(Math.max(0, self.unreadCount() - change.read));
+      }
       refreshUnread();
     });
     registry.events.on('profile-changed', function (profile) {
@@ -187,11 +193,13 @@ define([
         self.unreadCount(0);
         return;
       }
-      registry.notifications.list(0, 20).then(function (page) {
-        var unread = ((page && page.content) || []).filter(function (item) { return !item.read; }).length;
-        self.unreadCount(unread);
+      var ticket = ++unreadTicket;
+      registry.notifications.unreadCount().then(function (unread) {
+        if (ticket === unreadTicket) {
+          self.unreadCount(unread);
+        }
       }).catch(function () {
-        self.unreadCount(0);
+        return undefined;
       });
     }
 

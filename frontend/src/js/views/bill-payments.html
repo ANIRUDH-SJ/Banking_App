@@ -80,16 +80,22 @@
         <dl class="nb-review" data-bind="if: biller">
           <div><dt>Biller</dt><dd data-bind="text: biller().name"></dd></div>
           <div><dt data-bind="text: referenceLabel"></dt><dd class="nb-mono" data-bind="text: billReference"></dd></div>
-          <div data-bind="if: sourceAccount"><dt>From</dt><dd data-bind="text: label(sourceAccount().accountType) + ' ' + mask(sourceAccount().accountNumber)"></dd></div>
+          <div data-bind="if: sourceAccount"><dt>From</dt><dd data-bind="text: sourceName"></dd></div>
         </dl>
-        <p class="nb-note"><span class="nb-icon i-shield" aria-hidden="true"></span><span>We will send a one-time code to your registered email and mobile. The payment is made only after you enter it.</span></p>
+        <p class="nb-note"><span class="nb-icon i-shield" aria-hidden="true"></span><span>Confirm with a one-time code sent to your registered email and mobile<!-- ko if: pinAuth.available -->, or with your <b data-bind="text: pinAuth.cardLabel"></b> PIN<!-- /ko -->. The payment is made only after you confirm.</span></p>
+        <p class="nb-note is-warn" data-bind="visible: pinAuth.lockText"><span class="nb-icon i-lock" aria-hidden="true"></span><span data-bind="text: pinAuth.lockText"></span></p>
         <div class="nb-actions">
           <oj-c-button chroming="callToAction" label="[[busy() ? 'Sending code…' : 'Send code']]" disabled="[[busy]]" on-oj-action="[[sendCode]]"></oj-c-button>
+          <!-- ko if: pinAuth.available -->
+          <oj-c-button chroming="outlined" label="Use card PIN" disabled="[[busy]]" on-oj-action="[[usePin]]">
+            <span slot="startIcon" class="nb-icon i-key" aria-hidden="true"></span>
+          </oj-c-button>
+          <!-- /ko -->
           <oj-c-button chroming="borderless" label="Edit details" on-oj-action="[[back]]"></oj-c-button>
         </div>
       </div>
 
-      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(3), submit: pay">
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(3) && !pinAuth.usingPin(), submit: pay">
         <h2 tabindex="-1">Enter your one-time code</h2>
         <p class="nb-hint">Sent to your registered email and mobile. It expires in 5 minutes.</p>
         <div class="nb-otp">
@@ -98,6 +104,28 @@
         <div class="nb-actions">
           <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Paying…' : 'Pay ' + amountText()]]" disabled="[[busy]]"></oj-c-button>
           <oj-c-button chroming="borderless" label="Resend code" disabled="[[busy]]" on-oj-action="[[sendCode]]"></oj-c-button>
+          <!-- ko if: pinAuth.available -->
+          <oj-c-button chroming="borderless" label="Use card PIN instead" disabled="[[busy]]" on-oj-action="[[usePin]]"></oj-c-button>
+          <!-- /ko -->
+        </div>
+      </form>
+
+      <form class="nb-flow-panel nb-form" novalidate data-bind="visible: flow.is(3) && pinAuth.usingPin(), submit: pay">
+        <h2 tabindex="-1">Enter your card PIN</h2>
+        <div class="nb-pinbox">
+          <span class="nb-pinbox-card" aria-hidden="true"><span class="nb-icon i-cards"></span></span>
+          <span>
+            <b data-bind="text: pinAuth.cardLabel"></b>
+            <span class="nb-hint">Linked to <span data-bind="text: sourceName"></span>. Your PIN is encrypted on this device before it is sent.</span>
+          </span>
+        </div>
+        <div class="nb-otp">
+          <oj-c-input-sensitive-text class="nb-code-input nb-pin-input" label-hint="4-digit PIN" value="{{pinAuth.pin}}" messages-custom="[[pinAuth.messages]]" length.max="4" virtual-keyboard="number" autocomplete="off" mask-icon="hidden"></oj-c-input-sensitive-text>
+        </div>
+        <p class="nb-hint">Three wrong attempts lock the PIN for 30 minutes.</p>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" chroming="callToAction" label="[[busy() ? 'Paying…' : 'Pay ' + amountText()]]" disabled="[[busy]]"></oj-c-button>
+          <oj-c-button chroming="borderless" label="Use a one-time code instead" disabled="[[busy]]" on-oj-action="[[sendCode]]"></oj-c-button>
         </div>
       </form>
 
@@ -134,7 +162,7 @@
         <li class="nb-row">
           <span class="nb-row-glyph" data-bind="css: $parent.historyGlyph(billerId)" aria-hidden="true"></span>
           <span class="nb-row-main">
-            <span class="nb-row-title" data-bind="text: $parent.billerName(billerId)"></span>
+            <span class="nb-row-title" data-bind="text: $parent.paymentName($data)"></span>
             <span class="nb-row-meta">
               <span data-bind="text: $parent.when(createdAt)"></span>
               <span class="nb-row-status" data-bind="visible: status !== 'COMPLETED', text: $parent.label(status)"></span>

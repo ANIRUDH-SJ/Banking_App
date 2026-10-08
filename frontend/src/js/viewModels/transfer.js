@@ -6,14 +6,16 @@ define([
   '../services/ui-support',
   '../services/beneficiary-service',
   '../services/fund-transfer-service',
+  '../services/pin-authorization',
   'oj-c/button',
   'oj-c/input-text',
+  'oj-c/input-sensitive-text',
   'oj-c/input-number',
   'oj-c/select-single',
   'oj-c/badge',
   'oj-c/form-layout',
   'oj-c/skeleton'
-], function (ko, accUtils, registry, format, ui, BeneficiaryService, FundTransferService) {
+], function (ko, accUtils, registry, format, ui, BeneficiaryService, FundTransferService, PinAuthorization) {
   var STEPS = ['details', 'review', 'otp', 'receipt'];
 
   function TransferViewModel() {
@@ -44,6 +46,7 @@ define([
     self.amountMessages = ko.observableArray([]);
     self.narrationMessages = ko.observableArray([]);
     self.otpMessages = ko.observableArray([]);
+    self.pinAuth = new PinAuthorization(self.sourceAccountId);
 
     self.step = ko.pureComputed(function () {
       return STEPS[self.flow.at()];
@@ -83,8 +86,17 @@ define([
     self.mask = format.maskAccount;
     self.statusVariant = ui.statusVariant;
 
-    self.payeeName = function (beneficiaryId) {
-      var match = self.beneficiaries().filter(function (payee) { return payee.beneficiaryId === beneficiaryId; })[0];
+    self.sourceName = ko.pureComputed(function () {
+      var account = self.sourceAccount();
+      return account ? ui.accountName(account) + ' ' + format.maskAccount(account.accountNumber) : '';
+    });
+
+    self.payeeName = function (payment) {
+      if (payment && payment.beneficiaryNickname) {
+        return payment.beneficiaryNickname;
+      }
+      var id = payment && payment.beneficiaryId;
+      var match = self.beneficiaries().filter(function (payee) { return payee.beneficiaryId === id; })[0];
       return match ? match.nickname : 'Beneficiary';
     };
 
@@ -118,10 +130,22 @@ define([
       self.flow.go(Math.max(0, self.flow.at() - 1));
     };
 
+    self.usePin = function () {
+      self.problem.clear();
+      self.pinAuth.use('PIN');
+      self.flow.go(2);
+    };
+
+    self.useOtp = function () {
+      self.pinAuth.use('OTP');
+      self.requestOtp();
+    };
+
     self.requestOtp = function () {
       if (self.busy()) {
         return;
       }
+      self.pinAuth.use('OTP');
       self.busy(true);
       self.problem.clear();
       registry.otp.requestTransferChallenge(self.sourceAccountId(), self.beneficiaryId(), ui.parseAmount(self.amount())).then(function (challenge) {
@@ -137,30 +161,44 @@ define([
       });
     };
 
-    self.confirmTransfer = function () {
-      var error = registry.otp.validateCode(self.otpCode());
-      self.otpMessages(ui.messages(error));
-      if (error || self.busy()) {
-        return false;
-      }
-      self.busy(true);
-      self.problem.clear();
-      transfers.transfer({
+    function submit(authorization) {
+      return transfers.transfer(Object.assign({
         sourceAccountId: self.sourceAccountId(),
         beneficiaryId: self.beneficiaryId(),
         amount: ui.parseAmount(self.amount()),
         narration: String(self.narration() || '').trim() || null,
-        idempotencyKey: idempotencyKey,
-        otpChallengeId: self.otpChallengeId(),
-        otpCode: String(self.otpCode()).trim()
-      }).then(function (receipt) {
+        idempotencyKey: idempotencyKey
+      }, authorization));
+    }
+
+    self.confirmTransfer = function () {
+      var usingPin = self.pinAuth.usingPin();
+      var error = usingPin ? '' : registry.otp.validateCode(self.otpCode());
+      self.otpMessages(ui.messages(error));
+      if (error || (usingPin && !self.pinAuth.validate()) || self.busy()) {
+        return false;
+      }
+      self.busy(true);
+      self.problem.clear();
+      var authorization = usingPin
+        ? self.pinAuth.authorization().then(function (cardPin) { return { cardPin: cardPin }; })
+        : Promise.resolve({ otpChallengeId: self.otpChallengeId(), otpCode: String(self.otpCode()).trim() });
+      authorization.then(submit).then(function (receipt) {
         self.receipt(receipt);
+        self.pinAuth.reset();
         self.flow.go(3);
         accUtils.announce('Transfer submitted.', 'polite');
         loadHistory();
-      }).catch(function (error) {
-        self.otpMessages(ui.messages(ui.fieldMessage(error, 'otpCode')));
-        self.problem.set(error, 'The transfer could not be completed.');
+      }).catch(function (failure) {
+        if (usingPin) {
+          self.pinAuth.rejected(failure);
+          if (!failure || String(failure.code || '').indexOf('PIN_') !== 0) {
+            self.problem.set(failure, 'The transfer could not be completed.');
+          }
+        } else {
+          self.otpMessages(ui.messages(ui.fieldMessage(failure, 'otpCode')));
+          self.problem.set(failure, 'The transfer could not be completed.');
+        }
       }).finally(function () {
         self.busy(false);
       });
@@ -172,6 +210,7 @@ define([
       self.amount(null);
       self.narration('');
       self.otpCode('');
+      self.pinAuth.reset();
       self.problem.clear();
       self.flow.go(0);
     };
@@ -182,6 +221,9 @@ define([
     };
 
     self.openStatement = function () {
+      if (self.sourceAccountId()) {
+        ui.hand('transactions.accountId', self.sourceAccountId());
+      }
       registry.go('transactions');
     };
 
@@ -214,8 +256,10 @@ define([
     self.refreshOptions = function () {
       var ticket = ++generation;
       var preset = ui.take('transfer.beneficiaryId');
+      var source = ui.take('transfer.sourceAccountId');
       self.loading(true);
       self.problem.clear();
+      self.pinAuth.load();
       return Promise.all([registry.accounts.getAccounts(), payees.list()]).then(function (results) {
         if (ticket !== generation) {
           return;
@@ -226,8 +270,13 @@ define([
         var active = format.asList(results[1]).filter(function (payee) { return payee.status === 'ACTIVE'; });
         self.accounts(payable);
         self.beneficiaries(active);
-        if (!self.sourceAccountId() && payable.length) {
-          self.sourceAccountId(payable[0].accountId);
+        var owns = function (id) {
+          return payable.some(function (account) { return account.accountId === id; });
+        };
+        if (owns(source)) {
+          self.sourceAccountId(source);
+        } else if (!owns(self.sourceAccountId())) {
+          self.sourceAccountId(payable.length ? payable[0].accountId : null);
         }
         if (preset) {
           self.beneficiaryId(preset);

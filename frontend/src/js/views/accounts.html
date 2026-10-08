@@ -7,7 +7,7 @@
       <oj-c-button chroming="outlined" label="Open a currency wallet" on-oj-action="[[toggleWallet]]" disabled="[[loading() || availableWallets().length === 0]]">
         <span slot="startIcon" class="nb-icon i-forex" aria-hidden="true"></span>
       </oj-c-button>
-      <oj-c-button chroming="callToAction" label="Transfer money" on-oj-action="[[openTransfer]]">
+      <oj-c-button chroming="callToAction" label="Transfer money" on-oj-action="[[function () { openTransfer(); }]]">
         <span slot="startIcon" class="nb-icon i-transfer" aria-hidden="true"></span>
       </oj-c-button>
     </div>
@@ -48,7 +48,7 @@
     </div>
     <div>
       <dt>Statements</dt>
-      <dd>CSV, any date range</dd>
+      <dd>CSV or PDF, any range</dd>
     </div>
   </dl>
 
@@ -70,12 +70,27 @@
   </div>
 
   <ul class="nb-tiles" data-bind="foreach: accounts">
-    <li class="nb-tile" data-bind="css: { 'is-lead': $index() === 0 }">
+    <li class="nb-tile nb-acct" data-bind="css: $parent.tileCss($data)">
       <div class="nb-tile-top">
-        <span class="nb-tile-name" data-bind="text: $parent.accountTitle($data)"></span>
+        <div class="nb-acct-id">
+          <span class="nb-tile-name" data-bind="text: $parent.accountTitle($data)"></span>
+          <span class="nb-acct-kind" data-bind="visible: $parent.hasNickname($data), text: $parent.accountKind($data)"></span>
+        </div>
         <oj-c-badge size="sm" variant="[[$parent.statusVariant(accountStatus)]]" label="[[$parent.label(accountStatus)]]"></oj-c-badge>
       </div>
-      <p class="nb-tile-number" data-bind="text: $parent.grouped(accountNumber)"></p>
+      <p class="nb-tile-number" data-bind="text: $parent.grouped(accountNumber), attr: { 'aria-label': 'Account number ' + accountNumber }"></p>
+
+      <!-- ko if: $parent.isEditing($data) -->
+      <form class="nb-rename" novalidate data-bind="submit: function () { return $parent.saveRename($data); }">
+        <oj-c-input-text label-hint="Nickname" value="{{$parent.nickname}}" messages-custom="[[$parent.nicknameMessages]]" length.max="40" placeholder="For example Household" help-hints.definition="Only you see this name. The account number stays the same."></oj-c-input-text>
+        <div class="nb-actions">
+          <oj-c-button button-type="submit" size="sm" chroming="callToAction" label="[[$parent.busy() ? 'Saving…' : 'Save']]" disabled="[[$parent.busy]]"></oj-c-button>
+          <oj-c-button size="sm" chroming="borderless" label="Cancel" on-oj-action="[[$parent.cancelRename]]"></oj-c-button>
+        </div>
+      </form>
+      <!-- /ko -->
+
+      <!-- ko ifnot: $parent.isEditing($data) -->
       <p class="nb-tile-label">Available balance</p>
       <!-- ko with: $parent.moneyParts(availableBalance, currencyCode) -->
       <p class="nb-figure" data-bind="attr: { 'aria-label': sign + symbol + whole + fraction }">
@@ -83,14 +98,17 @@
       </p>
       <!-- /ko -->
       <p class="nb-tile-sub">Current <span data-bind="text: $parent.money(currentBalance, currencyCode)"></span></p>
+      <!-- /ko -->
+
       <div class="nb-tile-links">
-        <a href="#" data-bind="click: $parent.openStatement">Statement</a>
-        <!-- ko if: (currencyCode || 'INR') === 'INR' -->
-        <a href="#" data-bind="click: $parent.openTransfer">Transfer</a>
+        <a href="#" data-bind="click: $parent.openStatement, attr: { 'aria-label': 'Statements for ' + $parent.accountTitle($data) }"><span class="nb-icon i-statement" aria-hidden="true"></span>Statements</a>
+        <!-- ko if: (currencyCode || 'INR') === 'INR' && accountStatus === 'ACTIVE' -->
+        <a href="#" data-bind="click: $parent.openTransfer, attr: { 'aria-label': 'Transfer from ' + $parent.accountTitle($data) }"><span class="nb-icon i-transfer" aria-hidden="true"></span>Transfer</a>
         <!-- /ko -->
         <!-- ko ifnot: (currencyCode || 'INR') === 'INR' -->
-        <a href="#" data-bind="click: $parent.openForex">Convert</a>
+        <a href="#" data-bind="click: $parent.openForex"><span class="nb-icon i-forex" aria-hidden="true"></span>Convert</a>
         <!-- /ko -->
+        <a href="#" class="is-quiet" data-bind="click: $parent.startRename, visible: !$parent.isEditing($data), attr: { 'aria-label': 'Rename ' + $parent.accountTitle($data) }"><span class="nb-icon i-edit" aria-hidden="true"></span>Rename</a>
       </div>
     </li>
   </ul>

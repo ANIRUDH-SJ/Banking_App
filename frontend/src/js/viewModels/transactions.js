@@ -39,6 +39,11 @@ define([
     self.totalPages = ko.observable(1);
     self.totalElements = ko.observable(0);
     self.dateMessages = ko.observableArray([]);
+    self.applied = ko.observable({});
+    self.pdfBusy = ko.observable(false);
+    self.emailState = ko.observable('idle');
+    self.emailReceipt = ko.observable(null);
+    self.emailError = ko.observable('');
 
     self.accountOptions = ko.pureComputed(function () {
       return ui.options(self.accounts().map(ui.accountOption));
@@ -52,6 +57,9 @@ define([
     });
 
     self.label = format.labelize;
+    self.accountName = ui.accountName;
+    self.accountKind = ui.accountKind;
+    self.mask = format.maskAccount;
     self.money = format.formatMoney;
     self.date = format.formatDate;
     self.time = function (value) {
@@ -73,25 +81,42 @@ define([
       return start + '–' + end + ' of ' + self.totalElements();
     });
 
+    function filters() {
+      var applied = self.applied();
+      return {
+        from: applied.from || null,
+        to: applied.to || null,
+        type: applied.type && applied.type !== 'ALL' ? applied.type : null,
+        status: applied.status && applied.status !== 'ALL' ? applied.status : null
+      };
+    }
+
     function query(withPage) {
+      var active = filters();
       var parts = [];
-      if (self.from()) {
-        parts.push('from=' + encodeURIComponent(self.from()));
-      }
-      if (self.to()) {
-        parts.push('to=' + encodeURIComponent(self.to()));
-      }
-      if (self.type() && self.type() !== 'ALL') {
-        parts.push('type=' + encodeURIComponent(self.type()));
-      }
-      if (self.status() && self.status() !== 'ALL') {
-        parts.push('status=' + encodeURIComponent(self.status()));
-      }
+      ['from', 'to', 'type', 'status'].forEach(function (key) {
+        if (active[key]) {
+          parts.push(key + '=' + encodeURIComponent(active[key]));
+        }
+      });
       if (withPage) {
         parts.push('page=' + self.page(), 'size=' + PAGE_SIZE);
       }
       return parts.length ? '?' + parts.join('&') : '';
     }
+
+    function snapshot() {
+      self.applied({ from: self.from(), to: self.to(), type: self.type(), status: self.status() });
+      self.emailState('idle');
+    }
+
+    self.filterSummary = ko.pureComputed(function () {
+      var active = filters();
+      var period = active.from || active.to
+        ? (active.from ? format.formatDate(active.from) : 'Opening') + ' – ' + (active.to ? format.formatDate(active.to) : 'today')
+        : 'All dates';
+      return [period, active.type ? format.labelize(active.type) : 'All types', active.status ? format.labelize(active.status) : 'All statuses'].join(' · ');
+    });
 
     function rangeError() {
       if (self.from() && self.to() && self.from() > self.to()) {
@@ -135,6 +160,7 @@ define([
       if (error) {
         return;
       }
+      snapshot();
       self.page(0);
       load();
     };
@@ -145,6 +171,7 @@ define([
       self.type('ALL');
       self.status('ALL');
       self.dateMessages([]);
+      snapshot();
       self.page(0);
       load();
     };
@@ -163,6 +190,10 @@ define([
       }
     };
 
+    function last4(account) {
+      return String(account.accountNumber || '').slice(-4);
+    }
+
     self.download = function () {
       var account = self.account();
       if (!account || self.downloading()) {
@@ -171,15 +202,7 @@ define([
       self.downloading(true);
       registry.accounts.downloadStatement(account.accountId, query(false)).then(function (csv) {
         var blob = new Blob([typeof csv === 'string' ? csv : JSON.stringify(csv)], { type: 'text/csv' });
-        var link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'statement-' + String(account.accountNumber).slice(-4) + '.csv';
-        document.body.appendChild(link);
-        link.click();
-        window.setTimeout(function () {
-          URL.revokeObjectURL(link.href);
-          link.remove();
-        }, 0);
+        ui.saveFile(blob, 'statement-' + last4(account) + '.csv');
         accUtils.announce('Statement downloaded.', 'polite');
       }).catch(function (error) {
         self.problem.set(error, 'The statement could not be downloaded.');
@@ -188,8 +211,73 @@ define([
       });
     };
 
+    self.downloadPdf = function () {
+      var account = self.account();
+      if (!account || self.pdfBusy()) {
+        return;
+      }
+      self.pdfBusy(true);
+      registry.accounts.downloadStatementPdf(account.accountId, query(false)).then(function (file) {
+        ui.saveFile(file.blob, file.filename || 'statement-' + last4(account) + '.pdf');
+        accUtils.announce('PDF statement downloaded.', 'polite');
+      }).catch(function (error) {
+        self.problem.set(error, 'The PDF statement could not be prepared.');
+      }).finally(function () {
+        self.pdfBusy(false);
+      });
+    };
+
+    self.emailPdf = function () {
+      var account = self.account();
+      if (!account || self.emailState() === 'sending') {
+        return;
+      }
+      self.emailState('sending');
+      self.emailError('');
+      self.emailReceipt(null);
+      registry.accounts.emailStatement(account.accountId, filters()).then(function (receipt) {
+        self.emailReceipt(receipt || {});
+        self.emailState('sent');
+        accUtils.announce('Statement emailed to ' + ((receipt && receipt.sentTo) || 'your registered address') + '.', 'polite');
+      }).catch(function (error) {
+        self.emailError((error && error.message) || 'The statement could not be emailed.');
+        self.emailState('failed');
+      });
+    };
+
+    self.emailLabel = ko.pureComputed(function () {
+      return { sending: 'Sending…', sent: 'Email again', failed: 'Try again' }[self.emailState()] || 'Email PDF';
+    });
+
+    self.emailTitle = ko.pureComputed(function () {
+      return {
+        sending: 'Emailing your statement…',
+        sent: 'Statement emailed',
+        failed: 'Statement not sent'
+      }[self.emailState()] || '';
+    });
+
+    self.emailDetail = ko.pureComputed(function () {
+      if (self.emailState() === 'failed') {
+        return self.emailError();
+      }
+      if (self.emailState() === 'sent') {
+        return self.emailSummary() + ' The PDF covers ' + self.filterSummary() + '.';
+      }
+      return 'Preparing the PDF for ' + self.filterSummary() + '.';
+    });
+
+    self.emailSummary = ko.pureComputed(function () {
+      var receipt = self.emailReceipt();
+      if (self.emailState() !== 'sent' || !receipt) {
+        return '';
+      }
+      return 'Sent to ' + (receipt.sentTo || 'your registered email') + (receipt.sentAt ? ' at ' + format.formatTime(new Date(receipt.sentAt).getTime()) : '') + '.';
+    });
+
     var ready = false;
     self.accountId.subscribe(function () {
+      self.emailState('idle');
       if (ready) {
         self.page(0);
         load();
@@ -202,6 +290,13 @@ define([
       document.title = 'Transactions | Internet Banking';
       var preset = ui.take('transactions.accountId');
       self.loading(true);
+      if (preset) {
+        self.from(null);
+        self.to(null);
+        self.type('ALL');
+        self.status('ALL');
+      }
+      snapshot();
       registry.accounts.getAccounts().then(function (accounts) {
         if (ticket !== generation) {
           return;
@@ -209,7 +304,10 @@ define([
         var list = format.asList(accounts);
         self.accounts(list);
         ready = false;
-        self.accountId(preset || self.accountId() || (list[0] && list[0].accountId) || null);
+        var owned = function (id) {
+          return list.some(function (account) { return account.accountId === id; });
+        };
+        self.accountId(owned(preset) ? preset : (owned(self.accountId()) ? self.accountId() : (list[0] && list[0].accountId) || null));
         ready = true;
         load();
       }).catch(function (error) {

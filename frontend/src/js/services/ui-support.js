@@ -46,12 +46,62 @@ define(['knockout', 'ojs/ojarraydataprovider', 'ojs/ojconverter-number', './form
     return new ArrayDataProvider(rows, { keyAttributes: 'value' });
   }
 
+  /** The kind of account, such as "Savings account" or "USD wallet". */
+  function accountKind(account) {
+    if (!account) {
+      return 'Account';
+    }
+    if ((account.currencyCode || 'INR') !== 'INR') {
+      return account.currencyCode + ' wallet';
+    }
+    var type = format.labelize(account.accountType);
+    return type ? type + ' account' : 'Account';
+  }
+
+  /**
+   * Colour family for an account tile. Savings stays the house green, current is petrol,
+   * a fixed deposit is warm brown, and a foreign-currency wallet is slate.
+   */
+  function accountTone(account) {
+    if (account && (account.currencyCode || 'INR') !== 'INR') {
+      return 'wallet';
+    }
+    var type = String(account && account.accountType || '').toUpperCase();
+    if (type.indexOf('CURRENT') >= 0) {
+      return 'current';
+    }
+    if (type.indexOf('FIXED') >= 0 || type.indexOf('DEPOSIT') >= 0 || type.indexOf('TERM') >= 0) {
+      return 'deposit';
+    }
+    return 'savings';
+  }
+
+  /** The customer's nickname when set, otherwise the kind of account. */
+  function accountName(account) {
+    var nickname = account && String(account.nickname || '').trim();
+    return nickname || accountKind(account);
+  }
+
   function accountOption(account) {
+    var nickname = String(account.nickname || '').trim();
     return {
       value: account.accountId,
-      label: format.labelize(account.accountType) + ' ' + format.maskAccount(account.accountNumber) +
-        ' · ' + format.formatMoney(account.availableBalance, account.currencyCode)
+      label: (nickname ? nickname + ' · ' : '') + format.labelize(account.accountType) + ' ' +
+        format.maskAccount(account.accountNumber) + ' · ' + format.formatMoney(account.availableBalance, account.currencyCode)
     };
+  }
+
+  /** Saves a downloaded file without leaving the page. */
+  function saveFile(blob, filename) {
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    window.setTimeout(function () {
+      URL.revokeObjectURL(link.href);
+      link.remove();
+    }, 0);
   }
 
   function parseAmount(value) {
@@ -145,6 +195,10 @@ define(['knockout', 'ojs/ojarraydataprovider', 'ojs/ojconverter-number', './form
     newKey: newKey,
     options: options,
     accountOption: accountOption,
+    accountKind: accountKind,
+    accountTone: accountTone,
+    accountName: accountName,
+    saveFile: saveFile,
     parseAmount: parseAmount,
     amountError: amountError,
     statusVariant: statusVariant

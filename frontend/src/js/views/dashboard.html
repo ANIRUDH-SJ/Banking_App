@@ -50,9 +50,12 @@
     </div>
 
     <ul class="nb-tiles" data-bind="visible: hasAccounts, foreach: accounts">
-      <li class="nb-tile" data-bind="css: { 'is-lead': $index() === 0 }">
+      <li class="nb-tile nb-acct" data-bind="css: $parent.tileCss($data)">
         <div class="nb-tile-top">
-          <span class="nb-tile-name" data-bind="text: $parent.accountTitle($data)"></span>
+          <div class="nb-acct-id">
+            <span class="nb-tile-name" data-bind="text: $parent.accountTitle($data)"></span>
+            <span class="nb-acct-kind" data-bind="visible: $parent.hasNickname($data), text: $parent.accountKind($data)"></span>
+          </div>
           <oj-c-badge size="sm" variant="[[$parent.statusVariant(accountStatus)]]" label="[[$parent.label(accountStatus)]]"></oj-c-badge>
         </div>
         <p class="nb-tile-number" data-bind="text: $parent.mask(accountNumber)"></p>
@@ -64,8 +67,71 @@
         <!-- /ko -->
         <p class="nb-tile-sub">Current <span data-bind="text: $parent.money(currentBalance, currencyCode)"></span></p>
         <div class="nb-tile-links">
-          <a href="#" data-bind="click: $parent.openTransactions">Transactions</a>
-          <a href="#" data-bind="click: $parent.openTransfer">Transfer</a>
+          <a href="#" data-bind="click: $parent.openStatementFor, attr: { 'aria-label': 'Statements for ' + $parent.accountTitle($data) + ' ' + $parent.mask(accountNumber) }"><span class="nb-icon i-statement" aria-hidden="true"></span>Statements</a>
+          <!-- ko if: $parent.canTransfer($data) -->
+          <a href="#" data-bind="click: $parent.openTransferFor, attr: { 'aria-label': 'Transfer from ' + $parent.accountTitle($data) + ' ' + $parent.mask(accountNumber) }"><span class="nb-icon i-transfer" aria-hidden="true"></span>Transfer</a>
+          <!-- /ko -->
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="nb-block" aria-labelledby="cards-heading">
+    <div class="nb-block-head">
+      <h2 id="cards-heading">Your cards</h2>
+      <a href="#" class="nb-more" data-bind="click: openCards, visible: cards().length">Manage cards</a>
+    </div>
+    <div class="nb-cardstrip" data-bind="visible: cardsLoading" aria-hidden="true">
+      <!-- ko foreach: [1, 2, 3] -->
+      <div class="nb-cardslot"><oj-c-skeleton height="10.5rem" border-radius="14px"></oj-c-skeleton></div>
+      <!-- /ko -->
+    </div>
+    <p class="nb-rail-error" role="alert" data-bind="visible: cardsError, text: cardsError"></p>
+    <p class="nb-rail-empty" data-bind="visible: !cardsLoading() && !cardsError() && cards().length === 0">No cards on your profile.</p>
+    <ul class="nb-cardstrip" data-bind="visible: !cardsLoading(), foreach: cards">
+      <li class="nb-cardslot">
+        <div class="nb-paycard is-compact" data-bind="css: { 'is-credit': isCredit, 'is-off': card.status !== 'ACTIVE', 'is-shown': shown }">
+          <div class="nb-paycard-top">
+            <span data-bind="text: typeLabel"></span>
+            <span class="nb-paycard-network" data-bind="text: network"></span>
+          </div>
+          <span class="nb-paycard-chip" aria-hidden="true"></span>
+          <div>
+            <p class="nb-paycard-number" data-bind="text: display, attr: { 'aria-label': shown() ? 'Card number ' + display() : 'Card number ending ' + last4 }"></p>
+            <div class="nb-paycard-foot">
+              <span>Valid thru <b data-bind="text: expiry"></b></span>
+              <span class="nb-paycard-timer" data-bind="visible: shown, text: 'Hides in ' + secondsLeft() + 's'"></span>
+            </div>
+          </div>
+          <!-- ko if: canReveal -->
+          <button type="button" class="nb-eye" data-bind="click: toggle, disable: revealing, css: { 'is-on': shown }, attr: { 'aria-pressed': shown() ? 'true' : 'false', 'aria-label': toggleLabel, title: toggleLabel }">
+            <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
+          </button>
+          <!-- /ko -->
+        </div>
+        <p class="nb-rail-error" role="alert" data-bind="visible: error, text: error"></p>
+        <div class="nb-cardslot-meta">
+          <!-- ko if: isCredit && card.credit -->
+          <span class="nb-cardslot-figure">
+            <span>Available credit</span>
+            <b data-bind="text: $parent.money(card.credit.availableCredit, 'INR')"></b>
+          </span>
+          <span class="nb-cardslot-figure" data-bind="visible: card.credit.paymentDueDate">
+            <span>Due</span>
+            <b data-bind="text: card.credit.paymentDueDate ? $parent.day(card.credit.paymentDueDate) : ''"></b>
+          </span>
+          <!-- /ko -->
+          <!-- ko ifnot: isCredit && card.credit -->
+          <span class="nb-cardslot-figure">
+            <span>PIN</span>
+            <b data-bind="text: card.pinLockedUntil ? 'Locked' : (card.pinSet ? 'Set' : 'Not set')"></b>
+          </span>
+          <!-- /ko -->
+          <oj-c-badge size="sm" variant="[[$parent.statusVariant(card.status)]]" label="[[$parent.label(card.status)]]"></oj-c-badge>
+          <!-- ko if: $parent.pinAction(card) -->
+          <a href="#" class="nb-more" data-bind="click: function () { return $parent.openPin($data); }, text: $parent.pinAction(card), attr: { 'aria-label': $parent.pinAction(card) + ' for ' + typeLabel + ' ending ' + last4 }"></a>
+          <!-- /ko -->
+          <a href="#" class="nb-more" data-bind="click: $parent.openCard, attr: { 'aria-label': (isCredit ? 'Details for ' : 'Manage ') + typeLabel + ' ending ' + last4 }, text: isCredit ? 'Details' : 'Manage'"></a>
         </div>
       </li>
     </ul>
@@ -76,7 +142,7 @@
       <div class="nb-sheet-head">
         <div>
           <h2 id="activity-heading">Recent activity</h2>
-          <p class="nb-sheet-sub" data-bind="visible: transactionAccount">Account <span data-bind="text: transactionAccount"></span></p>
+          <p class="nb-sheet-sub" data-bind="visible: transactionAccount, text: transactionAccount"></p>
         </div>
         <a href="#" class="nb-more" data-bind="click: openTransactions, visible: transactions().length">Full statement</a>
       </div>
@@ -122,31 +188,6 @@
     </section>
 
     <div class="nb-rail">
-      <section class="nb-sheet" aria-labelledby="cards-heading">
-        <div class="nb-sheet-head">
-          <h2 id="cards-heading">Cards</h2>
-          <a href="#" class="nb-more" data-bind="click: openCards, visible: cards().length">Manage</a>
-        </div>
-        <div class="nb-rail-skeleton" data-bind="visible: cardsLoading" aria-hidden="true">
-          <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
-          <oj-c-skeleton height="2.75rem"></oj-c-skeleton>
-        </div>
-        <p class="nb-rail-error" role="alert" data-bind="visible: cardsError, text: cardsError"></p>
-        <p class="nb-rail-empty" data-bind="visible: !cardsLoading() && !cardsError() && cards().length === 0">No cards on your profile.</p>
-        <ul class="nb-cards" data-bind="foreach: cards">
-          <li class="nb-card-row">
-            <span class="nb-card-glyph" data-bind="css: $parent.cardTone($data)" aria-hidden="true">
-              <span data-bind="text: $parent.cardDigits($data)"></span>
-            </span>
-            <span class="nb-row-main">
-              <span class="nb-row-title" data-bind="text: $parent.label(cardType) + ' card'"></span>
-              <span class="nb-row-meta" data-bind="text: maskedCardNumber"></span>
-            </span>
-            <oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge>
-          </li>
-        </ul>
-      </section>
-
       <section class="nb-sheet" aria-labelledby="loans-heading">
         <div class="nb-sheet-head">
           <h2 id="loans-heading">Loans</h2>
@@ -182,7 +223,10 @@
         <p class="nb-rail-empty" data-bind="visible: !noticesLoading() && !noticesError() && notices().length === 0">Nothing new from the bank.</p>
         <ul class="nb-notice-list" data-bind="foreach: notices">
           <li data-bind="css: { 'is-unread': !$data.read }">
-            <span class="nb-row-title" data-bind="text: title"></span>
+            <a href="#" data-bind="click: $parent.openNotice">
+              <span class="nb-row-title" data-bind="text: title"></span>
+              <span class="nb-sr" data-bind="text: $data.read ? '' : ', unread'"></span>
+            </a>
             <span class="nb-row-meta" data-bind="text: $parent.when(createdAt)"></span>
           </li>
         </ul>

@@ -2,10 +2,16 @@
   <header class="nb-page-head has-actions">
     <p class="nb-kicker">Accounts</p>
     <h1>Transactions</h1>
-    <p class="nb-lede">Search an account's history by date, type and status, and download the same view as a CSV statement.</p>
+    <p class="nb-lede">Search an account's history by date, type and status. Download exactly what you see as CSV or PDF, or have the PDF emailed to your registered address.</p>
     <div class="nb-head-actions">
-      <oj-c-button chroming="outlined" label="[[downloading() ? 'Preparing…' : 'Download CSV']]" disabled="[[downloading() || !accountId()]]" on-oj-action="[[download]]">
+      <oj-c-button chroming="outlined" label="[[downloading() ? 'Preparing…' : 'CSV']]" disabled="[[downloading() || !accountId()]]" on-oj-action="[[download]]">
         <span slot="startIcon" class="nb-icon i-download" aria-hidden="true"></span>
+      </oj-c-button>
+      <oj-c-button chroming="outlined" label="[[pdfBusy() ? 'Preparing…' : 'PDF']]" disabled="[[pdfBusy() || !accountId()]]" on-oj-action="[[downloadPdf]]">
+        <span slot="startIcon" class="nb-icon i-statement" aria-hidden="true"></span>
+      </oj-c-button>
+      <oj-c-button chroming="callToAction" label="[[emailLabel]]" disabled="[[emailState() === 'sending' || !accountId()]]" on-oj-action="[[emailPdf]]">
+        <span slot="startIcon" class="nb-icon i-mail" aria-hidden="true"></span>
       </oj-c-button>
     </div>
   </header>
@@ -13,6 +19,14 @@
   <div class="nb-alert" role="alert" data-bind="visible: problem.text">
     <span class="nb-alert-text" data-bind="text: problem.text"></span>
     <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
+  </div>
+
+  <div class="nb-sendstate" role="status" data-bind="visible: emailState() !== 'idle', css: 'is-' + emailState()">
+    <span class="nb-icon" data-bind="css: emailState() === 'failed' ? 'i-shield' : (emailState() === 'sent' ? 'i-check' : 'i-mail')" aria-hidden="true"></span>
+    <span class="nb-sendstate-text">
+      <strong data-bind="text: emailTitle"></strong>
+      <span data-bind="text: emailDetail"></span>
+    </span>
   </div>
 
   <section class="nb-sheet" aria-label="Filters">
@@ -32,8 +46,12 @@
   <section class="nb-sheet" aria-labelledby="statement-heading">
     <div class="nb-sheet-head">
       <div>
-        <h2 id="statement-heading" data-bind="text: account() ? label(account().accountType) + ' ' + account().accountNumber : 'Statement'"></h2>
-        <p class="nb-sheet-sub" data-bind="text: rangeText"></p>
+        <h2 id="statement-heading" data-bind="text: account() ? accountName(account()) : 'Statement'"></h2>
+        <p class="nb-sheet-sub">
+          <span data-bind="visible: account, text: account() ? accountKind(account()) + ' ' + account().accountNumber : ''"></span>
+          <span data-bind="text: filterSummary"></span>
+          <span data-bind="text: rangeText"></span>
+        </p>
       </div>
       <span class="nb-chip" data-bind="visible: account, text: account() ? 'Available ' + money(account().availableBalance, account().currencyCode) : ''"></span>
     </div>

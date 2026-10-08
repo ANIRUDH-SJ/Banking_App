@@ -1,60 +1,94 @@
 <div class="nb-page nb-notices-page">
-  <header class="nb-page-head">
+  <header class="nb-page-head has-actions">
     <p class="nb-kicker">Messages from the bank</p>
     <h1 id="notices-heading">Notices</h1>
-    <p class="nb-lede">Security alerts, payment results and service messages. The bank will never ask for your password or authenticator code here.</p>
+    <p class="nb-lede">Security alerts, payment results and service messages. The bank will never ask for your password, PIN or authenticator code here.</p>
+    <div class="nb-head-actions">
+      <oj-c-button chroming="outlined" label="[[markingAll() ? 'Marking…' : 'Mark all as read']]" disabled="[[markingAll() || unreadHere() === 0]]" on-oj-action="[[markAll]]">
+        <span slot="startIcon" class="nb-icon i-check" aria-hidden="true"></span>
+      </oj-c-button>
+    </div>
   </header>
 
-  <div class="nb-alert" role="alert" data-bind="visible: error">
-    <span class="nb-alert-text" data-bind="text: error"></span>
-    <span class="nb-alert-ref" data-bind="visible: reference, text: reference"></span>
+  <div class="nb-alert" role="alert" data-bind="visible: problem.text">
+    <span class="nb-alert-text" data-bind="text: problem.text"></span>
+    <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
   </div>
 
-  <section class="nb-sheet" aria-labelledby="notices-heading">
-    <ul class="nb-notices" data-bind="visible: loading" aria-hidden="true">
-      <!-- ko foreach: [1, 2, 3] -->
-      <li class="nb-notice is-skeleton">
-        <oj-c-skeleton height="0.75rem" width="7rem"></oj-c-skeleton>
-        <div>
-          <oj-c-skeleton height="1rem" width="45%"></oj-c-skeleton>
-          <oj-c-skeleton height="0.875rem" width="85%"></oj-c-skeleton>
-        </div>
-      </li>
+  <div class="nb-inbox" data-bind="css: { 'has-detail': selected }">
+    <section class="nb-sheet nb-inbox-list" aria-labelledby="notices-heading">
+      <ul class="nb-notices" data-bind="visible: loading" aria-hidden="true">
+        <!-- ko foreach: [1, 2, 3] -->
+        <li class="nb-notice is-skeleton">
+          <oj-c-skeleton height="2.25rem" width="2.25rem" border-radius="50%"></oj-c-skeleton>
+          <div>
+            <oj-c-skeleton height="1rem" width="45%"></oj-c-skeleton>
+            <oj-c-skeleton height="0.875rem" width="85%"></oj-c-skeleton>
+          </div>
+        </li>
+        <!-- /ko -->
+      </ul>
+      <p class="nb-sr" role="status" data-bind="text: loading() ? 'Loading notices' : unreadHere() + ' unread on this page'"></p>
+
+      <div class="nb-empty-panel is-quiet" data-bind="visible: !loading() && !problem.text() && notices().length === 0">
+        <span class="nb-empty-glyph i-bell" aria-hidden="true"></span>
+        <p><strong>You are all caught up</strong></p>
+        <p>New messages from the bank will appear here.</p>
+      </div>
+
+      <ul class="nb-notices" data-bind="visible: !loading(), foreach: notices">
+        <li>
+          <button type="button" class="nb-notice" data-bind="click: $parent.open, css: { 'is-unread': !$data.read, 'is-selected': $parent.isSelected($data) }, attr: { 'aria-current': $parent.isSelected($data) ? 'true' : null }">
+            <span class="nb-notice-glyph" data-bind="css: $parent.glyph($data)" aria-hidden="true"></span>
+            <span class="nb-notice-body">
+              <span class="nb-notice-title">
+                <span data-bind="text: title"></span>
+                <span class="nb-sr" data-bind="text: $data.read ? '' : ', unread'"></span>
+              </span>
+              <span class="nb-notice-preview" data-bind="text: message"></span>
+              <time class="nb-notice-when" data-bind="text: $parent.when(createdAt)"></time>
+            </span>
+            <span class="nb-notice-dot" aria-hidden="true"></span>
+          </button>
+        </li>
+      </ul>
+
+      <div class="nb-pager" data-bind="visible: page() > 0 || !last()">
+        <oj-c-button chroming="outlined" label="Newer" on-oj-action="[[newer]]" disabled="[[page() === 0]]"></oj-c-button>
+        <span class="nb-pager-at" data-bind="text: 'Page ' + (page() + 1)"></span>
+        <oj-c-button chroming="outlined" label="Older" on-oj-action="[[older]]" disabled="[[last]]"></oj-c-button>
+      </div>
+    </section>
+
+    <section class="nb-sheet nb-inbox-detail" aria-labelledby="notice-detail-heading" aria-live="polite">
+      <!-- ko ifnot: selected -->
+      <div class="nb-empty-panel is-quiet">
+        <span class="nb-empty-glyph i-notices" aria-hidden="true"></span>
+        <p><strong>Select a notice</strong></p>
+        <p>Its full message opens here and it is marked as read.</p>
+      </div>
       <!-- /ko -->
-    </ul>
-    <p class="nb-sr" role="status" data-bind="text: loading() ? 'Loading notices' : ''"></p>
-
-    <div class="nb-empty-panel is-quiet" data-bind="visible: !loading() && !error() && notices().length === 0">
-      <span class="nb-empty-glyph i-bell" aria-hidden="true"></span>
-      <p><strong>You are all caught up</strong></p>
-      <p>New messages from the bank will appear here.</p>
-    </div>
-
-    <ul class="nb-notices" data-bind="visible: !loading(), foreach: notices">
-      <li class="nb-notice" data-bind="css: { 'is-unread': !$data.read }">
-        <span class="nb-notice-dot" aria-hidden="true"></span>
-        <div class="nb-notice-body">
-          <h2 class="nb-notice-title">
-            <span data-bind="text: title"></span>
-            <span class="nb-sr" data-bind="text: $data.read ? '' : ', unread'"></span>
-          </h2>
-          <p data-bind="text: message"></p>
-          <p class="nb-notice-when"><time data-bind="text: $parent.when(createdAt)"></time></p>
+      <!-- ko with: selected -->
+      <div class="nb-notice-detail">
+        <button type="button" class="nb-back" data-bind="click: $parent.close">
+          <span class="nb-icon i-chevron" aria-hidden="true"></span>All notices
+        </button>
+        <div class="nb-notice-detail-head">
+          <span class="nb-notice-glyph is-large" data-bind="css: $parent.glyph($data)" aria-hidden="true"></span>
+          <div>
+            <p class="nb-kicker" data-bind="text: $data.notificationType ? $parent.label(notificationType) : 'Notice'"></p>
+            <h2 id="notice-detail-heading" tabindex="-1" data-bind="text: title"></h2>
+          </div>
         </div>
-        <oj-c-button
-          data-bind="visible: !$data.read"
-          chroming="borderless"
-          size="sm"
-          label="Mark as read"
-          disabled="[[$parent.busyId() === notificationId]]"
-          on-oj-action="[[$parent.markReadAction]]"></oj-c-button>
-      </li>
-    </ul>
-  </section>
-
-  <div class="nb-pager" data-bind="visible: page() > 0 || !last()">
-    <oj-c-button chroming="outlined" label="Newer" on-oj-action="[[newer]]" disabled="[[page() === 0]]"></oj-c-button>
-    <span class="nb-pager-at" data-bind="text: 'Page ' + (page() + 1)"></span>
-    <oj-c-button chroming="outlined" label="Older" on-oj-action="[[older]]" disabled="[[last]]"></oj-c-button>
+        <p class="nb-notice-message" data-bind="text: message"></p>
+        <dl class="nb-review">
+          <div><dt>Received</dt><dd data-bind="text: $parent.when(createdAt)"></dd></div>
+          <div><dt>Status</dt><dd><oj-c-badge size="sm" variant="[[read ? 'neutralSubtle' : 'infoSubtle']]" label="[[read ? 'Read' : 'Unread']]"></oj-c-badge></dd></div>
+          <div data-bind="visible: $data.readAt"><dt>Read</dt><dd data-bind="text: $data.readAt ? $parent.when(readAt) : ''"></dd></div>
+        </dl>
+        <p class="nb-note"><span class="nb-icon i-shield" aria-hidden="true"></span><span>If anything here looks unfamiliar, block your cards from Cards and call the bank on the number printed on your card.</span></p>
+      </div>
+      <!-- /ko -->
+    </section>
   </div>
 </div>
