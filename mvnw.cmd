@@ -31,7 +31,7 @@
 @SET __MVNW_CMD__=
 @SET __MVNW_ERROR__=
 @REM Some Windows installations set JAVA_HOME with surrounding quotes. Maven requires the raw path.
-@SET "JAVA_HOME=%JAVA_HOME:"=%"
+@IF DEFINED JAVA_HOME SET "JAVA_HOME=%JAVA_HOME:"=%"
 @SET __MVNW_PSMODULEP_SAVE=%PSModulePath%
 @SET PSModulePath=
 @FOR /F "usebackq tokens=1* delims==" %%A IN (`powershell -noprofile "& {$scriptDir='%~dp0'; $script='%__MVNW_ARG0_NAME__%'; icm -ScriptBlock ([Scriptblock]::Create((Get-Content -Raw '%~f0'))) -NoNewScope}"`) DO @(

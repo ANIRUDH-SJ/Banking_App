@@ -65,7 +65,7 @@ define([
 
     self.connected = function () {
       accUtils.announce('Enter the Microsoft Authenticator code.', 'polite');
-      document.title = 'Authenticator code | Internet Banking';
+      document.title = 'Authenticator code | ORACLE INTERNATIONAL BANK (OIB)';
       if (!registry.authFlow.getChallengeId()) {
         registry.go('login');
       }

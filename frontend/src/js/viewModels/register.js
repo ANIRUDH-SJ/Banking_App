@@ -122,8 +122,8 @@ define([
     };
 
     self.connected = function () {
-      accUtils.announce('Register for Internet Banking.', 'polite');
-      document.title = 'Register | Internet Banking';
+      accUtils.announce('Register for ORACLE INTERNATIONAL BANK (OIB).', 'polite');
+      document.title = 'Register | ORACLE INTERNATIONAL BANK (OIB)';
     };
 
     self.disconnected = function () {

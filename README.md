@@ -1,4 +1,4 @@
-# Internet Banking
+# ORACLE INTERNATIONAL BANK (OIB)
 
 Oracle JET frontend and independently runnable Spring Boot services, with Eureka service discovery and one local Oracle Database 26ai instance per developer.
 
@@ -65,6 +65,41 @@ starting any service, so a checked-out source change cannot silently run an old
 run `./mvnw verify` (or `mvnw.cmd verify` on Windows) separately for the full suite.
 Direct `node scripts/run-service.mjs <service-name>` launches also perform a
 fresh build; the all-services launcher builds only once for its child services.
+The all-services launcher refuses to rebuild while any backend port is already
+occupied, waits for each service health check, and stops its own Java processes
+if one fails. Stop an existing run with Ctrl+C before starting it again; do not
+run a second copy against the same JARs.
+
+For the complete Kafka-backed stack on Windows, use one command:
+
+```powershell
+node scripts/run-all-services.mjs --kafka
+```
+
+The same launcher requires Java 17, starts or reuses Kafka from `KAFKA_HOME`
+(`C:\kafka` by default on Windows), safely formats only an empty KRaft data
+directory, creates and verifies the single `banking.events.v1` application
+topic, then starts Eureka, all six business services and the API gateway in
+dependency order. Ctrl+C stops every process that the launcher started.
+
+## Local .env configuration
+
+With Node 20.12 or newer, run `node scripts/export-local-env.mjs` once after
+configuring `.local` to create a Git-ignored `.env` with your existing credentials.
+The startup scripts load this file automatically. Shared entries apply to all
+services; entries such as `NOTIFICATION_SERVICE__SMTP_PASSWORD` apply only to
+that service, overriding its `.local` JSON. Never use a shared `DB_USERNAME` or
+`SERVICE_TOKEN`: each service has its own schema and token. JWT private and TOTP
+keys stay scoped to identity-service. Keep this file out of frontend assets.
+`configure-resend.mjs` updates both local configuration files when `.env` exists.
+
+For real OTP delivery, sign in with a customer whose registered email can receive
+mail. Seed addresses ending in `.test` are dummy addresses and cannot receive
+SMTP email. The `onboarding@resend.dev` sender is intended for testing delivery to
+the Resend account owner's inbox. Other recipients require a verified sender domain.
+The transfer limit defaults to INR 100000 and can be configured locally with
+`PAYMENTS_SERVICE__TRANSFER_MAX_AMOUNT`; an available balance above the limit does
+not increase the per-transfer limit. SMS defaults to the development log provider.
 
 ## Existing documentation
 

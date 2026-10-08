@@ -21,6 +21,15 @@ define([
     self.reference = ko.observable('');
     self.busy = ko.observable(false);
 
+    function clearPreviousAttempt() {
+      if (self.busy()) return;
+      self.formError('');
+      self.reference('');
+    }
+
+    self.username.subscribe(clearPreviousAttempt);
+    self.password.subscribe(clearPreviousAttempt);
+
     self.signIn = function () {
       var usernameError = registry.validation.usernameOrEmail(self.username());
       var passwordError = registry.validation.required(self.password(), 'Enter your password.');
@@ -77,8 +86,8 @@ define([
     };
 
     self.connected = function () {
-      accUtils.announce('Sign in to Internet Banking.', 'polite');
-      document.title = 'Sign in | Internet Banking';
+      accUtils.announce('Sign in to ORACLE INTERNATIONAL BANK (OIB).', 'polite');
+      document.title = 'Sign in | ORACLE INTERNATIONAL BANK (OIB)';
     };
   }
 

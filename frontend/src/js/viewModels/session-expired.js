@@ -4,8 +4,8 @@ define(['../accUtils', '../services/registry', 'oj-c/button'], function (accUtil
       registry.go('login');
     };
     this.connected = function () {
-      accUtils.announce('Your Internet Banking session has ended.', 'assertive');
-      document.title = 'Session ended | Internet Banking';
+      accUtils.announce('Your ORACLE INTERNATIONAL BANK (OIB) session has ended.', 'assertive');
+      document.title = 'Session ended | ORACLE INTERNATIONAL BANK (OIB)';
     };
   }
   return SessionExpiredViewModel;

@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -68,6 +69,23 @@ public class DemoCardIssuer {
         cards.saveAndFlush(credit);
         history(credit, today);
         return List.of(debit, credit);
+    }
+
+    /**
+     * Adds encrypted synthetic PANs to legacy development seed cards. This runs only when demo
+     * issuance is explicitly enabled, so production card rows are never synthesized.
+     */
+    List<BankCard> protectExisting(List<BankCard> existing) {
+        if (!numbers.enabled()) return existing;
+        boolean changed = false;
+        for (BankCard card : existing) {
+            if (card.getPanCiphertext() != null) continue;
+            String number = demoNumber(card.getCardNetwork(), card.getLastFour());
+            card.protectNumber(numbers.encrypt(number, card.getCardToken()));
+            changed = true;
+        }
+        if (changed) cards.saveAll(existing);
+        return existing;
     }
 
     private BankCard card(
@@ -159,5 +177,35 @@ public class DemoCardIssuer {
             sum += digit;
         }
         return digits.append((10 - sum % 10) % 10).toString();
+    }
+
+    private String demoNumber(CardNetwork network, String lastFour) {
+        String bin = switch (network) {
+            case VISA -> "424242";
+            case MASTERCARD -> "555555";
+            case RUPAY -> "652294";
+        };
+        while (true) {
+            String candidate =
+                    bin
+                            + String.format(Locale.ROOT, "%06d", random.nextInt(1_000_000))
+                            + lastFour;
+            if (validLuhn(candidate)) return candidate;
+        }
+    }
+
+    private static boolean validLuhn(String number) {
+        int sum = 0;
+        boolean doubleDigit = false;
+        for (int i = number.length() - 1; i >= 0; i--) {
+            int digit = number.charAt(i) - '0';
+            if (doubleDigit) {
+                digit *= 2;
+                if (digit > 9) digit -= 9;
+            }
+            sum += digit;
+            doubleDigit = !doubleDigit;
+        }
+        return sum % 10 == 0;
     }
 }

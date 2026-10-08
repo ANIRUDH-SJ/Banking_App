@@ -10,6 +10,7 @@
   <div class="nb-alert" role="alert" data-bind="visible: problem.text">
     <span class="nb-alert-text" data-bind="text: problem.text"></span>
     <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
+    <oj-c-button label="Try again" chroming="borderless" on-oj-action="[[retry]]" data-bind="visible: !detail()"></oj-c-button>
   </div>
   <p class="nb-success" role="status" data-bind="visible: success, text: success"></p>
 
@@ -35,20 +36,17 @@
         </div>
         <span class="nb-paycard-chip" aria-hidden="true"></span>
         <div>
+          <div class="nb-paycard-number-row">
           <p class="nb-paycard-number" data-bind="text: display, attr: { 'aria-label': shown() ? 'Card number ' + display() : 'Card number ending ' + last4 }"></p>
+          <button type="button" class="nb-eye" data-bind="click: toggle, disable: revealing() || !canReveal, css: { 'is-on': shown }, attr: { 'aria-pressed': shown() ? 'true' : 'false', 'aria-label': toggleLabel, title: toggleLabel, 'aria-busy': revealing() ? 'true' : 'false' }">
+            <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
+          </button>
+          </div>
           <div class="nb-paycard-foot">
             <span>Valid thru <b data-bind="text: expiry"></b></span>
             <span class="nb-paycard-timer" data-bind="visible: shown, text: 'Hides in ' + secondsLeft() + 's'"></span>
           </div>
         </div>
-        <!-- ko if: canReveal -->
-        <button type="button" class="nb-eye" data-bind="click: toggle, disable: revealing, css: { 'is-on': shown }, attr: { 'aria-pressed': shown() ? 'true' : 'false', 'aria-label': toggleLabel, title: toggleLabel }">
-          <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
-        </button>
-        <!-- /ko -->
-        <!-- ko ifnot: canReveal -->
-        <span class="nb-row-meta">Full number unavailable</span>
-        <!-- /ko -->
       </div>
       <p class="nb-field-error" role="alert" data-bind="visible: error, text: error"></p>
 
@@ -149,20 +147,17 @@
           </div>
           <span class="nb-paycard-chip" aria-hidden="true"></span>
           <div>
+            <div class="nb-paycard-number-row">
             <p class="nb-paycard-number" data-bind="text: display, attr: { 'aria-label': shown() ? 'Card number ' + display() : 'Card number ending ' + last4 }"></p>
+            <button type="button" class="nb-eye" data-bind="click: toggle, disable: revealing() || !canReveal, css: { 'is-on': shown }, attr: { 'aria-pressed': shown() ? 'true' : 'false', 'aria-label': toggleLabel, title: toggleLabel, 'aria-busy': revealing() ? 'true' : 'false' }">
+              <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
+            </button>
+            </div>
             <div class="nb-paycard-foot">
               <span>Valid thru <b data-bind="text: expiry"></b></span>
               <span class="nb-paycard-timer" data-bind="visible: shown, text: 'Hides in ' + secondsLeft() + 's'"></span>
             </div>
           </div>
-          <!-- ko if: canReveal -->
-          <button type="button" class="nb-eye" data-bind="click: toggle, disable: revealing, css: { 'is-on': shown }, attr: { 'aria-pressed': shown() ? 'true' : 'false', 'aria-label': toggleLabel, title: toggleLabel }">
-            <span class="nb-icon" data-bind="css: shown() ? 'i-eye-off' : 'i-eye'" aria-hidden="true"></span>
-          </button>
-          <!-- /ko -->
-          <!-- ko ifnot: canReveal -->
-          <span class="nb-row-meta">Full number unavailable</span>
-          <!-- /ko -->
         </div>
         <p class="nb-field-error" role="alert" data-bind="visible: error, text: error"></p>
         <dl class="nb-mini-facts">

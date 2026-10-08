@@ -41,7 +41,7 @@ function proxyApi(req, res, next) {
       timestamp: new Date().toISOString(),
       status: 502,
       code: 'UPSTREAM_REQUEST_FAILED',
-      message: 'Internet Banking is unavailable. Try again shortly.',
+      message: 'ORACLE INTERNATIONAL BANK (OIB) is unavailable. Try again shortly.',
       path: req.url,
       correlationId: '',
       fieldErrors: {}

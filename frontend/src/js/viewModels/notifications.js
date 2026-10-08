@@ -178,7 +178,7 @@ define([
 
     self.connected = function () {
       accUtils.announce('Notices.', 'polite');
-      document.title = 'Notices | Internet Banking';
+      document.title = 'Notices | ORACLE INTERNATIONAL BANK (OIB)';
       self.selected(null);
       load(0, ui.take('notifications.id'));
     };

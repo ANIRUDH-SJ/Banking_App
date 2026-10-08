@@ -259,7 +259,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Beneficiaries.', 'polite');
-      document.title = 'Beneficiaries | Internet Banking';
+      document.title = 'Beneficiaries | ORACLE INTERNATIONAL BANK (OIB)';
       self.loading(true);
       self.problem.clear();
       self.success('');

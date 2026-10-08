@@ -7,6 +7,7 @@ import com.netbanking.card.api.EmiPlanResponse;
 import com.netbanking.card.domain.BankCard;
 import com.netbanking.card.domain.CardEmiPlan;
 import com.netbanking.card.domain.CardStatus;
+import com.netbanking.card.domain.CardType;
 import com.netbanking.card.domain.CardTransaction;
 import com.netbanking.card.repository.CardEmiPlanRepository;
 import com.netbanking.card.repository.CardTransactionRepository;
@@ -127,8 +128,10 @@ public class CreditCardService {
 
     private BankCard creditCard(Long userId, Long cardId) {
         BankCard card = cards.findOwnedCard(userId, cardId);
-        if (!card.hasCreditAccount())
+        if (card.getCardType() != CardType.CREDIT)
             throw new ConflictException("Billing details are available for credit cards only.");
+        if (!card.hasCreditAccount())
+            throw new ConflictException("Billing has not been configured for this credit card.");
         return card;
     }
 

@@ -59,7 +59,8 @@ class TotpServiceTest {
 
         assertThat(response.provisioningUri()).startsWith("otpauth://totp/");
         assertThat(response.provisioningUri()).contains("secret=" + SECRET);
-        assertThat(response.provisioningUri()).contains("issuer=Internet%20Banking");
+        assertThat(response.provisioningUri())
+                .contains("issuer=ORACLE%20INTERNATIONAL%20BANK%20%28OIB%29");
         assertThat(response.provisioningUri()).contains("digits=6");
         assertThat(response.provisioningUri()).contains("period=30");
         assertThat(response.qrCodeDataUri()).startsWith("data:image/png;base64,");
@@ -148,7 +149,7 @@ class TotpServiceTest {
         return new TotpService(
                 repository,
                 cipher,
-                "Internet Banking",
+                "ORACLE INTERNATIONAL BANK (OIB)",
                 secretGenerator,
                 verifier,
                 CODE_GENERATOR,

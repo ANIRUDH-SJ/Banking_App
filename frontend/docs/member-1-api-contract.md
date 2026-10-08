@@ -60,7 +60,7 @@ Invalid credentials return `401` with `UNAUTHORIZED`. Repeated authentication po
   "provisioningUri": "otpauth://totp/...",
   "qrCodeDataUri": "data:image/png;base64,...",
   "manualEntryKey": "BASE32_SECRET",
-  "issuer": "Internet Banking",
+  "issuer": "ORACLE INTERNATIONAL BANK (OIB)",
   "accountName": "asha"
 }
 ```

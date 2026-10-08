@@ -44,6 +44,9 @@ define(['knockout', './registry', './format'], function (ko, registry, format) {
       return self.number() || '•••• •••• •••• ' + self.last4;
     });
     self.toggleLabel = ko.pureComputed(function () {
+      if (!self.canReveal) {
+        return 'Full number unavailable for card ending ' + self.last4;
+      }
       if (self.revealing()) {
         return 'Showing card number';
       }

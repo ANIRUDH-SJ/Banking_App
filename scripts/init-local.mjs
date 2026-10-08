@@ -45,6 +45,7 @@ for (const [name, [schema, port]] of Object.entries(applications)) {
     ...(name === 'identity-service' ? {
       JWT_PRIVATE_KEY: privateKey.export({ type: 'pkcs8', format: 'der' }).toString('base64'),
       TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
+      TOTP_ISSUER: 'ORACLE INTERNATIONAL BANK (OIB)',
       SPRING_PROFILES_ACTIVE: 'local',
     } : {}),
     ...(name === 'products-service' ? {

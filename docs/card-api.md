@@ -102,3 +102,17 @@ node -e "const c=require('crypto');console.log(JSON.stringify({CARD_PAN_ENCRYPTI
 ```
 
 Flyway migration `V6__card_security_and_credit.sql` adds the columns and tables.
+
+The older `development_seed_data` script inserts card `0103` as `CREDIT` without the
+billing columns introduced in V6. For an existing local demo database, run
+`database/development_credit_card_0103.sql` as `NB_PRODUCTS` once. It updates only
+the matching seed card with a demo limit and zero balances; it is not a
+production migration. The card has no seeded purchases, so its transaction list
+remains empty until demo transactions are added.
+
+When `CARD_DEMO_ISSUANCE=true` and `CARD_PAN_ENCRYPTION_KEY` is configured, the
+products service also encrypts a synthetic PAN for legacy development seed cards
+that have no protected number. This makes the eye control available without ever
+storing a clear-text PAN. The number is returned only by the authenticated reveal
+endpoint, uses no-store response headers, and is automatically masked again after
+30 seconds.

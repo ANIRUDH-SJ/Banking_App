@@ -240,7 +240,7 @@ define([
 
     self.connected = function () {
       accUtils.announce('Accounts.', 'polite');
-      document.title = 'Accounts | Internet Banking';
+      document.title = 'Accounts | ORACLE INTERNATIONAL BANK (OIB)';
       self.refreshAccounts();
     };
 

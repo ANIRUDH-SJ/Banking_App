@@ -412,7 +412,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Foreign exchange.', 'polite');
-      document.title = 'Forex | Internet Banking';
+      document.title = 'Forex | ORACLE INTERNATIONAL BANK (OIB)';
       self.problem.clear();
       timer = window.setInterval(tick, 1000);
       loadAccounts(ticket);

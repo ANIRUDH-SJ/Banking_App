@@ -2,7 +2,9 @@ package com.netbanking.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
+import com.netbanking.common.exception.EmailDeliveryException;
+import org.springframework.mail.MailSendException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +27,27 @@ import java.util.concurrent.TimeUnit;
 @ExtendWith(MockitoExtension.class)
 class SmtpEmailServiceTest {
     @Mock private JavaMailSender mailSender;
+
+    @Test
+    void rejectsDummyRecipientBeforeContactingSmtp() {
+        var service = new SmtpEmailService(mailSender, "from@example.com", false, "", "");
+        assertThatThrownBy(() -> service.send("seed.customer02@netbanking.test", "OTP", "123456"))
+                .isInstanceOfSatisfying(EmailDeliveryException.class,
+                        e -> assertThat(e.code()).isEqualTo("EMAIL_RECIPIENT_UNDELIVERABLE"));
+        verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void smtpFailureDoesNotExposeProviderDetails() {
+        doThrow(new MailSendException("private SMTP response"))
+                .when(mailSender).send(any(SimpleMailMessage.class));
+        var service = new SmtpEmailService(mailSender, "from@example.com", false, "", "");
+        assertThatThrownBy(() -> service.send("recipient@example.com", "OTP", "123456"))
+                .isInstanceOfSatisfying(EmailDeliveryException.class, e -> {
+                    assertThat(e.code()).isEqualTo("EMAIL_DELIVERY_UNAVAILABLE");
+                    assertThat(e.getReason()).doesNotContain("private SMTP response", "123456");
+                });
+    }
 
     @Test
     void sendsPlainTextEmailThroughTheConfiguredMailSender() {

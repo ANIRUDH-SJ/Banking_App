@@ -296,7 +296,7 @@ define([
 
     self.connected = function () {
       accUtils.announce('Transfer money.', 'polite');
-      document.title = 'Transfer | Internet Banking';
+      document.title = 'Transfer | ORACLE INTERNATIONAL BANK (OIB)';
       self.refreshOptions();
       loadHistory();
     };

@@ -15,7 +15,7 @@ define([
     var self = this;
     self.qrCodeDataUri = ko.observable('');
     self.manualEntryKey = ko.observable('');
-    self.issuer = ko.observable('Internet Banking');
+    self.issuer = ko.observable('ORACLE INTERNATIONAL BANK (OIB)');
     self.accountName = ko.observable('');
     self.code = ko.observable('');
     self.codeMessages = ko.observableArray([]);
@@ -86,7 +86,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Set up Microsoft Authenticator.', 'polite');
-      document.title = 'Set up Microsoft Authenticator | Internet Banking';
+      document.title = 'Set up Microsoft Authenticator | ORACLE INTERNATIONAL BANK (OIB)';
       if (!registry.authFlow.hasCredentials()) {
         registry.go('login');
         return;
@@ -100,7 +100,7 @@ define([
         }
         self.qrCodeDataUri(setup.qrCodeDataUri || '');
         self.manualEntryKey(setup.manualEntryKey || '');
-        self.issuer(setup.issuer || 'Internet Banking');
+        self.issuer(setup.issuer || 'ORACLE INTERNATIONAL BANK (OIB)');
         self.accountName(setup.accountName || credentials.usernameOrEmail);
       }).catch(function (error) {
         if (ticket !== generation) {

@@ -16,11 +16,15 @@ public class OtpDeliveryClient {
     }
 
     public Receipt deliver(Command command) {
-        return client.post(
+        try {
+            return client.post(
                 "notification-service",
                 "/internal/otp-deliveries",
                 command,
                 Receipt.class);
+        } catch (DownstreamRejectedException rejected) {
+            throw EmailDeliveryErrors.translate(rejected);
+        }
     }
 
     public record Command(

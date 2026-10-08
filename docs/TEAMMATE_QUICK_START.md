@@ -1,4 +1,4 @@
-# Internet Net Banking — teammate quick start
+# ORACLE INTERNATIONAL BANK (OIB) — teammate quick start
 
 Each developer runs their **own local Oracle database**. Do not share passwords, Podman volumes, or SSH keys.
 
