@@ -90,11 +90,21 @@
         </span>
         <span class="nb-item-side">
           <span class="nb-deposit-figure">
-            <span class="nb-review-label">At maturity</span>
-            <span data-bind="text: $parent.money(estimatedMaturity, 'INR')"></span>
+            <span class="nb-review-label" data-bind="text: status === 'CLOSED' || status === 'MATURED' ? 'Paid out' : 'At maturity'"></span>
+            <span data-bind="text: $parent.money(status === 'CLOSED' || status === 'MATURED' ? payoutAmount : estimatedMaturity, 'INR')"></span>
           </span>
           <oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge>
         </span>
+        <div class="nb-item-extra">
+          <p class="nb-row-meta" data-bind="text: 'Funded from ' + $parent.sourceAccount($data)"></p>
+          <p class="nb-row-meta" data-bind="visible: payoutReference, text: 'Payout reference: ' + payoutReference"></p>
+          <!-- ko if: status === 'ACTIVE' -->
+          <oj-c-button size="sm" chroming="outlined" label="Close early" on-oj-action="[[function () { $parent.startClosure($data); }]]"></oj-c-button>
+          <!-- /ko -->
+          <!-- ko if: status === 'CLOSURE_PENDING' -->
+          <p class="nb-row-meta">Closure payout is processing. Refresh to see its status.</p>
+          <!-- /ko -->
+        </div>
         <!-- ko if: kind === 'RD' -->
         <div class="nb-item-extra nb-deposit-rd">
           <div class="nb-meter">
@@ -106,10 +116,51 @@
               <span data-bind="visible: nextDueAt, text: 'Next due ' + $parent.date(nextDueAt)"></span>
             </p>
           </div>
-          <oj-c-button size="sm" chroming="outlined" label="[[$parent.payingId() === depositId ? 'Paying…' : 'Pay ' + $parent.money(installmentOrPrincipal, 'INR')]]" disabled="[[status !== 'ACTIVE' || !!$parent.payingId()]]" on-oj-action="[[function () { $parent.payInstallment($data); }]]"></oj-c-button>
+          <oj-c-button size="sm" chroming="outlined" label="[[$parent.payingId() === depositId ? 'Paying…' : 'Pay ' + $parent.money(installmentOrPrincipal, 'INR')]]" disabled="[[!$parent.canPayInstallment($data) || !!$parent.payingId()]]" on-oj-action="[[function () { $parent.payInstallment($data); }]]"></oj-c-button>
         </div>
         <!-- /ko -->
       </li>
     </ul>
   </section>
+
+  <!-- ko if: closingDeposit() -->
+  <section class="nb-sheet nb-flow-sheet" aria-labelledby="deposit-close-heading">
+    <div class="nb-flow-panel">
+      <h2 id="deposit-close-heading">Close deposit early</h2>
+      <p class="nb-lede" data-bind="text: kindName(closingDeposit().kind) + ' · ' + sourceAccount(closingDeposit())"></p>
+      <div class="nb-alert" role="alert" data-bind="visible: closureError.text">
+        <span class="nb-alert-text" data-bind="text: closureError.text"></span>
+        <span class="nb-alert-ref" data-bind="visible: closureError.reference, text: closureError.reference"></span>
+      </div>
+      <!-- ko if: closureQuote() -->
+      <p>Closing before maturity changes the interest paid. Review the final payout before confirming. This cannot be undone.</p>
+      <dl class="nb-quote">
+        <div><dt>Principal saved</dt><dd data-bind="text: money(closureQuote().principal, 'INR')"></dd></div>
+        <div><dt>Interest earned</dt><dd data-bind="text: money(closureQuote().interest, 'INR')"></dd></div>
+        <div><dt>Early-closure rate</dt><dd data-bind="text: closureQuote().annualRatePercent + '%' "></dd></div>
+        <div><dt>Credit to source account</dt><dd data-bind="text: money(closureQuote().payoutAmount, 'INR')"></dd></div>
+        <p class="nb-quote-foot" data-bind="text: 'Quote valid until ' + closureExpiry() + '. No separate fee is charged.'"></p>
+      </dl>
+      <!-- ko ifnot: closureChallengeId() -->
+      <div class="nb-actions">
+        <oj-c-button chroming="callToAction" label="[[closureBusy() ? 'Sending…' : 'Send confirmation code']]" disabled="[[closureBusy]]" on-oj-action="[[sendClosureCode]]"></oj-c-button>
+        <oj-c-button chroming="borderless" label="Keep deposit" disabled="[[closureBusy]]" on-oj-action="[[cancelClosure]]"></oj-c-button>
+      </div>
+      <!-- /ko -->
+      <!-- ko if: closureChallengeId() -->
+      <p>Enter the six-digit code sent to your registered contact to approve this payout.</p>
+      <oj-c-input-text class="nb-code-input" label-hint="6-digit code" value="{{closureCode}}" messages-custom="[[closureCodeMessages]]" length.max="6" virtual-keyboard="number" autocomplete="one-time-code"></oj-c-input-text>
+      <div class="nb-actions">
+        <oj-c-button chroming="callToAction" label="[[closureBusy() ? 'Closing…' : 'Confirm early closure']]" disabled="[[closureBusy]]" on-oj-action="[[confirmClosure]]"></oj-c-button>
+        <oj-c-button chroming="borderless" label="Keep deposit" disabled="[[closureBusy]]" on-oj-action="[[cancelClosure]]"></oj-c-button>
+      </div>
+      <!-- /ko -->
+      <!-- /ko -->
+      <!-- ko ifnot: closureQuote() -->
+      <p data-bind="visible: closureBusy">Preparing your early-closure payout…</p>
+      <oj-c-button chroming="borderless" label="Cancel" disabled="[[closureBusy]]" on-oj-action="[[cancelClosure]]"></oj-c-button>
+      <!-- /ko -->
+    </div>
+  </section>
+  <!-- /ko -->
 </div>

@@ -280,10 +280,19 @@ test('deposit service uses quote, open, and customer deposit endpoints', async (
   await deposits.quote({ sourceAccountId: 1, kind: 'FD', amount: 1000, termMonths: 12 });
   await deposits.open('quote/1', 'deposit-key');
   await deposits.collectInstallment('deposit/1');
+  await deposits.closureQuote('deposit/1');
+  await deposits.closureChallenge('deposit/1', 'closure/1');
+  await deposits.close('deposit/1', { quoteId: 'closure/1', idempotencyKey: 'close-key', otpChallengeId: 'challenge/1', otpCode: '123456' });
   assert.deepEqual(calls.map((call) => call.path), [
-    '/api/v1/deposits', '/api/v1/deposits/quotes', '/api/v1/deposits', '/api/v1/deposits/deposit%2F1/installments'
+    '/api/v1/deposits', '/api/v1/deposits/quotes', '/api/v1/deposits',
+    '/api/v1/deposits/deposit%2F1/installments',
+    '/api/v1/deposits/deposit%2F1/closure-quotes',
+    '/api/v1/deposits/deposit%2F1/closure-challenges',
+    '/api/v1/deposits/deposit%2F1/close'
   ]);
   assert.equal(calls[2].body.idempotencyKey, 'deposit-key');
+  assert.equal(calls[5].body.quoteId, 'closure/1');
+  assert.equal(calls[6].body.idempotencyKey, 'close-key');
 });
 
 test('forex service keeps quote and conversion confirmation separate', async () => {

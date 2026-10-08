@@ -31,7 +31,7 @@ public class OtpDeliveryClient {
             @NotBlank
                     @Pattern(
                             regexp =
-                                    "LOGIN|FUND_TRANSFER|BILL_PAYMENT|BENEFICIARY_ACTIVATION|FOREX_CONVERSION|PASSWORD_RESET")
+                                    "LOGIN|FUND_TRANSFER|BILL_PAYMENT|BENEFICIARY_ACTIVATION|FOREX_CONVERSION|DEPOSIT_CLOSURE|PASSWORD_RESET")
                     String purpose,
             @NotBlank @Pattern(regexp = "[0-9]{6}") String code,
             @NotNull Instant expiresAt) {}

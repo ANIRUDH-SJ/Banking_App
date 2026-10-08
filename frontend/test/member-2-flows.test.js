@@ -195,6 +195,66 @@ test('accounts screen displays only bank-provided balances', async () => {
   assert.equal(screen.loading(), false);
 });
 
+test('deposit closure requires a server quote and code before showing a payout', async () => {
+  const calls = [];
+  const deposit = {
+    depositId: 'deposit-1', kind: 'FD', status: 'ACTIVE', sourceAccountId: 11,
+    termMonths: 12, installmentsPaid: 1, installmentOrPrincipal: 1000
+  };
+  const customKo = Object.assign({}, ko, {
+    observable(initial) {
+      const value = observable(initial);
+      value.subscribe = () => {};
+      return value;
+    },
+    observableArray(initial) {
+      const value = observable(initial || []);
+      value.replace = (oldItem, newItem) => value(value().map((item) => item === oldItem ? newItem : item));
+      return value;
+    }
+  });
+  const Deposits = load('deposits.js', {
+    knockout: customKo,
+    '../accUtils': { announce: () => {} },
+    '../services/registry': {
+      otp: { validateCode: (code) => /^\d{6}$/.test(code) ? '' : 'Enter the 6-digit code.' },
+      deposits: {
+        closureQuote: async (id) => {
+          calls.push(['quote', id]);
+          return { quoteId: 'quote-1', principal: 1000, interest: 5, payoutAmount: 1005,
+            expiresAt: new Date(Date.now() + 600000).toISOString() };
+        },
+        closureChallenge: async (id, quoteId) => {
+          calls.push(['challenge', id, quoteId]);
+          return { challengeId: 'challenge-1' };
+        },
+        close: async (id, request) => {
+          calls.push(['close', id, request]);
+          return { depositId: id, status: 'CLOSED', payoutAmount: 1005, payoutReference: 'ledger-1' };
+        }
+      }
+    },
+    '../services/format': Object.assign({}, format, { formatDate: () => 'today', formatTime: () => 'soon' }),
+    '../services/ui-support': ui
+  });
+  const screen = new Deposits();
+  screen.deposits([deposit]);
+  screen.startClosure(deposit);
+  await tick();
+  assert.equal(calls.length, 1);
+  assert.equal(screen.closureQuote().payoutAmount, 1005);
+  screen.sendClosureCode();
+  await tick();
+  assert.equal(screen.closureChallengeId(), 'challenge-1');
+  screen.closureCode('123456');
+  screen.confirmClosure();
+  await tick();
+  assert.deepEqual(calls.map((call) => call[0]), ['quote', 'challenge', 'close']);
+  assert.equal(calls[2][2].idempotencyKey, 'test-idempotency-key');
+  assert.equal(screen.deposits()[0].status, 'CLOSED');
+  assert.equal(screen.deposits()[0].payoutReference, 'ledger-1');
+});
+
 test('transfer receipt comes only from the server after a real OTP challenge', async () => {
   const calls = [];
   const registry = {
