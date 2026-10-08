@@ -1182,7 +1182,8 @@ oj-c-badge {
 
 .nb-tile-links {
   display: flex;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.625rem 1rem;
   margin-top: 1rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--nb-line);
@@ -2798,6 +2799,8 @@ h2[tabindex="-1"]:focus {
 
 .nb-tile-links a {
   display: inline-flex;
+  flex: 0 0 auto;
+  white-space: nowrap;
   align-items: center;
   gap: 0.3rem;
 }

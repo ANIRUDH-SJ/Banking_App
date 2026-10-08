@@ -313,6 +313,7 @@ public class PaymentService {
 
     private void requireLimit(BigDecimal amount) {
         if (amount.compareTo(limit) > 0)
-            throw new IllegalArgumentException("Transfer amount exceeds the configured limit.");
+            throw new IllegalArgumentException("Transfer amount exceeds the configured limit of INR "
+                    + limit.stripTrailingZeros().toPlainString() + ".");
     }
 }
