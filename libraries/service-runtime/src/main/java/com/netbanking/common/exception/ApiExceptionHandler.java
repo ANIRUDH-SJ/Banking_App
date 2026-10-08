@@ -121,6 +121,14 @@ public class ApiExceptionHandler {
                 fields);
     }
 
+    @ExceptionHandler(EmailDeliveryException.class)
+    ResponseEntity<ApiErrorResponse> emailDelivery(
+            EmailDeliveryException exception, HttpServletRequest request) {
+        return ResponseEntity.status(exception.getStatusCode()).cacheControl(CacheControl.noStore())
+                .body(errors.response(request, exception.getStatusCode().value(),
+                        exception.code(), exception.getReason(), Map.of()));
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     ResponseEntity<ApiErrorResponse> responseStatus(
             ResponseStatusException exception, HttpServletRequest request) {

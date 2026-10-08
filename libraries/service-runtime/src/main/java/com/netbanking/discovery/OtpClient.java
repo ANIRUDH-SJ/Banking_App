@@ -15,11 +15,15 @@ public class OtpClient {
     }
 
     public Challenge issue(Long userId, String purpose, String digest) {
-        return client.post(
+        try {
+            return client.post(
                 "identity-service",
                 "/internal/otp/challenges",
                 new Issue(userId, purpose, digest),
                 Challenge.class);
+        } catch (DownstreamRejectedException rejected) {
+            throw EmailDeliveryErrors.translate(rejected);
+        }
     }
 
     public void authorize(

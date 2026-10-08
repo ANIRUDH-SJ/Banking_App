@@ -1,5 +1,7 @@
 package com.netbanking.notification.service;
 
+import com.netbanking.common.exception.EmailDeliveryException;
+import org.springframework.mail.MailException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import jakarta.mail.MessagingException;
@@ -39,16 +41,22 @@ public class SmtpEmailService implements EmailService {
 
     @Override
     public void send(String recipient, String subject, String body) {
+        requireDeliverableRecipient(recipient);
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(senderAddress);
         message.setTo(recipient);
         message.setSubject(subject);
         message.setText(body);
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+        } catch (MailException failure) {
+            throw EmailDeliveryException.unavailable();
+        }
     }
 
     @Override
     public void send(String recipient, String subject, String body, Attachment attachment) {
+        requireDeliverableRecipient(recipient);
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper =
@@ -62,8 +70,20 @@ public class SmtpEmailService implements EmailService {
                     new ByteArrayResource(attachment.content()),
                     attachment.contentType());
             mailSender.send(message);
+        } catch (MailException failure) {
+            throw EmailDeliveryException.unavailable();
         } catch (MessagingException failure) {
             throw new IllegalStateException("The email could not be composed.", failure);
+        }
+    }
+
+    private static void requireDeliverableRecipient(String recipient) {
+        String domain = recipient.substring(recipient.lastIndexOf('@') + 1)
+                .toLowerCase(java.util.Locale.ROOT);
+        if (domain.equals("test") || domain.endsWith(".test")
+                || domain.equals("invalid") || domain.endsWith(".invalid")
+                || domain.equals("localhost") || domain.endsWith(".localhost")) {
+            throw EmailDeliveryException.undeliverableRecipient();
         }
     }
 }
