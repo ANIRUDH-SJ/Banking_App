@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/internal/otp")
-@PreAuthorize("hasAuthority('SERVICE_payments-service')")
+@PreAuthorize("hasAnyAuthority('SERVICE_payments-service','SERVICE_products-service')")
 public class InternalOtpController {
     private final OtpService otp;
     private final UserService users;
@@ -29,7 +29,8 @@ public class InternalOtpController {
     }
 
     @PostMapping("/challenges")
-    public Challenge issue(@Valid @RequestBody Issue request) {
+    public Challenge issue(@Valid @RequestBody Issue request, Authentication caller) {
+        requireCaller(caller, request.purpose());
         var user = users.requireById(request.userId());
         users.requireEligibleForLogin(user);
         return new Challenge(
@@ -38,6 +39,7 @@ public class InternalOtpController {
 
     @PostMapping("/authorizations")
     public void authorize(@Valid @RequestBody Authorization request, Authentication caller) {
+        requireCaller(caller, request.purpose());
         purpose(request.purpose());
         users.requireEligibleForLogin(users.requireById(request.userId()));
         if (!authorizations.authorize(caller.getName(), request))
@@ -45,12 +47,21 @@ public class InternalOtpController {
                     "OTP challenge is invalid, expired, or does not match this operation.");
     }
 
+    private static void requireCaller(Authentication caller, String purpose) {
+        boolean productClosure = "DEPOSIT_CLOSURE".equals(purpose);
+        String expected = productClosure ? "products-service" : "payments-service";
+        if (!expected.equals(caller.getName()))
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Service is not permitted for this OTP purpose.");
+    }
+
     private static OtpPurpose purpose(String value) {
         var purpose = OtpPurpose.valueOf(value);
         if (purpose != OtpPurpose.FUND_TRANSFER
                 && purpose != OtpPurpose.BILL_PAYMENT
                 && purpose != OtpPurpose.BENEFICIARY_ACTIVATION
-                && purpose != OtpPurpose.FOREX_CONVERSION)
+                && purpose != OtpPurpose.FOREX_CONVERSION
+                && purpose != OtpPurpose.DEPOSIT_CLOSURE)
             throw new IllegalArgumentException("Unsupported authorization purpose.");
         return purpose;
     }
