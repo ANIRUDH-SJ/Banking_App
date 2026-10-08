@@ -463,6 +463,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       var preset = ui.take('cards.cardId');
+      var pinId = ui.take('cards.pinId');
       accUtils.announce('Cards.', 'polite');
       document.title = 'Cards | Internet Banking';
       self.loading(true);
@@ -477,8 +478,12 @@ define([
         disposeCards();
         self.cards(CardView.wrap(results[0]));
         self.accounts(format.asList(results[1]));
+        var pinCard = self.cards().filter(function (view) { return view.id === pinId; })[0];
         var chosen = self.cards().filter(function (view) { return view.id === preset; })[0];
-        if (chosen && chosen.isCredit) {
+        if (pinCard && self.canSetPin(pinCard)) {
+          self.openPin(pinCard);
+          self.focusId(pinCard.id);
+        } else if (chosen && chosen.isCredit) {
           self.openDetail(chosen);
         } else if (chosen) {
           self.focusId(chosen.id);

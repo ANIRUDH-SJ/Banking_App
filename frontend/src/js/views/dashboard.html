@@ -128,6 +128,9 @@
           </span>
           <!-- /ko -->
           <oj-c-badge size="sm" variant="[[$parent.statusVariant(card.status)]]" label="[[$parent.label(card.status)]]"></oj-c-badge>
+          <!-- ko if: $parent.pinAction(card) -->
+          <a href="#" class="nb-more" data-bind="click: function () { return $parent.openPin($data); }, text: $parent.pinAction(card), attr: { 'aria-label': $parent.pinAction(card) + ' for ' + typeLabel + ' ending ' + last4 }"></a>
+          <!-- /ko -->
           <a href="#" class="nb-more" data-bind="click: $parent.openCard, attr: { 'aria-label': (isCredit ? 'Details for ' : 'Manage ') + typeLabel + ' ending ' + last4 }, text: isCredit ? 'Details' : 'Manage'"></a>
         </div>
       </li>

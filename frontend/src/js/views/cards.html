@@ -66,6 +66,7 @@
         <div><dt>Outstanding</dt><dd data-bind="text: $parent.money(card.credit.outstandingBalance, 'INR')"></dd></div>
         <div><dt>Minimum due</dt><dd data-bind="text: $parent.money(card.credit.minimumDue, 'INR')"></dd></div>
         <div><dt>Due date</dt><dd data-bind="text: card.credit.paymentDueDate ? $parent.day(card.credit.paymentDueDate) : '—'"></dd></div>
+        <div><dt>PIN</dt><dd data-bind="text: $parent.pinStatus($data), css: { 'is-danger': $parent.pinLockedUntil($data) }"></dd></div>
       </dl>
       <!-- /ko -->
       <!-- ko ifnot: isCredit && card.credit -->
@@ -160,9 +161,33 @@
         <p class="nb-field-error" role="alert" data-bind="visible: error, text: error"></p>
         <dl class="nb-mini-facts">
           <div><dt>Status</dt><dd><oj-c-badge size="sm" variant="[[$parent.statusVariant(card.status)]]" label="[[$parent.label(card.status)]]"></oj-c-badge></dd></div>
-          <div><dt>PIN</dt><dd data-bind="text: $parent.pinStatus($data)"></dd></div>
+          <div><dt>PIN</dt><dd data-bind="text: $parent.pinStatus($data), css: { 'is-danger': $parent.pinLockedUntil($data) }"></dd></div>
           <div><dt>CVV</dt><dd>Printed on card</dd></div>
         </dl>
+        <!-- ko if: $parent.canSetPin($data) && $parent.pinFor() !== id -->
+        <div class="nb-actions">
+          <oj-c-button chroming="outlined" label="[[$parent.pinLabel($data)]]" on-oj-action="[[function () { $parent.openPin($data); }]]">
+            <span slot="startIcon" class="nb-icon i-key" aria-hidden="true"></span>
+          </oj-c-button>
+        </div>
+        <!-- /ko -->
+        <!-- ko if: $parent.pinFor() === id -->
+        <form class="nb-inline-panel nb-pin-form" novalidate data-bind="submit: function () { return $parent.savePin($data); }" aria-label="Card PIN">
+          <p><strong data-bind="text: card.pinSet ? 'Change your PIN' : 'Set a PIN'"></strong> Choose four digits that are not repeated or in sequence. The PIN is encrypted on this device and the bank never stores it in readable form.</p>
+          <div class="nb-pin-fields">
+            <!-- ko if: card.pinSet -->
+            <oj-c-input-sensitive-text class="nb-pin-input" label-hint="Current PIN" value="{{$parent.pinForm.current}}" messages-custom="[[$parent.pinMessages.current]]" length.max="4" virtual-keyboard="number" autocomplete="off" mask-icon="hidden"></oj-c-input-sensitive-text>
+            <!-- /ko -->
+            <oj-c-input-sensitive-text class="nb-pin-input" label-hint="New PIN" value="{{$parent.pinForm.next}}" messages-custom="[[$parent.pinMessages.next]]" length.max="4" virtual-keyboard="number" autocomplete="off" mask-icon="hidden"></oj-c-input-sensitive-text>
+            <oj-c-input-sensitive-text class="nb-pin-input" label-hint="Re-enter new PIN" value="{{$parent.pinForm.confirm}}" messages-custom="[[$parent.pinMessages.confirm]]" length.max="4" virtual-keyboard="number" autocomplete="off" mask-icon="hidden"></oj-c-input-sensitive-text>
+          </div>
+          <p class="nb-hint" data-bind="visible: card.pinSet">Three wrong current PINs lock the PIN for 30 minutes.</p>
+          <div class="nb-actions">
+            <oj-c-button button-type="submit" chroming="callToAction" label="[[$parent.busy() ? 'Saving…' : (card.pinSet ? 'Change PIN' : 'Set PIN')]]" disabled="[[$parent.busy]]"></oj-c-button>
+            <oj-c-button chroming="borderless" label="Cancel" on-oj-action="[[$parent.closePin]]"></oj-c-button>
+          </div>
+        </form>
+        <!-- /ko -->
       </div>
 
       <!-- ko with: $parent.credit -->

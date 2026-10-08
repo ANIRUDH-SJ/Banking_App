@@ -161,6 +161,21 @@ define([
       registry.go('cards');
       return false;
     };
+    self.pinAction = function (card) {
+      var status = String(card.status || '').toUpperCase();
+      if (status !== 'ACTIVE' && status !== 'INACTIVE') {
+        return '';
+      }
+      if (card.pinLockedUntil && new Date(card.pinLockedUntil).getTime() > Date.now()) {
+        return '';
+      }
+      return card.pinSet ? 'Change PIN' : 'Set PIN';
+    };
+    self.openPin = function (view) {
+      ui.hand('cards.pinId', view.id);
+      registry.go('cards');
+      return false;
+    };
     self.openNotice = function (notice) {
       ui.hand('notifications.id', notice.notificationId);
       registry.go('notifications');
