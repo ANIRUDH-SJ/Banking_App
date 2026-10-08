@@ -62,7 +62,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Billers.', 'polite');
-      document.title = 'Billers | Internet Banking';
+      document.title = 'Billers | ORACLE INTERNATIONAL BANK (OIB)';
       self.loading(true);
       self.problem.clear();
       billers.listActive().then(function (list) {

@@ -94,7 +94,7 @@ test('profile shows the customer account summary without exposing full numbers',
       profile: { get: async () => ({ customerNumber: 'C1', firstName: 'Demo', active: true }) },
       accounts: { getAccounts: async () => [
         { accountId: 1, accountType: 'SAVINGS', accountNumber: '001234567890', currencyCode: 'INR', accountStatus: 'ACTIVE', availableBalance: 500,
-          bankName: 'Net Banking', branchName: 'Main branch', branchCity: 'Bengaluru', branchState: 'Karnataka', ifscCode: 'NETB0000001' },
+          bankName: 'ORACLE INTERNATIONAL BANK (OIB)', branchName: 'Main branch', branchCity: 'Bengaluru', branchState: 'Karnataka', ifscCode: 'NETB0000001' },
         { accountId: 2, accountType: 'SAVINGS', accountNumber: '001234567891', currencyCode: 'USD', accountStatus: 'ACTIVE', availableBalance: 20 }
       ] }
     },

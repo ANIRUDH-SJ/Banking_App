@@ -112,7 +112,7 @@
         return Promise.reject(apiError.parseApiError(0, {
           status: 0,
           code: 'NETWORK',
-          message: 'Internet Banking is unavailable. Check your connection and try again.',
+          message: 'ORACLE INTERNATIONAL BANK (OIB) is unavailable. Check your connection and try again.',
           path: path,
           fieldErrors: {}
         }, path, ''));

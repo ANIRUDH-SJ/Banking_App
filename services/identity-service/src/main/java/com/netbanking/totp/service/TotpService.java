@@ -39,7 +39,7 @@ public class TotpService {
     public TotpService(
             UserTotpRepository repository,
             TotpSecretCipher cipher,
-            @Value("${app.security.totp.issuer:Internet Banking}") String issuer,
+            @Value("${app.security.totp.issuer:ORACLE INTERNATIONAL BANK (OIB)}") String issuer,
             SecretGenerator secretGenerator,
             CodeVerifier verifier,
             CodeGenerator codeGenerator,

@@ -224,7 +224,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Overview. Account balances are loaded from the bank.', 'polite');
-      document.title = 'Overview | Internet Banking';
+      document.title = 'Overview | ORACLE INTERNATIONAL BANK (OIB)';
       [self.accountsLoading, self.cardsLoading, self.loansLoading, self.noticesLoading].forEach(function (flag) {
         flag(true);
       });

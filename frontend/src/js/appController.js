@@ -265,7 +265,7 @@ define([
       var enteringDesk = decision.desk && !self.showDesk();
       self.showDesk(decision.desk);
       self.currentPath(decision.path);
-      document.title = registry.routeGuard.titleFor(decision.path) + ' | Internet Banking';
+      document.title = registry.routeGuard.titleFor(decision.path) + ' | ORACLE INTERNATIONAL BANK (OIB)';
       if (!decision.desk) {
         leaving = false;
         self.customerNav([]);

@@ -269,7 +269,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Fixed and recurring deposits.', 'polite');
-      document.title = 'FD & RD | Internet Banking';
+      document.title = 'FD & RD | ORACLE INTERNATIONAL BANK (OIB)';
       self.loading(true);
       self.problem.clear();
       self.success('');

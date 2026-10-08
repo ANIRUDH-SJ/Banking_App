@@ -305,7 +305,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Bill payments.', 'polite');
-      document.title = 'Bill payments | Internet Banking';
+      document.title = 'Bill payments | ORACLE INTERNATIONAL BANK (OIB)';
       self.loading(true);
       self.problem.clear();
       var preset = ui.take('bill.billerId');

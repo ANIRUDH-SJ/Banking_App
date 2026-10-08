@@ -30,7 +30,7 @@ class AuthenticatorCompatibilityTest {
                 new QrData.Builder()
                         .label("asha")
                         .secret(SECRET)
-                        .issuer("Internet Banking")
+                        .issuer("ORACLE INTERNATIONAL BANK (OIB)")
                         .algorithm(HashingAlgorithm.SHA1)
                         .digits(6)
                         .period(30)

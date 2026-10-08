@@ -134,7 +134,7 @@ define([
     };
 
     self.connected = function () {
-      document.title = 'Administration | Internet Banking';
+      document.title = 'Administration | ORACLE INTERNATIONAL BANK (OIB)';
       accUtils.announce('Administration console.', 'polite');
       self.refresh();
     };

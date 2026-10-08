@@ -197,7 +197,7 @@
     return FEATURES[path] || {
       title: 'Banking service',
       owner: 'A connected workspace',
-      detail: 'This screen is part of Internet Banking and is supplied by its owning workspace.'
+      detail: 'This screen is part of ORACLE INTERNATIONAL BANK (OIB) and is supplied by its owning workspace.'
     };
   }
 
@@ -206,7 +206,7 @@
       return TITLES[path];
     }
     var feature = FEATURES[path];
-    return feature ? feature.title : 'Internet Banking';
+    return feature ? feature.title : 'ORACLE INTERNATIONAL BANK (OIB)';
   }
 
   function routerConfig() {

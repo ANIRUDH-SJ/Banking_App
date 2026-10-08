@@ -86,8 +86,8 @@ define([
     };
 
     self.connected = function () {
-      accUtils.announce('Sign in to Internet Banking.', 'polite');
-      document.title = 'Sign in | Internet Banking';
+      accUtils.announce('Sign in to ORACLE INTERNATIONAL BANK (OIB).', 'polite');
+      document.title = 'Sign in | ORACLE INTERNATIONAL BANK (OIB)';
     };
   }
 

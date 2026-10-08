@@ -1,4 +1,4 @@
-# Internet Banking
+# ORACLE INTERNATIONAL BANK (OIB)
 
 Oracle JET frontend and independently runnable Spring Boot services, with Eureka service discovery and one local Oracle Database 26ai instance per developer.
 

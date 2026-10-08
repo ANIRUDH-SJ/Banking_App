@@ -287,7 +287,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Transactions.', 'polite');
-      document.title = 'Transactions | Internet Banking';
+      document.title = 'Transactions | ORACLE INTERNATIONAL BANK (OIB)';
       var preset = ui.take('transactions.accountId');
       self.loading(true);
       if (preset) {

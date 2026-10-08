@@ -69,7 +69,7 @@ The response contains:
   "provisioningUri": "otpauth://totp/...",
   "qrCodeDataUri": "data:image/png;base64,...",
   "manualEntryKey": "BASE32_SECRET",
-  "issuer": "Internet Banking",
+  "issuer": "ORACLE INTERNATIONAL BANK (OIB)",
   "accountName": "asha"
 }
 ```
@@ -126,7 +126,7 @@ login attempt.
 
 ## Verification checklist
 
-1. Scan the QR code and confirm that Microsoft Authenticator shows `Internet Banking` and the username.
+1. Scan the QR code and confirm that Microsoft Authenticator shows `ORACLE INTERNATIONAL BANK (OIB)` and the username.
 2. Submit the displayed code to `/totp/confirm`; expect `204`.
 3. Confirm `user_totp.is_enabled = 'Y'` and `confirmed_at` is populated. Do not print the ciphertext.
 4. Log in again; expect `TOTP_REQUIRED` with a non-empty `challengeId`.

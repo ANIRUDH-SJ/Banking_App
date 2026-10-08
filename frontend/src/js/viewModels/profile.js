@@ -147,7 +147,7 @@ define([
       var ticket = ++generation;
       hideNumber();
       accUtils.announce('Customer profile.', 'polite');
-      document.title = 'Profile | Internet Banking';
+      document.title = 'Profile | ORACLE INTERNATIONAL BANK (OIB)';
       self.loading(true);
       self.formError('');
       self.formSuccess('');

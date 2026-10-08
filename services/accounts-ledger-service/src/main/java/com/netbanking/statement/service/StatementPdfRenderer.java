@@ -85,8 +85,8 @@ public class StatementPdfRenderer {
     private static void describe(PDDocument document, Account account, LocalDateTime generatedAt) {
         PDDocumentInformation info = document.getDocumentInformation();
         info.setTitle("Account statement " + masked(account.accountNumber()));
-        info.setAuthor("Internet Banking");
-        info.setCreator("Internet Banking");
+        info.setAuthor("ORACLE INTERNATIONAL BANK (OIB)");
+        info.setCreator("ORACLE INTERNATIONAL BANK (OIB)");
         Calendar created = Calendar.getInstance();
         created.setTime(java.sql.Timestamp.valueOf(generatedAt));
         info.setCreationDate(created);
@@ -126,7 +126,7 @@ public class StatementPdfRenderer {
             content.setNonStrokingColor(PETROL);
             content.addRect(0, HEIGHT - 8, WIDTH, 8);
             content.fill();
-            write(content, BOLD, 9, PETROL, MARGIN, y, "INTERNET BANKING");
+            write(content, BOLD, 9, PETROL, MARGIN, y, "ORACLE INTERNATIONAL BANK (OIB)");
             write(content, REGULAR, 8, MUTED, WIDTH - MARGIN - width(REGULAR, 8, "Generated " + STAMP.format(generatedAt)),
                     y, "Generated " + STAMP.format(generatedAt));
             y -= 30;

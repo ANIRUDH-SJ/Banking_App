@@ -6,7 +6,7 @@ define(['../accUtils'], function (accUtils) {
     this.detail = options.detail || 'This screen is supplied by its owning workspace.';
     this.featurePath = options.featurePath || '';
     this.connected = function () {
-      document.title = this.title + ' | Internet Banking';
+      document.title = this.title + ' | ORACLE INTERNATIONAL BANK (OIB)';
       accUtils.announce(this.title + '.', 'polite');
     };
   }

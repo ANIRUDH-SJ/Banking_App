@@ -471,7 +471,7 @@ define([
       var preset = ui.take('cards.cardId');
       var pinId = ui.take('cards.pinId');
       accUtils.announce('Cards.', 'polite');
-      document.title = 'Cards | Internet Banking';
+      document.title = 'Cards | ORACLE INTERNATIONAL BANK (OIB)';
       self.loading(true);
       self.problem.clear();
       self.success('');

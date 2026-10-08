@@ -85,14 +85,14 @@ class AccountServiceTest {
         when(branch.getCity()).thenReturn("Bengaluru");
         when(branch.getState()).thenReturn("Karnataka");
         when(bankRepository.findById(3L)).thenReturn(Optional.of(bank));
-        when(bank.getDisplayName()).thenReturn("Net Banking");
+        when(bank.getDisplayName()).thenReturn("ORACLE INTERNATIONAL BANK (OIB)");
 
         var response = new AccountService(bankAccountRepository, accountHolderRepository,
                 customerService, branchRepository, bankRepository).getOwnedAccount(7L, 40L);
 
         assertThat(response.accountNumber()).isEqualTo("001234567890");
         assertThat(response.ifscCode()).isEqualTo("NETB0000001");
-        assertThat(response.bankName()).isEqualTo("Net Banking");
+        assertThat(response.bankName()).isEqualTo("ORACLE INTERNATIONAL BANK (OIB)");
         assertThat(response.branchName()).isEqualTo("Main branch");
         assertThat(response.branchCity()).isEqualTo("Bengaluru");
         assertThat(response.availableBalance()).isEqualByComparingTo("500.00");

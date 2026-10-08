@@ -118,8 +118,8 @@ define([
     };
 
     self.connected = function () {
-      accUtils.announce('Reset your Internet Banking password.', 'polite');
-      document.title = 'Reset password | Internet Banking';
+      accUtils.announce('Reset your ORACLE INTERNATIONAL BANK (OIB) password.', 'polite');
+      document.title = 'Reset password | ORACLE INTERNATIONAL BANK (OIB)';
     };
 
     self.disconnected = function () {

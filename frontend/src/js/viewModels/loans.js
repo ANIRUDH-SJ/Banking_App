@@ -138,7 +138,7 @@ define([
     self.connected = function () {
       var ticket = ++generation;
       accUtils.announce('Loans.', 'polite');
-      document.title = 'Loans | Internet Banking';
+      document.title = 'Loans | ORACLE INTERNATIONAL BANK (OIB)';
       self.loading(true);
       self.problem.clear();
       Promise.all([loanService.listLoans(), registry.accounts.getAccounts()]).then(function (results) {
