@@ -300,7 +300,8 @@ oj-c-badge {
 }
 
 .nb-mast-inner {
-  max-width: 1600px;
+  width: 100%;
+  max-width: none;
   height: 4rem;
   gap: 2.5rem;
 }
@@ -3605,6 +3606,30 @@ h2[tabindex="-1"]:focus {
 
   .nb-paycards {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
+ * Keep the full navigation on wide screens while reserving space for account
+ * controls. The customer name is still available from the avatar/profile link;
+ * hiding only its label prevents long names from pushing into the final nav item.
+ */
+
+@media (max-width: 1900px) {
+  .nb-mast-inner {
+    gap: 1.25rem;
+  }
+
+  .nb-primary ul {
+    gap: clamp(0.75rem, 1.25vw, 1.25rem);
+  }
+
+  .nb-who-name {
+    display: none;
+  }
+
+  .nb-who {
+    padding: 0.25rem;
   }
 }
 
