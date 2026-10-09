@@ -345,6 +345,13 @@ test('formatting masks accounts and keeps the server amount', () => {
   assert.deepEqual(format.asList({ content: [{ id: 1 }] }), [{ id: 1 }]);
 });
 
+test('masthead keeps account controls out of the primary navigation', () => {
+  const css = fs.readFileSync(path.join(__dirname, '../src/css/app.css'), 'utf8');
+  assert.match(css, /\.nb-mast-inner\s*\{[^}]*max-width:\s*none;/s);
+  assert.match(css, /@media \(max-width: 1900px\)[\s\S]*?\.nb-who-name\s*\{\s*display:\s*none;/);
+  assert.match(css, /@media \(max-width: 1440px\)[\s\S]*?\.nb-primary,[\s\S]*?display:\s*none;/);
+});
+
 test('money parts split the figure without rounding it', () => {
   assert.deepEqual(format.formatMoneyParts(184520.35, 'INR'), {
     sign: '',

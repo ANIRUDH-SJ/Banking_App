@@ -48,7 +48,8 @@ class CardServiceTest {
 
     @Test
     void returnsOnlyMaskedCardDetails() {
-        when(cardRepository.findByCustomerIdOrderByCardIdAsc(21L))
+        when(cardRepository.findByCustomerIdAndCardStatusNotOrderByCardIdAsc(
+                        21L, CardStatus.CLOSED))
                 .thenReturn(List.of(card(CardStatus.ACTIVE)));
 
         var cards = cardService.getCards(7L);
@@ -61,13 +62,17 @@ class CardServiceTest {
                             assertThat(card.status()).isEqualTo("ACTIVE");
                             assertThat(card.revealable()).isFalse();
                         });
+        verify(cardRepository)
+                .findByCustomerIdAndCardStatusNotOrderByCardIdAsc(21L, CardStatus.CLOSED);
     }
 
     @Test
     void doesNotOfferRevealWhenCardIsEncryptedButKeyIsMissing() {
         BankCard card = card(CardStatus.ACTIVE);
         card.protectNumber("v1:encrypted");
-        when(cardRepository.findByCustomerIdOrderByCardIdAsc(21L)).thenReturn(List.of(card));
+        when(cardRepository.findByCustomerIdAndCardStatusNotOrderByCardIdAsc(
+                        21L, CardStatus.CLOSED))
+                .thenReturn(List.of(card));
 
         assertThat(cardService.getCards(7L)).singleElement()
                 .satisfies(result -> assertThat(result.revealable()).isFalse());
