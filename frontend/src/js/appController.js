@@ -223,7 +223,17 @@ define([
     function showModule(path) {
       var token = ++loadToken;
       var feature = registry.routeGuard.featureFor(path);
-      moduleUtils.createConfig({ name: path }).then(function (config) {
+      var adminViews = {
+        admin: 'users',
+        'admin-users': 'users',
+        'admin-accounts': 'accounts',
+        'admin-transactions': 'transactions',
+        'admin-loans': 'loans',
+        'admin-audit': 'audit'
+      };
+      var moduleName = adminViews[path] ? 'admin' : path;
+      var params = adminViews[path] ? { initialView: adminViews[path] } : undefined;
+      moduleUtils.createConfig({ name: moduleName, params: params }).then(function (config) {
         if (token === loadToken && config) {
           self.moduleConfig(config);
         }
