@@ -47,7 +47,9 @@ public class CardService {
     @Transactional
     public List<CardResponse> getCards(Long userId) {
         Long customerId = customerService.requireCustomerIdForUser(userId);
-        List<BankCard> cards = cardRepository.findByCustomerIdOrderByCardIdAsc(customerId);
+        List<BankCard> cards =
+                cardRepository.findByCustomerIdAndCardStatusNotOrderByCardIdAsc(
+                        customerId, CardStatus.CLOSED);
         if (demoCards.isPresent()) {
             cards = cards.isEmpty()
                     ? demoCards.get().issue(userId, customerId)
