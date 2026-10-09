@@ -400,18 +400,18 @@ VALUES (
     source.reference_label, source.reference_pattern, source.reference_hint,
     1, source.max_amount, 'Y', SYSTIMESTAMP);
 
-PROMPT === Products: one debit card per account plus a credit card ===
+PROMPT === Products: one debit card per account plus two credit cards ===
 
 -- Retire older cards for these disposable profiles so the UI shows the four
--- account-backed debit cards and the credit card created below instead of
+-- account-backed debit cards and two credit cards created below instead of
 -- accumulating cards across seed revisions.
 UPDATE nb_products.bank_card
 SET card_status = 'CLOSED', updated_at = SYSTIMESTAMP
 WHERE customer_id IN (900001, 900003, 900004)
   AND card_id NOT IN (
-      992011, 992012, 992013, 992014, 992015,
-      992021, 992022, 992023, 992024, 992025,
-      992031, 992032, 992033, 992034, 992035);
+      992011, 992012, 992013, 992014, 992015, 992016,
+      992021, 992022, 992023, 992024, 992025, 992026,
+      992031, 992032, 992033, 992034, 992035, 992036);
 
 DECLARE
     v_customer_id NUMBER(19);
@@ -422,15 +422,17 @@ BEGIN
         v_customer_id := CASE customer_index WHEN 1 THEN 900001 WHEN 2 THEN 900003 ELSE 900004 END;
 
         -- Four active accounts produce four debit cards. Card index 2 remains
-        -- the credit card so rerunning this revision keeps its purchase history
-        -- stable; account 3 is its nominated repayment/current account.
-        FOR card_index IN 1..5 LOOP
+        -- the original Mastercard so rerunning this revision keeps its purchase
+        -- history stable; card index 6 adds a Visa credit card. Each credit card
+        -- nominates a current account for repayment without replacing its debit card.
+        FOR card_index IN 1..6 LOOP
             v_card_id := 992000 + customer_index * 10 + card_index;
             v_account_id := 921000 + customer_index * 10 + CASE card_index
                 WHEN 1 THEN 1
                 WHEN 2 THEN 3
                 WHEN 3 THEN 2
                 WHEN 4 THEN 3
+                WHEN 5 THEN 4
                 ELSE 4
             END;
 
@@ -440,7 +442,7 @@ BEGIN
                        v_account_id account_id,
                        'oib-local-c' || customer_index || '-' || card_index card_token,
                        LPAD(TO_CHAR(5000 + customer_index * 10 + card_index), 4, '0') last_four,
-                       CASE card_index WHEN 2 THEN 'CREDIT' ELSE 'DEBIT' END card_type,
+                       CASE WHEN card_index IN (2, 6) THEN 'CREDIT' ELSE 'DEBIT' END card_type,
                        CASE card_index
                            WHEN 2 THEN 'MASTERCARD'
                            WHEN 3 THEN 'RUPAY'
@@ -460,10 +462,18 @@ BEGIN
                 target.expiry_year = 2030,
                 target.card_status = 'ACTIVE',
                 target.activated_at = SYSTIMESTAMP,
-                target.credit_limit = CASE WHEN source.card_type = 'CREDIT' THEN 200000 ELSE NULL END,
-                target.outstanding_balance = CASE WHEN source.card_type = 'CREDIT' THEN 8448 ELSE NULL END,
-                target.statement_balance = CASE WHEN source.card_type = 'CREDIT' THEN 7149 ELSE NULL END,
-                target.minimum_due = CASE WHEN source.card_type = 'CREDIT' THEN 715 ELSE NULL END,
+                target.credit_limit = CASE
+                    WHEN source.card_type = 'CREDIT' AND source.card_network = 'MASTERCARD' THEN 200000
+                    WHEN source.card_type = 'CREDIT' THEN 150000 ELSE NULL END,
+                target.outstanding_balance = CASE
+                    WHEN source.card_type = 'CREDIT' AND source.card_network = 'MASTERCARD' THEN 8448
+                    WHEN source.card_type = 'CREDIT' THEN 6235 ELSE NULL END,
+                target.statement_balance = CASE
+                    WHEN source.card_type = 'CREDIT' AND source.card_network = 'MASTERCARD' THEN 7149
+                    WHEN source.card_type = 'CREDIT' THEN 5120 ELSE NULL END,
+                target.minimum_due = CASE
+                    WHEN source.card_type = 'CREDIT' AND source.card_network = 'MASTERCARD' THEN 715
+                    WHEN source.card_type = 'CREDIT' THEN 512 ELSE NULL END,
                 target.statement_date = CASE WHEN source.card_type = 'CREDIT' THEN TRUNC(SYSDATE) - 5 ELSE NULL END,
                 target.payment_due_date = CASE WHEN source.card_type = 'CREDIT' THEN TRUNC(SYSDATE) + 15 ELSE NULL END,
                 target.updated_at = SYSTIMESTAMP
@@ -478,62 +488,96 @@ BEGIN
                 source.card_token, source.last_four, source.card_type,
                 source.card_network, 12, 2030, 'ACTIVE', SYSTIMESTAMP,
                 SYSTIMESTAMP, SYSTIMESTAMP,
-                CASE WHEN source.card_type = 'CREDIT' THEN 200000 ELSE NULL END,
-                CASE WHEN source.card_type = 'CREDIT' THEN 8448 ELSE NULL END,
-                CASE WHEN source.card_type = 'CREDIT' THEN 7149 ELSE NULL END,
-                CASE WHEN source.card_type = 'CREDIT' THEN 715 ELSE NULL END,
+                CASE
+                    WHEN source.card_type = 'CREDIT' AND source.card_network = 'MASTERCARD' THEN 200000
+                    WHEN source.card_type = 'CREDIT' THEN 150000 ELSE NULL END,
+                CASE
+                    WHEN source.card_type = 'CREDIT' AND source.card_network = 'MASTERCARD' THEN 8448
+                    WHEN source.card_type = 'CREDIT' THEN 6235 ELSE NULL END,
+                CASE
+                    WHEN source.card_type = 'CREDIT' AND source.card_network = 'MASTERCARD' THEN 7149
+                    WHEN source.card_type = 'CREDIT' THEN 5120 ELSE NULL END,
+                CASE
+                    WHEN source.card_type = 'CREDIT' AND source.card_network = 'MASTERCARD' THEN 715
+                    WHEN source.card_type = 'CREDIT' THEN 512 ELSE NULL END,
                 CASE WHEN source.card_type = 'CREDIT' THEN TRUNC(SYSDATE) - 5 ELSE NULL END,
                 CASE WHEN source.card_type = 'CREDIT' THEN TRUNC(SYSDATE) + 15 ELSE NULL END);
         END LOOP;
 
-        v_card_id := 992000 + customer_index * 10 + 2;
-        FOR transaction_index IN 1..3 LOOP
-            MERGE INTO nb_products.card_transaction target
-            USING (
-                SELECT 993000 + customer_index * 10 + transaction_index card_transaction_id,
-                       v_card_id card_id,
-                       'OIB-CARD-' || customer_index || '-' || transaction_index transaction_reference,
-                       CASE transaction_index
-                           WHEN 1 THEN 'Amazon India'
-                           WHEN 2 THEN 'Indian Oil'
-                           ELSE 'Taj Hotels'
-                       END merchant_name,
-                       CASE transaction_index
-                           WHEN 1 THEN 'ONLINE_RETAIL'
-                           WHEN 2 THEN 'FUEL'
-                           ELSE 'HOTELS'
-                       END merchant_category,
-                       CASE transaction_index WHEN 1 THEN 4299 WHEN 2 THEN 2850 ELSE 1299 END amount,
-                       SYSTIMESTAMP - NUMTODSINTERVAL(transaction_index * 4, 'DAY') posted_at
-                FROM dual) source
-            ON (target.card_transaction_id = source.card_transaction_id)
-            WHEN MATCHED THEN UPDATE SET
-                target.card_id = source.card_id,
-                target.transaction_reference = source.transaction_reference,
-                target.merchant_name = source.merchant_name,
-                target.merchant_category = source.merchant_category,
-                target.transaction_type = 'PURCHASE',
-                target.amount = source.amount,
-                target.currency_code = 'INR',
-                target.transaction_status = 'POSTED',
-                target.posted_at = source.posted_at,
-                target.billed_on = TRUNC(SYSDATE) - 5
-            WHEN NOT MATCHED THEN INSERT (
-                card_transaction_id, card_id, transaction_reference,
-                merchant_name, merchant_category, transaction_type,
-                amount, currency_code, transaction_status, posted_at, billed_on)
-            VALUES (
-                source.card_transaction_id, source.card_id,
-                source.transaction_reference, source.merchant_name,
-                source.merchant_category, 'PURCHASE', source.amount,
-                'INR', 'POSTED', source.posted_at, TRUNC(SYSDATE) - 5);
+        FOR credit_sequence IN 1..2 LOOP
+            v_card_id := 992000 + customer_index * 10
+                + CASE credit_sequence WHEN 1 THEN 2 ELSE 6 END;
+
+            FOR transaction_index IN 1..3 LOOP
+                MERGE INTO nb_products.card_transaction target
+                USING (
+                    SELECT CASE credit_sequence WHEN 1 THEN 993000 ELSE 994000 END
+                               + customer_index * 10 + transaction_index card_transaction_id,
+                           v_card_id card_id,
+                           'OIB-CARD-' || customer_index || '-' || credit_sequence || '-'
+                               || transaction_index transaction_reference,
+                           CASE credit_sequence
+                               WHEN 1 THEN CASE transaction_index
+                                   WHEN 1 THEN 'Amazon India'
+                                   WHEN 2 THEN 'Indian Oil'
+                                   ELSE 'Taj Hotels'
+                               END
+                               ELSE CASE transaction_index
+                                   WHEN 1 THEN 'Flipkart'
+                                   WHEN 2 THEN 'BigBasket'
+                                   ELSE 'MakeMyTrip'
+                               END
+                           END merchant_name,
+                           CASE credit_sequence
+                               WHEN 1 THEN CASE transaction_index
+                                   WHEN 1 THEN 'ONLINE_RETAIL'
+                                   WHEN 2 THEN 'FUEL'
+                                   ELSE 'HOTELS'
+                               END
+                               ELSE CASE transaction_index
+                                   WHEN 1 THEN 'ONLINE_RETAIL'
+                                   WHEN 2 THEN 'GROCERIES'
+                                   ELSE 'TRAVEL'
+                               END
+                           END merchant_category,
+                           CASE credit_sequence
+                               WHEN 1 THEN CASE transaction_index
+                                   WHEN 1 THEN 4299 WHEN 2 THEN 2850 ELSE 1299 END
+                               ELSE CASE transaction_index
+                                   WHEN 1 THEN 3499 WHEN 2 THEN 1736 ELSE 1000 END
+                           END amount,
+                           SYSTIMESTAMP - NUMTODSINTERVAL(
+                               transaction_index * 4 + (credit_sequence - 1), 'DAY') posted_at
+                    FROM dual) source
+                ON (target.card_transaction_id = source.card_transaction_id)
+                WHEN MATCHED THEN UPDATE SET
+                    target.card_id = source.card_id,
+                    target.transaction_reference = source.transaction_reference,
+                    target.merchant_name = source.merchant_name,
+                    target.merchant_category = source.merchant_category,
+                    target.transaction_type = 'PURCHASE',
+                    target.amount = source.amount,
+                    target.currency_code = 'INR',
+                    target.transaction_status = 'POSTED',
+                    target.posted_at = source.posted_at,
+                    target.billed_on = TRUNC(SYSDATE) - 5
+                WHEN NOT MATCHED THEN INSERT (
+                    card_transaction_id, card_id, transaction_reference,
+                    merchant_name, merchant_category, transaction_type,
+                    amount, currency_code, transaction_status, posted_at, billed_on)
+                VALUES (
+                    source.card_transaction_id, source.card_id,
+                    source.transaction_reference, source.merchant_name,
+                    source.merchant_category, 'PURCHASE', source.amount,
+                    'INR', 'POSTED', source.posted_at, TRUNC(SYSDATE) - 5);
+            END LOOP;
         END LOOP;
     END LOOP;
 END;
 /
 
 -- Fail rather than commit a partial portfolio: each active seeded account must
--- have one active debit card, and each customer must have one active credit card.
+-- have one active debit card, and each customer must have two active credit cards.
 DECLARE
     v_invalid_accounts  NUMBER;
     v_invalid_customers NUMBER;
@@ -569,13 +613,13 @@ BEGIN
          AND card.card_type = 'CREDIT'
          AND card.card_status = 'ACTIVE'
         GROUP BY seeded.customer_id
-        HAVING COUNT(card.card_id) <> 1
+        HAVING COUNT(card.card_id) <> 2
     );
 
     IF v_invalid_accounts > 0 OR v_invalid_customers > 0 THEN
         RAISE_APPLICATION_ERROR(
             -20001,
-            'Seed card portfolio must contain one debit card per active account and one credit card per customer.');
+            'Seed card portfolio must contain one debit card per active account and two credit cards per customer.');
     END IF;
 END;
 /
@@ -614,14 +658,14 @@ SELECT card.customer_id, card.card_type, card.card_network, card.last_four,
 FROM nb_products.bank_card card
 LEFT JOIN nb_products.card_transaction transaction ON transaction.card_id = card.card_id
 WHERE card.card_id IN (
-    992011, 992012, 992013, 992014, 992015,
-    992021, 992022, 992023, 992024, 992025,
-    992031, 992032, 992033, 992034, 992035)
+    992011, 992012, 992013, 992014, 992015, 992016,
+    992021, 992022, 992023, 992024, 992025, 992026,
+    992031, 992032, 992033, 992034, 992035, 992036)
 GROUP BY card.customer_id, card.card_type, card.card_network,
          card.last_four, card.card_status
 ORDER BY card.customer_id, card.card_type;
 
--- Expected result: four ACTIVE debit cards and one ACTIVE credit card per
+-- Expected result: four ACTIVE debit cards and two ACTIVE credit cards per
 -- customer, with each active account represented by exactly one debit card.
 SELECT card.customer_id, card.account_id, COUNT(*) debit_card_count
 FROM nb_products.bank_card card
