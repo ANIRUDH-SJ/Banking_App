@@ -25,11 +25,12 @@ public class GatewayRoutes {
                     Map.entry("notifications", "notification-service"));
 
     private static final Map<String, String> ADMIN_ROUTES =
-            Map.of(
-                    "users", "identity-service",
-                    "accounts", "accounts-ledger-service",
-                    "transactions", "accounts-ledger-service",
-                    "audit-events", "audit-reporting-service");
+            Map.ofEntries(
+                    Map.entry("users", "identity-service"),
+                    Map.entry("accounts", "accounts-ledger-service"),
+                    Map.entry("transactions", "accounts-ledger-service"),
+                    Map.entry("loans", "products-service"),
+                    Map.entry("audit-events", "audit-reporting-service"));
 
     public String serviceFor(String path) {
         // Reject encoded separators, matrix parameters and dot segments before resolving a route.
