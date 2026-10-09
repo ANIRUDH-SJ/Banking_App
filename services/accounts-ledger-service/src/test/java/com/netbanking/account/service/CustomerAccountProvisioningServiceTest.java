@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +52,8 @@ class CustomerAccountProvisioningServiceTest {
         assertThat(account.getValue().getAccountNumber()).isEqualTo("100000000000000091");
         assertThat(account.getValue().getAccountType()).isEqualTo("SAVINGS");
         assertThat(account.getValue().getAccountStatus()).isEqualTo("ACTIVE");
+        assertThat(account.getValue().getCurrentBalance()).isEqualByComparingTo("30000.00");
+        assertThat(account.getValue().getAvailableBalance()).isEqualByComparingTo("30000.00");
 
         ArgumentCaptor<AccountHolder> holder = ArgumentCaptor.forClass(AccountHolder.class);
         verify(holders).saveAndFlush(holder.capture());
@@ -71,6 +74,6 @@ class CustomerAccountProvisioningServiceTest {
 
     private CustomerAccountProvisioningService service() {
         return new CustomerAccountProvisioningService(
-                accounts, holders, branches, "NETB0000001");
+                accounts, holders, branches, "NETB0000001", new BigDecimal("30000"));
     }
 }

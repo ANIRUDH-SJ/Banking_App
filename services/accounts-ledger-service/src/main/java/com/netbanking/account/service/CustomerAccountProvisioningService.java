@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.Locale;
 
 @Service
@@ -21,16 +22,23 @@ public class CustomerAccountProvisioningService {
     private final AccountHolderRepository holders;
     private final BranchRepository branches;
     private final String onboardingIfsc;
+    private final BigDecimal onboardingInitialBalance;
 
     public CustomerAccountProvisioningService(
             BankAccountRepository accounts,
             AccountHolderRepository holders,
             BranchRepository branches,
-            @Value("${app.onboarding.branch-ifsc:NETB0000001}") String onboardingIfsc) {
+            @Value("${app.onboarding.branch-ifsc:NETB0000001}") String onboardingIfsc,
+            @Value("${app.onboarding.initial-balance:30000}")
+                    BigDecimal onboardingInitialBalance) {
         this.accounts = accounts;
         this.holders = holders;
         this.branches = branches;
         this.onboardingIfsc = onboardingIfsc;
+        if (onboardingInitialBalance == null || onboardingInitialBalance.signum() < 0) {
+            throw new IllegalArgumentException("The onboarding initial balance cannot be negative.");
+        }
+        this.onboardingInitialBalance = onboardingInitialBalance;
     }
 
     @Transactional
@@ -49,9 +57,12 @@ public class CustomerAccountProvisioningService {
                                         new ResourceNotFoundException(
                                                 "The onboarding branch is not available."));
         BankAccount account =
-                accounts.saveAndFlush(
-                        BankAccount.openSavings(
-                                branch.getBranchId(), accountNumber(customer.customerId())));
+                BankAccount.openSavings(
+                        branch.getBranchId(), accountNumber(customer.customerId()));
+        if (onboardingInitialBalance.signum() > 0) {
+            account.credit(onboardingInitialBalance);
+        }
+        account = accounts.saveAndFlush(account);
         holders.saveAndFlush(new AccountHolder(account.getAccountId(), customer.customerId()));
     }
 
