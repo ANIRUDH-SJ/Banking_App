@@ -68,13 +68,24 @@ test('cards and loans use shared authenticated reads and status writes', async (
 });
 
 test('administrator requests use the foundation API client', async () => {
-  const paths = [];
+  const calls = [];
   const admin = load('AdminService.js', {
-    apiClient: { get: async (path) => { paths.push(path); return { content: [] }; } }
+    apiClient: {
+      get: async (path) => { calls.push(['get', path]); return { content: [] }; },
+      patch: async (path, body) => { calls.push(['patch', path, body]); return { status: body.status }; }
+    }
   });
   await admin.listUsers({ query: 'asha', page: 0, size: 10 });
   await admin.listAccounts({ status: 'ACTIVE' });
-  assert.match(paths[0], /^\/api\/v1\/admin\/users\?/);
-  assert.match(paths[0], /query=asha/);
-  assert.match(paths[1], /status=ACTIVE/);
+  await admin.listLoans({ status: 'ACTIVE' });
+  await admin.loanSummary();
+  await admin.updateUserStatus(4, 'DISABLED');
+  await admin.updateAccountStatus(7, 'FROZEN');
+  assert.match(calls[0][1], /^\/api\/v1\/admin\/users\?/);
+  assert.match(calls[0][1], /query=asha/);
+  assert.match(calls[1][1], /status=ACTIVE/);
+  assert.match(calls[2][1], /admin\/loans.*status=ACTIVE/);
+  assert.equal(calls[3][1], '/api/v1/admin/loans/summary');
+  assert.equal(JSON.stringify(calls[4]), JSON.stringify(['patch', '/api/v1/admin/users/4/status', { status: 'DISABLED' }]));
+  assert.equal(JSON.stringify(calls[5]), JSON.stringify(['patch', '/api/v1/admin/accounts/7/status', { status: 'FROZEN' }]));
 });

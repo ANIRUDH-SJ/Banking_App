@@ -16,16 +16,20 @@ define([
     users: { label: 'Users', hint: 'Username, email or customer name', sub: 'Sign-in status, roles and the linked customer profile.' },
     accounts: { label: 'Accounts', hint: 'Account number', sub: 'Balances, status and the customers linked to each account.' },
     transactions: { label: 'Transactions', hint: 'Transaction reference', sub: 'The latest money movement across the bank.' },
+    loans: { label: 'Loans', hint: 'Loan account number', sub: 'Principal provided, outstanding exposure, instalments and due dates.' },
     audit: { label: 'Audit', hint: 'Event type, for example LOGIN', sub: 'Security and operational events with their outcome.' }
   };
 
-  function AdminViewModel() {
+  function AdminViewModel(options) {
     var self = this;
+    var initialView = options && VIEWS[options.initialView] ? options.initialView : 'users';
 
     self.problem = new ui.Problem();
     self.isLoading = ko.observable(false);
     self.searching = ko.observable(false);
-    self.view = ko.observable('users');
+    self.updating = ko.observable('');
+    self.actionMessage = ko.observable('');
+    self.view = ko.observable(initialView);
     self.viewItems = Object.keys(VIEWS).map(function (key) {
       return { value: key, label: VIEWS[key].label };
     });
@@ -33,18 +37,22 @@ define([
     self.users = ko.observableArray([]);
     self.accounts = ko.observableArray([]);
     self.transactions = ko.observableArray([]);
+    self.loans = ko.observableArray([]);
     self.auditEvents = ko.observableArray([]);
     self.userTotal = ko.observable(0);
     self.accountTotal = ko.observable(0);
     self.transactionTotal = ko.observable(0);
+    self.loanTotal = ko.observable(0);
     self.auditTotal = ko.observable(0);
+    self.loanSummary = ko.observable({ totalLoans: 0, activeLoans: 0, currencies: [] });
     self.userQuery = ko.observable('');
     self.accountQuery = ko.observable('');
     self.transactionQuery = ko.observable('');
+    self.loanQuery = ko.observable('');
     self.auditQuery = ko.observable('');
 
-    var queries = { users: self.userQuery, accounts: self.accountQuery, transactions: self.transactionQuery, audit: self.auditQuery };
-    var rows = { users: self.users, accounts: self.accounts, transactions: self.transactions, audit: self.auditEvents };
+    var queries = { users: self.userQuery, accounts: self.accountQuery, transactions: self.transactionQuery, loans: self.loanQuery, audit: self.auditQuery };
+    var rows = { users: self.users, accounts: self.accounts, transactions: self.transactions, loans: self.loans, audit: self.auditEvents };
 
     self.current = ko.pureComputed(function () {
       return VIEWS[self.view()];
@@ -64,6 +72,12 @@ define([
     };
     self.joinValues = function (values) {
       return Array.isArray(values) && values.length ? values.join(', ') : '—';
+    };
+    self.loanAmounts = function (field) {
+      var currencies = self.loanSummary().currencies || [];
+      return currencies.length ? currencies.map(function (item) {
+        return self.money(item[field], item.currencyCode);
+      }).join(' · ') : '—';
     };
     self.customerName = function (user) {
       var customer = user && user.customer;
@@ -102,11 +116,68 @@ define([
     self.loadTransactions = function () {
       return load(function () { return AdminService.listTransactions({ reference: self.transactionQuery(), page: 0, size: 10 }); }, self.transactions, self.transactionTotal);
     };
+    self.loadLoans = function () {
+      return load(function () { return AdminService.listLoans({ query: self.loanQuery(), page: 0, size: 10 }); }, self.loans, self.loanTotal);
+    };
+    self.loadLoanSummary = function () {
+      return AdminService.loanSummary().then(function (summary) {
+        self.loanSummary(summary || { totalLoans: 0, activeLoans: 0, currencies: [] });
+        self.loanTotal((summary && summary.totalLoans) || 0);
+      }).catch(reportError);
+    };
     self.loadAudit = function () {
       return load(function () { return AdminService.listAuditEvents({ eventType: self.auditQuery(), page: 0, size: 10 }); }, self.auditEvents, self.auditTotal);
     };
 
-    var loaders = { users: self.loadUsers, accounts: self.loadAccounts, transactions: self.loadTransactions, audit: self.loadAudit };
+    var loaders = { users: self.loadUsers, accounts: self.loadAccounts, transactions: self.loadTransactions, loans: self.loadLoans, audit: self.loadAudit };
+
+    self.userActionLabel = function (user) {
+      if (user.status === 'ACTIVE') {
+        return 'Disable';
+      }
+      return user.status === 'DISABLED' || user.status === 'LOCKED' ? 'Enable' : '';
+    };
+    self.accountActionLabel = function (account) {
+      if (account.status === 'ACTIVE') {
+        return 'Freeze';
+      }
+      if (account.status === 'FROZEN') {
+        return 'Unfreeze';
+      }
+      return account.status === 'PENDING' ? 'Activate' : '';
+    };
+    self.isUpdating = function (kind, id) {
+      return self.updating() === kind + ':' + id;
+    };
+
+    function changeStatus(kind, row, nextStatus, action, request, target, idField) {
+      var key = kind + ':' + row[idField];
+      if (self.updating() || !window.confirm(action + ' ' + (row.username || row.accountNumber) + '?')) {
+        return false;
+      }
+      self.problem.clear();
+      self.actionMessage('');
+      self.updating(key);
+      request(row[idField], nextStatus).then(function (updated) {
+        target.replace(row, updated);
+        self.actionMessage(action + ' completed successfully.');
+        self.loadAudit();
+      }).catch(reportError).finally(function () {
+        self.updating('');
+      });
+      return false;
+    }
+
+    self.changeUserStatus = function (user) {
+      var nextStatus = user.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+      var action = nextStatus === 'ACTIVE' ? 'Enable user' : 'Disable user';
+      return changeStatus('user', user, nextStatus, action, AdminService.updateUserStatus, self.users, 'userId');
+    };
+    self.changeAccountStatus = function (account) {
+      var nextStatus = account.status === 'ACTIVE' ? 'FROZEN' : 'ACTIVE';
+      var action = nextStatus === 'FROZEN' ? 'Freeze account' : 'Activate account';
+      return changeStatus('account', account, nextStatus, action, AdminService.updateAccountStatus, self.accounts, 'accountId');
+    };
 
     self.search = function () {
       if (self.searching()) {
@@ -114,6 +185,7 @@ define([
       }
       self.searching(true);
       self.problem.clear();
+      self.actionMessage('');
       loaders[self.view()]().finally(function () {
         self.searching(false);
       });
@@ -128,7 +200,8 @@ define([
     self.refresh = function () {
       self.isLoading(true);
       self.problem.clear();
-      return Promise.all([self.loadUsers(), self.loadAccounts(), self.loadTransactions(), self.loadAudit()]).finally(function () {
+      self.actionMessage('');
+      return Promise.all([self.loadUsers(), self.loadAccounts(), self.loadTransactions(), self.loadLoans(), self.loadLoanSummary(), self.loadAudit()]).finally(function () {
         self.isLoading(false);
       });
     };

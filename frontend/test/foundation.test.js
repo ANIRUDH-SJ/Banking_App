@@ -321,6 +321,7 @@ test('route guard sends customers and administrators to their own desks', () => 
   assert.equal(routeGuard.evaluate('admin', customer, now).path, 'dashboard');
   assert.equal(routeGuard.evaluate('dashboard', admin, now).path, 'admin');
   assert.equal(routeGuard.evaluate('admin-audit', admin, now).path, 'admin-audit');
+  assert.equal(routeGuard.evaluate('admin-loans', admin, now).path, 'admin-loans');
   assert.equal(routeGuard.evaluate('transfer', both, now).path, 'transfer');
   assert.equal(routeGuard.evaluate('accounts', { accessToken: 't', expiresAt: 1000, roles: ['CUSTOMER'] }, now).path, 'login');
   assert.deepEqual(routeGuard.navFor(customer).customer.map((item) => item.path), [

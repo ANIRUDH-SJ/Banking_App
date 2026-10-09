@@ -2822,6 +2822,14 @@ h2[tabindex="-1"]:focus {
   width: min(24rem, 100%);
 }
 
+.nb-admin-facts > div:nth-child(n + 5) {
+  border-top: 1px solid var(--nb-line);
+}
+
+.nb-admin-facts > div:nth-child(5) {
+  border-left: 0;
+}
+
 .nb-deposit-figure {
   display: flex;
   flex-direction: column;

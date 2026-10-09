@@ -10,7 +10,7 @@
     'dashboard', 'profile', 'notifications', 'accounts', 'transactions',
     'beneficiaries', 'transfer', 'billers', 'bill-payments', 'cards', 'loans', 'deposits', 'forex'
   ];
-  var ADMIN = ['admin', 'admin-users', 'admin-accounts', 'admin-transactions', 'admin-audit'];
+  var ADMIN = ['admin', 'admin-users', 'admin-accounts', 'admin-transactions', 'admin-loans', 'admin-audit'];
 
   var CUSTOMER_NAV = [
     { path: 'dashboard', label: 'Home' },
@@ -33,6 +33,7 @@
     { path: 'admin-users', label: 'User monitoring' },
     { path: 'admin-accounts', label: 'Account monitoring' },
     { path: 'admin-transactions', label: 'Transaction monitoring' },
+    { path: 'admin-loans', label: 'Loan monitoring' },
     { path: 'admin-audit', label: 'Audit' }
   ];
 
@@ -106,6 +107,11 @@
       title: 'Transaction monitoring',
       owner: 'Payments and administration',
       detail: 'Transaction monitoring requests stay in the administration service.'
+    },
+    'admin-loans': {
+      title: 'Loan monitoring',
+      owner: 'Payments and administration',
+      detail: 'Loan amounts, repayment exposure and due dates are supplied by the products service.'
     },
     'admin-audit': {
       title: 'Audit',

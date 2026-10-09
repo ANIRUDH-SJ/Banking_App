@@ -2,7 +2,7 @@
   <header class="nb-page-head has-actions">
     <p class="nb-kicker">Administration</p>
     <h1>Operations console</h1>
-    <p class="nb-lede">Monitor customers, accounts, money movement and the audit trail from one place.</p>
+    <p class="nb-lede">Monitor customers, accounts, money movement, lending exposure and the audit trail from one place.</p>
     <div class="nb-head-actions">
       <oj-c-button chroming="outlined" label="[[isLoading() ? 'Refreshing…' : 'Refresh all']]" disabled="[[isLoading]]" on-oj-action="[[refresh]]"></oj-c-button>
     </div>
@@ -12,12 +12,17 @@
     <span class="nb-alert-text" data-bind="text: problem.text"></span>
     <span class="nb-alert-ref" data-bind="visible: problem.reference, text: problem.reference"></span>
   </div>
+  <div class="nb-notice is-success" role="status" data-bind="visible: actionMessage, text: actionMessage"></div>
 
-  <dl class="nb-facts">
+  <dl class="nb-facts nb-admin-facts">
     <div><dt>Users</dt><dd data-bind="text: isLoading() ? '…' : userTotal()"></dd></div>
     <div><dt>Accounts</dt><dd data-bind="text: isLoading() ? '…' : accountTotal()"></dd></div>
     <div><dt>Transactions</dt><dd data-bind="text: isLoading() ? '…' : transactionTotal()"></dd></div>
     <div><dt>Audit events</dt><dd data-bind="text: isLoading() ? '…' : auditTotal()"></dd></div>
+    <div><dt>Loans</dt><dd data-bind="text: isLoading() ? '…' : loanTotal()"></dd></div>
+    <div><dt>Active loans</dt><dd data-bind="text: isLoading() ? '…' : loanSummary().activeLoans"></dd></div>
+    <div><dt>Principal provided</dt><dd data-bind="text: isLoading() ? '…' : loanAmounts('principalProvided')"></dd></div>
+    <div><dt>Loan outstanding</dt><dd data-bind="text: isLoading() ? '…' : loanAmounts('outstandingPrincipal')"></dd></div>
   </dl>
 
   <section class="nb-sheet" aria-labelledby="admin-view-heading">
@@ -58,6 +63,7 @@
             <th scope="col">Status</th>
             <th scope="col" class="is-wide">Roles</th>
             <th scope="col" class="is-num">Last sign-in</th>
+            <th scope="col" class="is-num">Action</th>
           </tr>
         </thead>
         <tbody data-bind="foreach: users">
@@ -70,6 +76,12 @@
             <td class="is-status"><oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge></td>
             <td class="is-wide nb-mono" data-bind="text: $parent.joinValues($data.roles)"></td>
             <td class="is-num is-date" data-bind="text: $parent.when($data.lastLoginAt)"></td>
+            <td class="is-num">
+              <!-- ko if: $parent.userActionLabel($data) -->
+              <oj-c-button size="sm" chroming="outlined" label="[[$parent.isUpdating('user', userId) ? 'Saving…' : $parent.userActionLabel($data)]]" disabled="[[$parent.updating]]" on-oj-action="[[$parent.changeUserStatus.bind($parent, $data)]]"></oj-c-button>
+              <!-- /ko -->
+              <!-- ko ifnot: $parent.userActionLabel($data) --><span>—</span><!-- /ko -->
+            </td>
           </tr>
         </tbody>
       </table>
@@ -86,6 +98,7 @@
             <th scope="col">Status</th>
             <th scope="col" class="is-wide">Customers</th>
             <th scope="col" class="is-num">Available</th>
+            <th scope="col" class="is-num">Action</th>
           </tr>
         </thead>
         <tbody data-bind="foreach: accounts">
@@ -97,6 +110,12 @@
             <td class="is-status"><oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge></td>
             <td class="is-wide nb-mono" data-bind="text: $parent.joinValues($data.customerIds)"></td>
             <td class="is-num is-amount" data-bind="text: $parent.money(availableBalance, currencyCode)"></td>
+            <td class="is-num">
+              <!-- ko if: $parent.accountActionLabel($data) -->
+              <oj-c-button size="sm" chroming="outlined" label="[[$parent.isUpdating('account', accountId) ? 'Saving…' : $parent.accountActionLabel($data)]]" disabled="[[$parent.updating]]" on-oj-action="[[$parent.changeAccountStatus.bind($parent, $data)]]"></oj-c-button>
+              <!-- /ko -->
+              <!-- ko ifnot: $parent.accountActionLabel($data) --><span>—</span><!-- /ko -->
+            </td>
           </tr>
         </tbody>
       </table>
@@ -126,6 +145,40 @@
             <td class="is-status"><oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge></td>
             <td class="is-wide nb-mono" data-bind="text: $data.initiatedByUserId || '—'"></td>
             <td class="is-num is-amount" data-bind="text: $parent.money(amount, currencyCode)"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- /ko -->
+
+    <!-- ko if: view() === 'loans' && !isLoading() && !searching() && loans().length -->
+    <div class="nb-table-wrap">
+      <table class="nb-table">
+        <caption class="nb-sr">Loans</caption>
+        <thead>
+          <tr>
+            <th scope="col">Loan account</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="is-wide">Customer</th>
+            <th scope="col" class="is-num">Principal provided</th>
+            <th scope="col" class="is-num">Outstanding</th>
+            <th scope="col" class="is-num">EMI / next due</th>
+          </tr>
+        </thead>
+        <tbody data-bind="foreach: loans">
+          <tr>
+            <td class="is-details">
+              <span class="nb-mono" data-bind="text: loanAccountNumber"></span>
+              <span class="nb-table-sub" data-bind="text: $parent.label(loanType) + ' · ' + interestRate + '% · ' + termMonths + ' months'"></span>
+            </td>
+            <td class="is-status"><oj-c-badge size="sm" variant="[[$parent.statusVariant(status)]]" label="[[$parent.label(status)]]"></oj-c-badge></td>
+            <td class="is-wide nb-mono" data-bind="text: customerId"></td>
+            <td class="is-num is-amount" data-bind="text: $parent.money(principalAmount, currencyCode)"></td>
+            <td class="is-num is-amount" data-bind="text: $parent.money(outstandingPrincipal, currencyCode)"></td>
+            <td class="is-num is-details">
+              <span data-bind="text: $parent.money(emiAmount, currencyCode)"></span>
+              <span class="nb-table-sub" data-bind="text: nextDueDate || 'No payment due'"></span>
+            </td>
           </tr>
         </tbody>
       </table>
