@@ -400,14 +400,18 @@ VALUES (
     source.reference_label, source.reference_pattern, source.reference_hint,
     1, source.max_amount, 'Y', SYSTIMESTAMP);
 
-PROMPT === Products: active debit/credit cards and posted card purchases ===
+PROMPT === Products: one debit card per account plus a credit card ===
 
--- Retire older cards for these disposable profiles so the UI shows the two
--- cards created below instead of accumulating cards across seed revisions.
+-- Retire older cards for these disposable profiles so the UI shows the four
+-- account-backed debit cards and the credit card created below instead of
+-- accumulating cards across seed revisions.
 UPDATE nb_products.bank_card
 SET card_status = 'CLOSED', updated_at = SYSTIMESTAMP
 WHERE customer_id IN (900001, 900003, 900004)
-  AND card_id NOT IN (992011, 992012, 992021, 992022, 992031, 992032);
+  AND card_id NOT IN (
+      992011, 992012, 992013, 992014, 992015,
+      992021, 992022, 992023, 992024, 992025,
+      992031, 992032, 992033, 992034, 992035);
 
 DECLARE
     v_customer_id NUMBER(19);
@@ -417,9 +421,18 @@ BEGIN
     FOR customer_index IN 1..3 LOOP
         v_customer_id := CASE customer_index WHEN 1 THEN 900001 WHEN 2 THEN 900003 ELSE 900004 END;
 
-        FOR card_index IN 1..2 LOOP
+        -- Four active accounts produce four debit cards. Card index 2 remains
+        -- the credit card so rerunning this revision keeps its purchase history
+        -- stable; account 3 is its nominated repayment/current account.
+        FOR card_index IN 1..5 LOOP
             v_card_id := 992000 + customer_index * 10 + card_index;
-            v_account_id := 921000 + customer_index * 10 + CASE card_index WHEN 1 THEN 1 ELSE 3 END;
+            v_account_id := 921000 + customer_index * 10 + CASE card_index
+                WHEN 1 THEN 1
+                WHEN 2 THEN 3
+                WHEN 3 THEN 2
+                WHEN 4 THEN 3
+                ELSE 4
+            END;
 
             MERGE INTO nb_products.bank_card target
             USING (
@@ -427,8 +440,13 @@ BEGIN
                        v_account_id account_id,
                        'oib-local-c' || customer_index || '-' || card_index card_token,
                        LPAD(TO_CHAR(5000 + customer_index * 10 + card_index), 4, '0') last_four,
-                       CASE card_index WHEN 1 THEN 'DEBIT' ELSE 'CREDIT' END card_type,
-                       CASE card_index WHEN 1 THEN 'VISA' ELSE 'MASTERCARD' END card_network
+                       CASE card_index WHEN 2 THEN 'CREDIT' ELSE 'DEBIT' END card_type,
+                       CASE card_index
+                           WHEN 2 THEN 'MASTERCARD'
+                           WHEN 3 THEN 'RUPAY'
+                           WHEN 5 THEN 'RUPAY'
+                           ELSE 'VISA'
+                       END card_network
                 FROM dual) source
             ON (target.card_id = source.card_id)
             WHEN MATCHED THEN UPDATE SET
@@ -514,6 +532,54 @@ BEGIN
 END;
 /
 
+-- Fail rather than commit a partial portfolio: each active seeded account must
+-- have one active debit card, and each customer must have one active credit card.
+DECLARE
+    v_invalid_accounts  NUMBER;
+    v_invalid_customers NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_invalid_accounts
+    FROM (
+        SELECT holder.customer_id, holder.account_id
+        FROM nb_accounts.account_holder holder
+        JOIN nb_accounts.bank_account account
+          ON account.account_id = holder.account_id
+        LEFT JOIN nb_products.bank_card card
+          ON card.customer_id = holder.customer_id
+         AND card.account_id = holder.account_id
+         AND card.card_type = 'DEBIT'
+         AND card.card_status = 'ACTIVE'
+        WHERE holder.customer_id IN (900001, 900003, 900004)
+          AND holder.is_active = 'Y'
+          AND account.account_status = 'ACTIVE'
+        GROUP BY holder.customer_id, holder.account_id
+        HAVING COUNT(card.card_id) <> 1
+    );
+
+    SELECT COUNT(*) INTO v_invalid_customers
+    FROM (
+        SELECT seeded.customer_id
+        FROM (
+            SELECT 900001 customer_id FROM dual
+            UNION ALL SELECT 900003 FROM dual
+            UNION ALL SELECT 900004 FROM dual
+        ) seeded
+        LEFT JOIN nb_products.bank_card card
+          ON card.customer_id = seeded.customer_id
+         AND card.card_type = 'CREDIT'
+         AND card.card_status = 'ACTIVE'
+        GROUP BY seeded.customer_id
+        HAVING COUNT(card.card_id) <> 1
+    );
+
+    IF v_invalid_accounts > 0 OR v_invalid_customers > 0 THEN
+        RAISE_APPLICATION_ERROR(
+            -20001,
+            'Seed card portfolio must contain one debit card per active account and one credit card per customer.');
+    END IF;
+END;
+/
+
 COMMIT;
 
 PROMPT === Verification ===
@@ -547,9 +613,22 @@ SELECT card.customer_id, card.card_type, card.card_network, card.last_four,
        card.card_status, COUNT(transaction.card_transaction_id) transaction_count
 FROM nb_products.bank_card card
 LEFT JOIN nb_products.card_transaction transaction ON transaction.card_id = card.card_id
-WHERE card.card_id IN (992011, 992012, 992021, 992022, 992031, 992032)
+WHERE card.card_id IN (
+    992011, 992012, 992013, 992014, 992015,
+    992021, 992022, 992023, 992024, 992025,
+    992031, 992032, 992033, 992034, 992035)
 GROUP BY card.customer_id, card.card_type, card.card_network,
          card.last_four, card.card_status
 ORDER BY card.customer_id, card.card_type;
+
+-- Expected result: four ACTIVE debit cards and one ACTIVE credit card per
+-- customer, with each active account represented by exactly one debit card.
+SELECT card.customer_id, card.account_id, COUNT(*) debit_card_count
+FROM nb_products.bank_card card
+WHERE card.customer_id IN (900001, 900003, 900004)
+  AND card.card_type = 'DEBIT'
+  AND card.card_status = 'ACTIVE'
+GROUP BY card.customer_id, card.account_id
+ORDER BY card.customer_id, card.account_id;
 
 PROMPT === Seed completed successfully ===
