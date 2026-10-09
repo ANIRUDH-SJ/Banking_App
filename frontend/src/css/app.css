@@ -300,6 +300,7 @@ oj-c-badge {
 }
 
 .nb-mast-inner {
+  max-width: 1600px;
   height: 4rem;
   gap: 2.5rem;
 }
@@ -313,6 +314,7 @@ oj-c-badge {
   align-self: stretch;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .nb-primary ul {
@@ -344,6 +346,7 @@ oj-c-badge {
 
 .nb-mast-end {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 0.375rem;
   margin-left: auto;
@@ -3605,9 +3608,9 @@ h2[tabindex="-1"]:focus {
   }
 }
 
-/* Narrow screens */
+/* Move primary navigation into the drawer before masthead controls can collide. */
 
-@media (max-width: 1080px) {
+@media (max-width: 1440px) {
   .nb-primary,
   .nb-who-name {
     display: none;
@@ -3624,7 +3627,11 @@ h2[tabindex="-1"]:focus {
   .nb-who {
     padding: 0.25rem;
   }
+}
 
+/* Narrow screens */
+
+@media (max-width: 1080px) {
   .nb-split {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3731,6 +3738,10 @@ h2[tabindex="-1"]:focus {
 @media (max-width: 600px) {
   .nb-body {
     font-size: 14.5px;
+  }
+
+  .nb-mast .nb-brand-name {
+    display: none;
   }
 
   .nb-signout span:last-child {
